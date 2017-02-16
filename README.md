@@ -28,5 +28,10 @@ like [Open Broadcaster Software](https://obsproject.com) begins and
 the aforementioned stream tools end. Over the life of this project the
 feature set is likely to evolve and blend into these other areas.
 
+This project is inspired by other live-coding environments
+like
+[Impromptu](http://impromptu.moso.com.au)/[Extempore](https://github.com/digego/extempore) and
+[Overtone](http://overtone.github.io).
+
 You can follow the development along
 at <http://tinyletter.com/wunsch>.
