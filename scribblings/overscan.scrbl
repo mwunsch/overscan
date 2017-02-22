@@ -1,10 +1,10 @@
 #lang scribble/manual
-@require[@for-label[chyron
+@require[@for-label[overscan
                     racket/base]]
 
-@title{chyron}
+@title{Overscan}
 @author{markwunsch}
 
-@defmodule[chyron]
+@defmodule[overscan]
 
 Package Description Here

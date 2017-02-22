@@ -1,9 +1,7 @@
-# Chyron
+# Overscan
 
 A study in live video broadcasting with
 the [Racket](http://racket-lang.org) programming language.
-
-No relation to the [ChyronHego](http://chyronhego.com) Corporation…
 
 The goal of this project is to learn Racket and to better understand
 the problems involved in:

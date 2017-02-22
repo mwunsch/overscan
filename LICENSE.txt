@@ -1,5 +1,5 @@
-chyron
-Copyright (c) 2017 markwunsch
+Overscan
+Copyright (c) 2017 Mark Wunsch
 
 This package is distributed under the GNU Lesser General Public
 License (LGPL).  This means that you can link chyron into proprietary
