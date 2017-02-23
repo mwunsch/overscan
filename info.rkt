@@ -4,6 +4,5 @@
                "rackunit-lib"))
 (define build-deps '("scribble-lib" "racket-doc"))
 (define scribblings '(("scribblings/overscan.scrbl" ())))
-(define pkg-desc "Description Here")
+(define pkg-desc "Video graphics companion")
 (define version "0.0")
-(define pkg-authors '(markwunsch))
