@@ -3,7 +3,7 @@
                     racket/base]]
 
 @title{Overscan}
-@author{(author+email "Mark Wunsch" "mark@markwunsch.com")}
+@author[(author+email "Mark Wunsch" "mark@markwunsch.com")]
 
 @defmodule[overscan]
 

@@ -25,21 +25,14 @@
 ;; http://docs.racket-lang.org/style/index.html
 
 ;; Code here
-(require ffi/unsafe
-         ffi/unsafe/define)
+(require gir)
 
-(define-ffi-definer define-gst (ffi-lib "libgstreamer-1.0"))
-(define-ffi-definer define-glib (ffi-lib "libglib-2.0"))
-
-(define-gst gst_init (_fun _pointer _pointer -> _void))
-(define-gst gst_init_check (_fun _pointer _pointer _pointer -> _bool))
-(define-gst gst_version (_fun _pointer _pointer _pointer _pointer -> _void))
-(define-gst gst_version_string (_fun -> _string))
+(define gst (gi-ffi "Gst"))
 
 (module+ test
   ;; Tests to be run with raco test
   )
 
 (module+ main
-  (displayln (format "This program is linked against ~a" (gst_version_string)))
+  (displayln (format "This program is linked against ~a" (gst 'version_string)))
   )

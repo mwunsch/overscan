@@ -1,7 +1,8 @@
 #lang info
 (define collection "overscan")
 (define deps '("base"
-               "rackunit-lib"))
+               "rackunit-lib"
+               "gir"))
 (define build-deps '("scribble-lib" "racket-doc"))
 (define scribblings '(("scribblings/overscan.scrbl" ())))
 (define pkg-desc "Video graphics companion")
