@@ -25,14 +25,20 @@
 ;; http://docs.racket-lang.org/style/index.html
 
 ;; Code here
-(require gir)
+(require gir
+         ffi/unsafe)
 
 (define gst (gi-ffi "Gst"))
+
+(define (initialize)
+  (define-values (initialized? junk err) (gst 'init_check 0 #f))
+  initialized?)
 
 (module+ test
   ;; Tests to be run with raco test
   )
 
 (module+ main
-  (displayln (format "This program is linked against ~a" (gst 'version_string)))
+  (when (initialize)
+    (displayln (format "This program is linked against ~a" (gst 'version_string))))
   )
