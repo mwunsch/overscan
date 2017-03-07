@@ -36,6 +36,8 @@
 
 (define-gir g_irepository_require (_fun (_pointer = #f) _string _string _int _pointer -> _pointer))
 (define-gir g_irepository_get_n_infos (_fun (_pointer = #f) _string -> _int))
+(define-gir g_irepository_get_info (_fun (_pointer = #f) _string _int -> _gi-base-info)
+  #:wrap (allocator g_base_info_unref))
 (define-gir g_irepository_find_by_name (_fun (_pointer = #f) _string _string -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
 
@@ -44,5 +46,6 @@
 
 (define (introspect namespace)
   (gir-require namespace)
-  (lambda (lookup)
-    (g_irepository_find_by_name namespace lookup)))
+  (for/list ([i (in-range (g_irepository_get_n_infos namespace))])
+    (let ([_info (g_irepository_get_info namespace i)])
+      (cons (g_base_info_get_type _info) (g_base_info_get_name _info)))))
