@@ -10,54 +10,54 @@
 (define _gi-type-lib (_cpointer/null 'GITypelib))
 (define _gi-base-info (_cpointer/null 'GIBaseInfo))
 (define _gi-type-info (_cpointer/null 'GITypeInfo))
-(define _gi-info-type (_enum '(invalid
-                               function
-                               callback
-                               struct
-                               boxed
-                               enum
-                               flags
-                               object
-                               interface
-                               constant
-                               invalid-0
-                               union
-                               value
-                               signal
-                               vfunc
-                               property
-                               field
-                               arg
-                               type
-                               unresolved)))
-(define _gi-type-tag (_enum '(void
-                              bool
-                              int8
-                              uint8
-                              int16
-                              uint16
-                              int32
-                              uint32
-                              int64
-                              uint64
-                              float
-                              double
-                              gtype
-                              utf8
-                              filename
-                              array
-                              interface
-                              glist
-                              gslist
-                              ghash
-                              gerror
-                              unichar)))
-(define _gi-function-info-flags (_bitmask '(method?
-                                            constructor?
-                                            getter?
-                                            setter?
-                                            wraps-vfunc?
-                                            throws?)))
+(define _gi-info-type (_enum '(GI_INFO_TYPE_INVALID
+                               GI_INFO_TYPE_FUNCTION
+                               GI_INFO_TYPE_CALLBACK
+                               GI_INFO_TYPE_STRUCT
+                               GI_INFO_TYPE_BOXED
+                               GI_INFO_TYPE_ENUM
+                               GI_INFO_TYPE_FLAGS
+                               GI_INFO_TYPE_OBJECT
+                               GI_INFO_TYPE_INTERFACE
+                               GI_INFO_TYPE_CONSTANT
+                               GI_INFO_TYPE_INVALID_0
+                               GI_INFO_TYPE_UNION
+                               GI_INFO_TYPE_VALUE
+                               GI_INFO_TYPE_SIGNAL
+                               GI_INFO_TYPE_VFUNC
+                               GI_INFO_TYPE_PROPERTY
+                               GI_INFO_TYPE_FIELD
+                               GI_INFO_TYPE_ARG
+                               GI_INFO_TYPE_TYPE
+                               GI_INFO_TYPE_UNRESOLVED)))
+(define _gi-type-tag (_enum '(GI_TYPE_TAG_VOID
+                              GI_TYPE_TAG_BOOLEAN
+                              GI_TYPE_TAG_INT8
+                              GI_TYPE_TAG_UINT8
+                              GI_TYPE_TAG_INT16
+                              GI_TYPE_TAG_UINT16
+                              GI_TYPE_TAG_INT32
+                              GI_TYPE_TAG_UINT32
+                              GI_TYPE_TAG_INT64
+                              GI_TYPE_TAG_UINT64
+                              GI_TYPE_TAG_FLOAT
+                              GI_TYPE_TAG_DOUBLE
+                              GI_TYPE_TAG_GTYPE
+                              GI_TYPE_TAG_UTF8
+                              GI_TYPE_TAG_FILENAME
+                              GI_TYPE_TAG_ARRAY
+                              GI_TYPE_TAG_INTERFACE
+                              GI_TYPE_TAG_GLIST
+                              GI_TYPE_TAG_GSLIST
+                              GI_TYPE_TAG_GHASH
+                              GI_TYPE_TAG_ERROR
+                              GI_TYPE_TAG_UNICHAR)))
+(define _gi-function-info-flags (_bitmask '(GI_FUNCTION_IS_METHOD
+                                            GI_FUNCTION_IS_CONSTRUCTOR
+                                            GI_FUNCTION_IS_GETTER
+                                            GI_FUNCTION_IS_SETTER
+                                            GI_FUNCTION_WRAPS_VFUNC
+                                            GI_FUNCTION_THROWS)))
 
 (define-gir g_base_info_get_namespace (_fun _gi-base-info -> _string))
 (define-gir g_base_info_get_name (_fun _gi-base-info -> _string))
@@ -76,8 +76,15 @@
   #:wrap (allocator g_base_info_unref))
 
 (define-gir g_callable_info_get_n_args (_fun _gi-base-info -> _int))
+(define-gir g_callable_info_get_arg (_fun _gi-base-info _int -> _gi-base-info)
+  #:wrap (allocator g_base_info_unref))
 (define-gir g_callable_info_get_return_type (_fun _gi-base-info -> (r : _gi-type-info)
-                                                  -> (begin (cpointer-push-tag! r 'GIBaseInfo) r)))
+                                                  -> (begin (cpointer-push-tag! r 'GIBaseInfo) r))
+  #:wrap (allocator g_base_info_unref))
+
+(define-gir g_arg_info_get_type (_fun _gi-base-info -> (r : _gi-type-info)
+                                      -> (begin (cpointer-push-tag! r 'GIBaseInfo) r))
+  #:wrap (allocator g_base_info_unref))
 
 (define-gir g_type_info_get_tag (_fun _gi-type-info -> _gi-type-tag))
 
@@ -99,8 +106,16 @@
 (define (gi-binding info)
   (let ([info-type (g_base_info_get_type info)])
     (case info-type
-      [(function) (let* ([n-args (g_callable_info_get_n_args info)]
-                         [return-type (g_callable_info_get_return_type info)]
-                         [type-tag (g_type_info_get_tag return-type)])
-                    (format "fun ~v -> ~v" n-args type-tag))]
+      [(GI_INFO_TYPE_FUNCTION) (let* ([args (callable-arguments info)]
+                                      [return-type (g_callable_info_get_return_type info)]
+                                      [type-tag (g_type_info_get_tag return-type)])
+                                 (format "fun ~a -> ~v" args type-tag))]
       [else (cons info-type (g_base_info_get_name info))])))
+
+(define (callable-arguments info)
+  (for/list ([i (in-range (g_callable_info_get_n_args info))])
+    (let* ([arg-info (g_callable_info_get_arg info i)]
+           [arg-name (g_base_info_get_name arg-info)]
+           [arg-type (g_arg_info_get_type arg-info)]
+           [arg-type-tag (g_type_info_get_tag arg-type)])
+      (format "~v ~a" arg-type-tag arg-name))))
