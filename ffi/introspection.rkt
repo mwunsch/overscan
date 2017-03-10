@@ -7,7 +7,6 @@
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
 
 (define-cstruct _gerror ([domain _uint32] [code _int] [message _string]))
-(define _gi-type-lib (_cpointer/null 'GITypelib))
 (define _gi-base-info (_cpointer/null 'GIBaseInfo))
 (define _gi-type-info (_cpointer/null 'GITypeInfo))
 (define _gi-info-type (_enum '(GI_INFO_TYPE_INVALID
@@ -66,7 +65,7 @@
   #:wrap (deallocator))
 
 (define-gir g_irepository_require (_fun (_pointer = #f) _string _string _int (err : (_ptr io _gerror-pointer/null) = #f)
-                                        -> (r : _gi-type-lib)
+                                        -> (r : _pointer)
                                         -> (or r
                                                (error (gerror-message err)))))
 (define-gir g_irepository_get_n_infos (_fun (_pointer = #f) _string -> _int))
