@@ -57,6 +57,9 @@
                                             GI_FUNCTION_IS_SETTER
                                             GI_FUNCTION_WRAPS_VFUNC
                                             GI_FUNCTION_THROWS)))
+(define _gi-direction (_enum '(GI_DIRECTION_IN
+                               GI_DIRECTION_OUT
+                               GI_DIRECTION_INOUT)))
 
 (define-gir g_base_info_get_namespace (_fun _gi-base-info -> _string))
 (define-gir g_base_info_get_name (_fun _gi-base-info -> _string))
@@ -77,6 +80,7 @@
 (define-gir g_callable_info_get_n_args (_fun _gi-base-info -> _int))
 (define-gir g_callable_info_get_arg (_fun _gi-base-info _int -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
+(define-gir g_callable_info_can_throw_gerror (_fun _gi-base-info -> _bool))
 (define-gir g_callable_info_get_return_type (_fun _gi-base-info -> (r : _gi-type-info)
                                                   -> (begin (cpointer-push-tag! r 'GIBaseInfo) r))
   #:wrap (allocator g_base_info_unref))
@@ -84,6 +88,7 @@
 (define-gir g_arg_info_get_type (_fun _gi-base-info -> (r : _gi-type-info)
                                       -> (begin (cpointer-push-tag! r 'GIBaseInfo) r))
   #:wrap (allocator g_base_info_unref))
+(define-gir g_arg_info_get_direction (_fun _gi-base-info -> _gi-direction))
 
 (define-gir g_type_info_get_tag (_fun _gi-type-info -> _gi-type-tag))
 
@@ -116,5 +121,6 @@
     (let* ([arg-info (g_callable_info_get_arg info i)]
            [arg-name (g_base_info_get_name arg-info)]
            [arg-type (g_arg_info_get_type arg-info)]
-           [arg-type-tag (g_type_info_get_tag arg-type)])
-      (format "~v ~a" arg-type-tag arg-name))))
+           [arg-type-tag (g_type_info_get_tag arg-type)]
+           [arg-direction (g_arg_info_get_direction arg-info)])
+      (format "~v ~a [~a]" arg-type-tag arg-name arg-direction))))
