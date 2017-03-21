@@ -57,9 +57,13 @@
                                             GI_FUNCTION_IS_SETTER
                                             GI_FUNCTION_WRAPS_VFUNC
                                             GI_FUNCTION_THROWS)))
-(define _gi-direction (_enum '(GI_DIRECTION_IN
-                               GI_DIRECTION_OUT
-                               GI_DIRECTION_INOUT)))
+(define _gi-argument (_union _bool _int8 _uint8 _int16 _uint16 _int32 _uint32
+                             _int64 _uint64 _float _double
+                             _short _ushort _int _uint _long _ulong _ssize _size
+                             _string _pointer))
+(define _gi-direction (_enum '(i
+                               o
+                               io)))
 
 (define-gir g_base_info_get_namespace (_fun _gi-base-info -> _string))
 (define-gir g_base_info_get_name (_fun _gi-base-info -> _string))
@@ -91,8 +95,12 @@
 (define-gir g_arg_info_get_direction (_fun _gi-base-info -> _gi-direction))
 
 (define-gir g_type_info_get_tag (_fun _gi-type-info -> _gi-type-tag))
+(define-gir g_type_info_is_pointer (_fun _gi-type-info -> _bool))
 
 (define-gir g_function_info_get_flags (_fun _gi-base-info -> _gi-function-info-flags))
+(define-gir g_function_info_invoke (_fun _gi-base-info _pointer _int _pointer _int (r : _pointer) (err : (_ptr io _gerror-pointer/null) = #f)
+                                         -> (invoked : _bool)
+                                         -> (if invoked r (error (gerror-message err)))))
 
 (define (introspection-info namespace)
   (g_irepository_require namespace #f 0)
@@ -110,11 +118,15 @@
 (define (gi-binding info)
   (let ([info-type (g_base_info_get_type info)])
     (case info-type
-      [(GI_INFO_TYPE_FUNCTION) (let* ([args (callable-arguments info)]
-                                      [return-type (g_callable_info_get_return_type info)]
-                                      [type-tag (g_type_info_get_tag return-type)])
-                                 (format "fun ~a -> ~v" args type-tag))]
+      [(GI_INFO_TYPE_FUNCTION) (gi-bind-function-type info)]
       [else (cons info-type (g_base_info_get_name info))])))
+
+(define (gi-bind-function-type info)
+  (let* ([args (callable-arguments info)]
+         [return-type (g_callable_info_get_return_type info)]
+         [type-tag (g_type_info_get_tag return-type)])
+    (lambda arguments
+      (format "fun ~a -> ~v" args type-tag))))
 
 (define (callable-arguments info)
   (for/list ([i (in-range (g_callable_info_get_n_args info))])
