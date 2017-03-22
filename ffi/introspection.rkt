@@ -130,9 +130,4 @@
 
 (define (callable-arguments info)
   (for/list ([i (in-range (g_callable_info_get_n_args info))])
-    (let* ([arg-info (g_callable_info_get_arg info i)]
-           [arg-name (g_base_info_get_name arg-info)]
-           [arg-type (g_arg_info_get_type arg-info)]
-           [arg-type-tag (g_type_info_get_tag arg-type)]
-           [arg-direction (g_arg_info_get_direction arg-info)])
-      (format "~v ~a [~a]" arg-type-tag arg-name arg-direction))))
+    (g_callable_info_get_arg info i)))
