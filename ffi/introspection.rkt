@@ -97,7 +97,11 @@
 (define-gir g_type_info_is_pointer (_fun _gi-type-info -> _bool))
 
 (define-gir g_function_info_get_flags (_fun _gi-base-info -> _gi-function-info-flags))
-(define-gir g_function_info_invoke (_fun _gi-base-info _pointer _int _pointer _int (r : _pointer) (err : (_ptr io _gerror-pointer/null) = #f)
+(define-gir g_function_info_invoke (_fun _gi-base-info
+                                         [inargs : (_list i _gi-argument)] [_int = (length inargs)]
+                                         [outargs : (_list i _gi-argument)] [_int = (length outargs)]
+                                         [r : _pointer]
+                                         (err : (_ptr io _gerror-pointer/null) = #f)
                                          -> (invoked : _bool)
                                          -> (if invoked r (error (gerror-message err)))))
 
