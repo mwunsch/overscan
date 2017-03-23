@@ -101,7 +101,7 @@
 (define-gir g_function_info_invoke (_fun _gi-base-info
                                          [inargs : (_list i _gi-argument)] [_int = (length inargs)]
                                          [outargs : (_list i _gi-argument)] [_int = (length outargs)]
-                                         [r : _pointer]
+                                         [r : (_ptr o _gi-argument)]
                                          (err : (_ptr io _gerror-pointer/null) = #f)
                                          -> (invoked : _bool)
                                          -> (if invoked r (error (gerror-message err)))))
@@ -127,7 +127,8 @@
 
 (define (gi-bind-function-type info)
   (let* ([args (callable-arguments info)]
-         [return-info (g_callable_info_get_return_type info)])
+         [return-info (g_callable_info_get_return_type info)]
+         [return-type (type-info->ctype return-info)])
     (lambda arguments
       (define (arg->gi-argument arg ctype)
         (let* ([giarg-ptr (malloc _gi-argument)]
@@ -135,11 +136,9 @@
                [index (index-of gi-argument-type-list ctype)])
           (union-set! union-val index arg)
           union-val))
-      (let* ([inargs (map arg->gi-argument arguments (arguments->ctypes args))]
-             [invocation (g_function_info_invoke info inargs '() (malloc _gi-argument))] ;; TODO: better deal with out args
-             [return-type (type-info->ctype return-info)]
-             [return-value (ptr-ref invocation _gi-argument)])
-        (union-ref return-value (index-of gi-argument-type-list return-type))))))
+      (define inargs (map arg->gi-argument arguments (arguments->ctypes args)))
+      (define invocation (g_function_info_invoke info inargs '())) ;; TODO: better deal with out args
+      (union-ref invocation (index-of gi-argument-type-list return-type)))))
 
 (define (callable-arguments info)
   (for/list ([i (in-range (g_callable_info_get_n_args info))])
@@ -180,6 +179,6 @@
       ;; ['GI_TYPE_TAG_GLIST]
       ;; ['GI_TYPE_TAG_GSLIST]
       ;; ['GI_TYPE_TAG_GHASH]
-      ['GI_TYPE_TAG_ERROR _gerror_pointer]
+      ['GI_TYPE_TAG_ERROR _gerror-pointer]
       ;; ['GI_TYPE_TAG_UNICHAR]
       [else _pointer])))
