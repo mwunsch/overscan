@@ -57,13 +57,12 @@
                                             GI_FUNCTION_IS_SETTER
                                             GI_FUNCTION_WRAPS_VFUNC
                                             GI_FUNCTION_THROWS)))
-(define _gi-argument (_union _bool _int8 _uint8 _int16 _uint16 _int32 _uint32
-                             _int64 _uint64 _float _double
-                             _short _ushort _int _uint _long _ulong _ssize _size
-                             _string _pointer))
-(define _gi-direction (_enum '(i
-                               o
-                               io)))
+(define gi-argument-type-list (list _bool _int8 _uint8 _int16 _uint16 _int32 _uint32
+                                    _int64 _uint64 _float _double
+                                    _short _ushort _int _uint _long _ulong _ssize _size
+                                    _string _pointer))
+(define _gi-argument (apply _union gi-argument-type-list))
+(define _gi-direction (_enum '(i o io)))
 
 (define-gir g_base_info_get_namespace (_fun _gi-base-info -> _string))
 (define-gir g_base_info_get_name (_fun _gi-base-info -> _string))
