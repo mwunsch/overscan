@@ -2,7 +2,8 @@
 
 (require ffi/unsafe
          ffi/unsafe/define
-         ffi/unsafe/alloc)
+         ffi/unsafe/alloc
+         (only-in racket/list index-of))
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
 
@@ -121,16 +122,64 @@
 (define (gi-binding info)
   (let ([info-type (g_base_info_get_type info)])
     (case info-type
-      [(GI_INFO_TYPE_FUNCTION) (gi-bind-function-type info)]
+      ['GI_INFO_TYPE_FUNCTION (gi-bind-function-type info)]
       [else (cons info-type (g_base_info_get_name info))])))
 
 (define (gi-bind-function-type info)
   (let* ([args (callable-arguments info)]
-         [return-type (g_callable_info_get_return_type info)]
-         [type-tag (g_type_info_get_tag return-type)])
+         [return-info (g_callable_info_get_return_type info)])
     (lambda arguments
-      (format "fun ~a -> ~v" args type-tag))))
+      (define (arg->gi-argument arg ctype)
+        (let* ([giarg-ptr (malloc _gi-argument)]
+               [union-val (ptr-ref giarg-ptr _gi-argument)]
+               [index (index-of gi-argument-type-list ctype)])
+          (union-set! union-val index arg)
+          union-val))
+      (let* ([inargs (map arg->gi-argument arguments (arguments->ctypes args))]
+             [invocation (g_function_info_invoke info inargs '() (malloc _gi-argument))] ;; TODO: better deal with out args
+             [return-type (type-info->ctype return-info)]
+             [return-value (ptr-ref invocation _gi-argument)])
+        (union-ref return-value (index-of gi-argument-type-list return-type))))))
 
 (define (callable-arguments info)
   (for/list ([i (in-range (g_callable_info_get_n_args info))])
     (g_callable_info_get_arg info i)))
+
+(define (describe-arguments arguments)
+  (define (describe-arg arg)
+    (let* ([arg-name (g_base_info_get_name arg)]
+           [arg-type (g_arg_info_get_type arg)]
+           [arg-type-tag (g_type_info_get_tag arg-type)]
+           [arg-direction (g_arg_info_get_direction arg)])
+      (format "~v ~a [~a]" arg-type-tag arg-name arg-direction)))
+  (map describe-arg arguments))
+
+(define (arguments->ctypes arguments)
+  (map (lambda (arg) (type-info->ctype (g_arg_info_get_type arg)))
+       arguments))
+
+(define (type-info->ctype info)
+  (let ([type-tag (g_type_info_get_tag info)])
+    (case type-tag
+      ['GI_TYPE_TAG_VOID _void]
+      ['GI_TYPE_TAG_BOOLEAN _bool]
+      ['GI_TYPE_TAG_INT8 _int8]
+      ['GI_TYPE_TAG_UINT8 _uint8]
+      ['GI_TYPE_TAG_INT16 _int16]
+      ['GI_TYPE_TAG_UINT16 _uint16]
+      ['GI_TYPE_TAG_INT32 _int32]
+      ['GI_TYPE_TAG_UINT32 _uint32]
+      ['GI_TYPE_TAG_INT64 _int64]
+      ['GI_TYPE_TAG_UINT64 _uint64]
+      ['GI_TYPE_TAG_FLOAT _float]
+      ['GI_TYPE_TAG_DOUBLE _double]
+      [(GI_TYPE_TAG_UTF8 GI_TYPE_TAG_FILENAME) _string]
+      ;; ['GI_TYPE_TAG_GTYPE ]
+      ;; ['GI_TYPE_TAG_ARRAY]
+      ;; ['GI_TYPE_TAG_INTERFACE]
+      ;; ['GI_TYPE_TAG_GLIST]
+      ;; ['GI_TYPE_TAG_GSLIST]
+      ;; ['GI_TYPE_TAG_GHASH]
+      ['GI_TYPE_TAG_ERROR _gerror_pointer]
+      ;; ['GI_TYPE_TAG_UNICHAR]
+      [else _pointer])))
