@@ -3,7 +3,8 @@
 (require ffi/unsafe
          ffi/unsafe/define
          ffi/unsafe/alloc
-         (only-in racket/list index-of))
+         (only-in racket/list index-of partition)
+         (only-in racket/function curry))
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
 
@@ -123,8 +124,8 @@
       [else (cons info-type (g_base_info_get_name info))])))
 
 (define (gi-bind-function-type info)
-  (let* ([args (callable-arguments info)]
-         [return-info (g_callable_info_get_return_type info)]
+  (define-values (in-args out-args) (callable-arguments info))
+  (let* ([return-info (g_callable_info_get_return_type info)]
          [return-type (type-info->ctype return-info)])
     (lambda arguments
       (define (arg->gi-argument arg ctype)
@@ -133,13 +134,21 @@
                [index (index-of gi-argument-type-list ctype)])
           (union-set! union-val index arg)
           union-val))
-      (define inargs (map arg->gi-argument arguments (arguments->ctypes args)))
-      (define invocation (g_function_info_invoke info inargs '())) ;; TODO: better deal with out args
+      (define gi-args-i (map arg->gi-argument arguments (arguments->ctypes in-args)))
+      (define gi-args-o (map arg->gi-argument arguments (arguments->ctypes out-args))) ;; TODO: Make sure out-args are converted to gi-arguments in an intelligent way
+      (define invocation (g_function_info_invoke info gi-args-i gi-args-o))
       (union-ref invocation (index-of gi-argument-type-list return-type)))))
 
 (define (callable-arguments info)
-  (for/list ([i (in-range (g_callable_info_get_n_args info))])
-    (g_callable_info_get_arg info i)))
+  (define arguments
+    (build-list (g_callable_info_get_n_args info)
+                (curry g_callable_info_get_arg info)))
+  (define (arg-direction? dir)
+    (lambda (arg)
+      (let ([direction (g_arg_info_get_direction arg)])
+        (memq direction dir))))
+  (values (filter (arg-direction? '(i io)) arguments)
+          (filter (arg-direction? '(o io)) arguments)))
 
 (define (describe-arguments arguments)
   (define (describe-arg arg)
