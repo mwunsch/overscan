@@ -9,7 +9,6 @@
 
 (define-cstruct _gerror ([domain _uint32] [code _int] [message _string]))
 (define _gi-base-info (_cpointer/null 'GIBaseInfo))
-(define _gi-type-info (_cpointer/null 'GITypeInfo))
 (define _gi-info-type (_enum '(GI_INFO_TYPE_INVALID
                                GI_INFO_TYPE_FUNCTION
                                GI_INFO_TYPE_CALLBACK
@@ -85,17 +84,15 @@
 (define-gir g_callable_info_get_arg (_fun _gi-base-info _int -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
 (define-gir g_callable_info_can_throw_gerror (_fun _gi-base-info -> _bool))
-(define-gir g_callable_info_get_return_type (_fun _gi-base-info -> (r : _gi-type-info)
-                                                  -> (begin (cpointer-push-tag! r 'GIBaseInfo) r))
+(define-gir g_callable_info_get_return_type (_fun _gi-base-info -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
 
-(define-gir g_arg_info_get_type (_fun _gi-base-info -> (r : _gi-type-info)
-                                      -> (begin (cpointer-push-tag! r 'GIBaseInfo) r))
+(define-gir g_arg_info_get_type (_fun _gi-base-info -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
 (define-gir g_arg_info_get_direction (_fun _gi-base-info -> _gi-direction))
 
-(define-gir g_type_info_get_tag (_fun _gi-type-info -> _gi-type-tag))
-(define-gir g_type_info_is_pointer (_fun _gi-type-info -> _bool))
+(define-gir g_type_info_get_tag (_fun _gi-base-info -> _gi-type-tag))
+(define-gir g_type_info_is_pointer (_fun _gi-base-info -> _bool))
 
 (define-gir g_function_info_get_flags (_fun _gi-base-info -> _gi-function-info-flags))
 (define-gir g_function_info_invoke (_fun _gi-base-info
