@@ -136,12 +136,8 @@
       (map (lambda (transform arg) (transform arg)) arguments->gi-arguments arguments))
     (define gi-args-out
       (map (lambda (arg) ((ctype->value->gi-argument _pointer) #f)) (filter (arg-direction? '(o io)) args)))
-    (let* ([invocation (g_function_info_invoke info gi-args-in gi-args-out)]
-           [return-val (union-ref invocation (or (index-of gi-argument-type-list return-type)
-                                                (sub1 (length gi-argument-type-list))))])
-      (if (eq? return-type _void)
-          (void return-val)
-          return-val))))
+    (let ([invocation (g_function_info_invoke info gi-args-in gi-args-out)])
+      (gi-argument->value-of-type invocation return-type))))
 
 (define (callable-arguments info)
   (build-list (g_callable_info_get_n_args info)
@@ -195,3 +191,8 @@
     (lambda (value)
       (union-set! union-val index value)
       union-val)))
+
+(define (gi-argument->value-of-type giarg ctype)
+  (let ([value (union-ref giarg (or (index-of gi-argument-type-list ctype)
+                                    (sub1 (length gi-argument-type-list))))])
+    (if (eq? ctype _void) (void value) value)))
