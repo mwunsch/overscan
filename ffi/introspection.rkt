@@ -4,7 +4,8 @@
          ffi/unsafe/define
          ffi/unsafe/alloc
          (only-in racket/list index-of partition last)
-         (only-in racket/function curry))
+         (only-in racket/function curry)
+         (for-syntax racket/base racket/contract))
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
 
@@ -118,12 +119,13 @@
       (gi-binding info))))
 
 (define (gi-binding info)
-  (let ([info-type (g_base_info_get_type info)])
+  (let ([info-type (g_base_info_get_type info)]
+        [info-name (string->symbol (g_base_info_get_name info))])
     (case info-type
-      ['GI_INFO_TYPE_FUNCTION (gi-bind-function-type info)]
-      [else (cons info-type (g_base_info_get_name info))])))
+      ['GI_INFO_TYPE_FUNCTION (gi-bind-function-type info-name info)]
+      [else (cons info-type info-name)])))
 
-(define (gi-bind-function-type info)
+(define (gi-bind-function-type name info)
   (define args (callable-arguments info))
   (define return-info (g_callable_info_get_return_type info))
   (define return-type (type-info->ctype return-info))
@@ -138,6 +140,16 @@
       (map (lambda (arg) ((ctype->value->gi-argument _pointer) #f)) (filter (arg-direction? '(o io)) args)))
     (let ([invocation (g_function_info_invoke info gi-args-in gi-args-out)])
       (gi-argument->value-of-type invocation return-type))))
+
+(struct argument (value type direction))
+
+(define-syntax (gir/define stx)
+  (syntax-case stx ()
+    [(_ name (args ...) body ...)
+     #'(begin
+         (define (name args ...)
+           body ...)
+         name)]))
 
 (define (callable-arguments info)
   (build-list (g_callable_info_get_n_args info)
