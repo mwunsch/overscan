@@ -3,7 +3,7 @@
 (require ffi/unsafe
          ffi/unsafe/define
          ffi/unsafe/alloc
-         (only-in racket/list index-of partition last)
+         (only-in racket/list index-of partition last filter-map)
          (only-in racket/function curry)
          (for-syntax racket/base racket/contract))
 
@@ -125,49 +125,33 @@
       ['GI_INFO_TYPE_FUNCTION (gi-bind-function-type info-name info)]
       [else (cons info-type info-name)])))
 
-(define (gi-bind-function-type name info)
-  (define args (callable-arguments info))
-  (define return-info (g_callable_info_get_return_type info))
-  (define return-type (type-info->ctype return-info))
-  (define arguments->gi-arguments
-    (map (compose1 ctype->value->gi-argument
-                   type-info->ctype
-                   g_arg_info_get_type) (filter (arg-direction? '(i io)) args)))
-  (lambda arguments
-    (define gi-args-in
-      (map (lambda (transform arg) (transform arg)) arguments->gi-arguments arguments))
-    (define gi-args-out
-      (map (lambda (arg) ((ctype->value->gi-argument _pointer) #f)) (filter (arg-direction? '(o io)) args)))
-    (let ([invocation (g_function_info_invoke info gi-args-in gi-args-out)])
-      (gi-argument->value-of-type invocation return-type))))
-
 (struct argument (value type direction))
 
-(define-syntax (gir/define stx)
-  (syntax-case stx ()
-    [(_ name (args ...) body ...)
-     #'(begin
-         (define (name args ...)
-           body ...)
-         name)]))
+(define (make-argument arginfo value)
+  (define arg-ctype ((compose1 type-info->ctype g_arg_info_get_type) arginfo))
+  (argument ((ctype->value->gi-argument arg-ctype) value)
+            arg-ctype
+            (g_arg_info_get_direction arginfo)))
 
-(define (callable-arguments info)
-  (build-list (g_callable_info_get_n_args info)
+(define (argument-direction? dir)
+  (lambda (argument)
+    (memq (argument-direction argument) dir)))
+
+(define (gi-bind-function-type name info)
+  (define arginfos
+    (build-list (g_callable_info_get_n_args info)
               (curry g_callable_info_get_arg info)))
-
-(define (arg-direction? dir)
-  (lambda (arginfo)
-    (let ([direction (g_arg_info_get_direction arginfo)])
-      (memq direction dir))))
-
-(define (describe-arguments arguments)
-  (define (describe-arg arg)
-    (let* ([arg-name (g_base_info_get_name arg)]
-           [arg-type (g_arg_info_get_type arg)]
-           [arg-type-tag (g_type_info_get_tag arg-type)]
-           [arg-direction (g_arg_info_get_direction arg)])
-      (format "~v ~a [~a]" arg-type-tag arg-name arg-direction)))
-  (map describe-arg arguments))
+  (define return-info (g_callable_info_get_return_type info))
+  (define return-type (type-info->ctype return-info))
+  (procedure-rename
+   (lambda arguments
+     (define transformed-args (map make-argument arginfos arguments))
+     (define-values (args-in args-out)
+       (values (map argument-value (filter (argument-direction? '(i io)) transformed-args))
+               (map argument-value (filter (argument-direction? '(o io)) transformed-args))))
+     (let ([invocation (g_function_info_invoke info args-in args-out)])
+       (gi-arg->value-of-type invocation return-type)))
+   name))
 
 (define (type-info->ctype info)
   (let ([type-tag (g_type_info_get_tag info)])
@@ -204,7 +188,7 @@
       (union-set! union-val index value)
       union-val)))
 
-(define (gi-argument->value-of-type giarg ctype)
+(define (gi-arg->value-of-type giarg ctype)
   (let ([value (union-ref giarg (or (index-of gi-argument-type-list ctype)
                                     (sub1 (length gi-argument-type-list))))])
     (if (eq? ctype _void) (void value) value)))
