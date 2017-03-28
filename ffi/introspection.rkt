@@ -4,8 +4,7 @@
          ffi/unsafe/define
          ffi/unsafe/alloc
          (only-in racket/list index-of partition last filter-map)
-         (only-in racket/function curry)
-         (for-syntax racket/base racket/contract))
+         (only-in racket/function curry))
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
 
@@ -122,8 +121,26 @@
   (let ([info-type (g_base_info_get_type info)]
         [info-name (string->symbol (g_base_info_get_name info))])
     (case info-type
-      ['GI_INFO_TYPE_FUNCTION (gi-bind-function-type info-name info)]
+      ['GI_INFO_TYPE_FUNCTION (gir/function info)]
       [else (cons info-type info-name)])))
+
+(struct gir/function (info)
+  #:property
+  prop:procedure
+  (lambda (f . arguments)
+    (let* ([funinfo (gir/function-info f)]
+           [n_args (g_callable_info_get_n_args funinfo)])
+      (when (not (eqv? (length arguments) n_args))
+        (apply raise-arity-error f n_args arguments))
+      (define arginfos (build-list n_args (curry g_callable_info_get_arg funinfo)))
+      (define return-type (type-info->ctype
+                           (g_callable_info_get_return_type funinfo)))
+      (define args (map make-argument arginfos arguments))
+      (define-values (args-in args-out)
+        (values (map argument-value (filter (argument-direction? '(i io)) args))
+                (map argument-value (filter (argument-direction? '(o io)) args))))
+      (let ([invocation (g_function_info_invoke funinfo args-in args-out)])
+        (gi-arg->value-of-type invocation return-type)))))
 
 (struct argument (value type direction))
 
@@ -136,22 +153,6 @@
 (define (argument-direction? dir)
   (lambda (argument)
     (memq (argument-direction argument) dir)))
-
-(define (gi-bind-function-type name info)
-  (define arginfos
-    (build-list (g_callable_info_get_n_args info)
-              (curry g_callable_info_get_arg info)))
-  (define return-info (g_callable_info_get_return_type info))
-  (define return-type (type-info->ctype return-info))
-  (procedure-rename
-   (lambda arguments
-     (define transformed-args (map make-argument arginfos arguments))
-     (define-values (args-in args-out)
-       (values (map argument-value (filter (argument-direction? '(i io)) transformed-args))
-               (map argument-value (filter (argument-direction? '(o io)) transformed-args))))
-     (let ([invocation (g_function_info_invoke info args-in args-out)])
-       (gi-arg->value-of-type invocation return-type)))
-   name))
 
 (define (type-info->ctype info)
   (let ([type-tag (g_type_info_get_tag info)])
