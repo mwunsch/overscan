@@ -113,7 +113,18 @@
                                             -> (size : _int)
                                             -> r))
 
+(define-gir g_struct_info_get_n_fields (_fun _gi-base-info -> _int))
+(define-gir g_struct_info_get_field (_fun _gi-base-info _int -> _gi-base-info)
+  #:wrap (allocator g_base_info_unref))
+(define-gir g_struct_info_get_n_methods (_fun _gi-base-info -> _int))
+(define-gir g_struct_info_get_method (_fun _gi-base-info _int -> _gi-base-info)
+  #:wrap (allocator g_base_info_unref))
+(define-gir g_struct_info_find_method (_fun _gi-base-info _string -> _gi-base-info)
+  #:wrap (allocator g_base_info_unref))
+
 (define-gir g_object_info_get_parent (_fun _gi-base-info -> _gi-base-info)
+  #:wrap (allocator g_base_info_unref))
+(define-gir g_object_info_get_class_struct (_fun _gi-base-info -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
 
 (define (introspection-info namespace)
@@ -134,12 +145,11 @@
   (let ([info-type (g_base_info_get_type info)]
         [info-name (string->symbol (g_base_info_get_name info))])
     (case info-type
-      ['GI_INFO_TYPE_FUNCTION (let ([args (build-list (g_callable_info_get_n_args info)
-                                                      (curry g_callable_info_get_arg))]
-                                    [returns (g_callable_info_get_return_type info)])
-                                (gir/function info args returns))]
+      ['GI_INFO_TYPE_FUNCTION (make-gir/function info)]
+      ['GI_INFO_TYPE_STRUCT (make-gir/struct info)]
+      ['GI_INFO_TYPE_OBJECT (gir/object info)]
       ['GI_INFO_TYPE_CONSTANT (gir/constant info)]
-      [else (cons info-type info-name)])))
+      [else (cons info-type (info-name))])))
 
 (struct gir/function (info args returns)
   #:property prop:procedure
@@ -156,7 +166,13 @@
       (let ([invocation (g_function_info_invoke funinfo args-in args-out)])
         (gi-arg->value-of-type invocation return-type)))))
 
-(define (gir/function-describe fn)
+(define (make-gir/function fninfo)
+  (let ([args (build-list (g_callable_info_get_n_args fninfo)
+                          (curry g_callable_info_get_arg fninfo))]
+        [returns (g_callable_info_get_return_type fninfo)])
+    (gir/function fninfo args returns)))
+
+(define (describe-gir/function fn)
   (let* ([funinfo (gir/function-info fn)]
          [arginfos (gir/function-args fn)]
          [returninfo (gir/function-returns fn)]
@@ -165,7 +181,8 @@
                                                 g_type_info_get_tag
                                                 g_arg_info_get_type) arg)]
                             [argname (g_base_info_get_name arg)])
-                        (format "~a ~a" argtype argname))) arginfos)]
+                        (format "~a ~a" argtype argname)))
+                    arginfos)]
          [return-type ((compose1 g_type_tag_to_string g_type_info_get_tag)
                        returninfo)])
     (format "~a (~a) → ~a" (g_base_info_get_name funinfo) (string-join args ", ") return-type)))
@@ -187,6 +204,30 @@
                           g_constant_info_get_type) info)]
         [value (g_constant_info_get_value info)])
     (gi-arg->value-of-type value ctype)))
+
+(struct gir/struct (info fields methods)
+  #:property prop:procedure
+  (lambda (structure)
+    (let* ([structinfo (gir/struct-info structure)]
+           [fields (gir/struct-fields structure)]
+           [methods (gir/struct-methods structure)])
+      (hash 'fields (map g_base_info_get_name fields)
+            'methods (map (compose1 describe-gir/function make-gir/function) methods)))))
+
+(define (make-gir/struct info)
+  (let ([fields (build-list (g_struct_info_get_n_fields info)
+                            (curry g_struct_info_get_field info))]
+        [methods (build-list (g_struct_info_get_n_methods info)
+                             (curry g_struct_info_get_method info))])
+    (gir/struct info fields methods)))
+
+(define (gir/object info)
+  (letrec ([hierarchy (lambda (infos)
+                        (define parentinfo (g_object_info_get_parent (car infos)))
+                        (if parentinfo
+                            (hierarchy (cons parentinfo infos))
+                            infos))])
+    (make-gir/struct (g_object_info_get_class_struct info))))
 
 (define (type-info->ctype info)
   (let ([type-tag (g_type_info_get_tag info)])
