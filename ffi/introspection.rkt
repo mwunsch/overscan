@@ -3,9 +3,10 @@
 (require ffi/unsafe
          ffi/unsafe/define
          ffi/unsafe/alloc
+         racket/class
          (only-in racket/list index-of partition last filter-map)
          (only-in racket/string string-join)
-         (only-in racket/function curry))
+         (only-in racket/function curry curryr))
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
 
@@ -112,18 +113,22 @@
                                             -> (size : _int)
                                             -> r))
 
+(define-gir g_object_info_get_parent (_fun _gi-base-info -> _gi-base-info)
+  #:wrap (allocator g_base_info_unref))
+
 (define (introspection-info namespace)
   (g_irepository_require namespace #f 0)
   (for/list ([i (in-range (g_irepository_get_n_infos namespace))])
     (let ([_info (g_irepository_get_info namespace i)])
       (cons (g_base_info_get_type _info) (g_base_info_get_name _info)))))
 
-(define (introspection namespace)
-  (g_irepository_require namespace #f 0)
-  (lambda (name)
-    (let ([info (or (g_irepository_find_by_name namespace name)
-                    (raise-argument-error 'introspection "name in GIR namespace" name))])
-      (gi-binding info))))
+(define (introspection namesym)
+  (let ([namespace (symbol->string namesym)])
+    (g_irepository_require namespace #f 0)
+    (lambda (name)
+      (let ([info (or (g_irepository_find_by_name namespace (symbol->string name))
+                      (raise-argument-error 'introspection "name in GIR namespace" name))])
+        (gi-binding info)))))
 
 (define (gi-binding info)
   (let ([info-type (g_base_info_get_type info)]
