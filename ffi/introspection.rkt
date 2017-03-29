@@ -10,8 +10,9 @@
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
 
-(define-cstruct _gerror ([domain _uint32] [code _int] [message _string]))
+;;; CTypes
 (define _gi-base-info (_cpointer/null 'GIBaseInfo))
+
 (define _gi-info-type (_enum '(GI_INFO_TYPE_INVALID
                                GI_INFO_TYPE_FUNCTION
                                GI_INFO_TYPE_CALLBACK
@@ -32,6 +33,7 @@
                                GI_INFO_TYPE_ARG
                                GI_INFO_TYPE_TYPE
                                GI_INFO_TYPE_UNRESOLVED)))
+
 (define _gi-type-tag (_enum '(GI_TYPE_TAG_VOID
                               GI_TYPE_TAG_BOOLEAN
                               GI_TYPE_TAG_INT8
@@ -54,51 +56,89 @@
                               GI_TYPE_TAG_GHASH
                               GI_TYPE_TAG_ERROR
                               GI_TYPE_TAG_UNICHAR)))
+
 (define _gi-function-info-flags (_bitmask '(GI_FUNCTION_IS_METHOD
                                             GI_FUNCTION_IS_CONSTRUCTOR
                                             GI_FUNCTION_IS_GETTER
                                             GI_FUNCTION_IS_SETTER
                                             GI_FUNCTION_WRAPS_VFUNC
                                             GI_FUNCTION_THROWS)))
+
 (define gi-argument-type-list (list _bool _int8 _uint8 _int16 _uint16 _int32 _uint32
                                     _int64 _uint64 _float _double
                                     _short _ushort _int _uint _long _ulong _ssize _size
                                     _string _pointer))
+
 (define _gi-argument (apply _union gi-argument-type-list))
+
 (define _gi-direction (_enum '(i o io)))
 
+(define-cstruct _gerror ([domain _uint32] [code _int] [message _string]))
+
+
+;;; BaseInfo
 (define-gir g_base_info_get_namespace (_fun _gi-base-info -> _string))
+
 (define-gir g_base_info_get_name (_fun _gi-base-info -> _string))
+
 (define-gir g_base_info_get_type (_fun _gi-base-info -> _gi-info-type))
+
 (define-gir g_base_info_unref (_fun _gi-base-info -> _void)
   #:wrap (deallocator))
 
+;;; Repositories
 (define-gir g_irepository_require (_fun (_pointer = #f) _string _string _int (err : (_ptr io _gerror-pointer/null) = #f)
                                         -> (r : _pointer)
                                         -> (or r
                                                (error (gerror-message err)))))
+
 (define-gir g_irepository_get_n_infos (_fun (_pointer = #f) _string -> _int))
+
 (define-gir g_irepository_get_info (_fun (_pointer = #f) _string _int -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
+
 (define-gir g_irepository_find_by_name (_fun (_pointer = #f) _string _string -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
 
+
+;;; Types
+(define-gir g_type_info_get_tag (_fun _gi-base-info -> _gi-type-tag))
+
+(define-gir g_type_info_is_pointer (_fun _gi-base-info -> _bool))
+
+(define-gir g_type_tag_to_string (_fun _gi-type-tag -> _string))
+
+
+;;; Functions & Callables
 (define-gir g_callable_info_get_n_args (_fun _gi-base-info -> _int))
+
 (define-gir g_callable_info_get_arg (_fun _gi-base-info _int -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
+
 (define-gir g_callable_info_can_throw_gerror (_fun _gi-base-info -> _bool))
+
 (define-gir g_callable_info_get_return_type (_fun _gi-base-info -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
 
 (define-gir g_arg_info_get_type (_fun _gi-base-info -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
+
 (define-gir g_arg_info_get_direction (_fun _gi-base-info -> _gi-direction))
 
-(define-gir g_type_info_get_tag (_fun _gi-base-info -> _gi-type-tag))
-(define-gir g_type_info_is_pointer (_fun _gi-base-info -> _bool))
-(define-gir g_type_tag_to_string (_fun _gi-type-tag -> _string))
+(struct gir/argument (value type direction))
+
+(define (make-gir/argument arginfo value)
+  (define arg-ctype ((compose1 type-info->ctype g_arg_info_get_type) arginfo))
+  (gir/argument ((ctype->value->gi-argument arg-ctype) value)
+            arg-ctype
+            (g_arg_info_get_direction arginfo)))
+
+(define (gir/argument-direction? dir)
+  (lambda (argument)
+    (memq (gir/argument-direction argument) dir)))
 
 (define-gir g_function_info_get_flags (_fun _gi-base-info -> _gi-function-info-flags))
+
 (define-gir g_function_info_invoke (_fun _gi-base-info
                                          [inargs : (_list i _gi-argument)] [_int = (length inargs)]
                                          [outargs : (_list i _gi-argument)] [_int = (length outargs)]
@@ -106,50 +146,6 @@
                                          (err : (_ptr io _gerror-pointer/null) = #f)
                                          -> (invoked : _bool)
                                          -> (if invoked r (error (gerror-message err)))))
-
-(define-gir g_constant_info_get_type (_fun _gi-base-info -> _gi-base-info))
-(define-gir g_constant_info_get_value (_fun _gi-base-info
-                                            [r : (_ptr o _gi-argument)]
-                                            -> (size : _int)
-                                            -> r))
-
-(define-gir g_struct_info_get_n_fields (_fun _gi-base-info -> _int))
-(define-gir g_struct_info_get_field (_fun _gi-base-info _int -> _gi-base-info)
-  #:wrap (allocator g_base_info_unref))
-(define-gir g_struct_info_get_n_methods (_fun _gi-base-info -> _int))
-(define-gir g_struct_info_get_method (_fun _gi-base-info _int -> _gi-base-info)
-  #:wrap (allocator g_base_info_unref))
-(define-gir g_struct_info_find_method (_fun _gi-base-info _string -> _gi-base-info)
-  #:wrap (allocator g_base_info_unref))
-
-(define-gir g_object_info_get_parent (_fun _gi-base-info -> _gi-base-info)
-  #:wrap (allocator g_base_info_unref))
-(define-gir g_object_info_get_class_struct (_fun _gi-base-info -> _gi-base-info)
-  #:wrap (allocator g_base_info_unref))
-
-(define (introspection-info namespace)
-  (g_irepository_require namespace #f 0)
-  (for/list ([i (in-range (g_irepository_get_n_infos namespace))])
-    (let ([_info (g_irepository_get_info namespace i)])
-      (cons (g_base_info_get_type _info) (g_base_info_get_name _info)))))
-
-(define (introspection namesym)
-  (let ([namespace (symbol->string namesym)])
-    (g_irepository_require namespace #f 0)
-    (lambda (name)
-      (let ([info (or (g_irepository_find_by_name namespace (symbol->string name))
-                      (raise-argument-error 'introspection "name in GIR namespace" name))])
-        (gi-binding info)))))
-
-(define (gi-binding info)
-  (let ([info-type (g_base_info_get_type info)]
-        [info-name (string->symbol (g_base_info_get_name info))])
-    (case info-type
-      ['GI_INFO_TYPE_FUNCTION (make-gir/function info)]
-      ['GI_INFO_TYPE_STRUCT (make-gir/struct info)]
-      ['GI_INFO_TYPE_OBJECT (gir/object info)]
-      ['GI_INFO_TYPE_CONSTANT (gir/constant info)]
-      [else (cons info-type (info-name))])))
 
 (struct gir/function (info args returns)
   #:property prop:procedure
@@ -159,10 +155,10 @@
            [return-type (type-info->ctype (gir/function-returns fn))])
       (when (not (eqv? (length arguments) (length arginfos)))
         (apply raise-arity-error fn (length arginfos) arguments))
-      (define args (map make-argument arginfos arguments))
+      (define args (map make-gir/argument arginfos arguments))
       (define-values (args-in args-out)
-        (values (map argument-value (filter (argument-direction? '(i io)) args))
-                (map argument-value (filter (argument-direction? '(o io)) args))))
+        (values (map gir/argument-value (filter (gir/argument-direction? '(i io)) args))
+                (map gir/argument-value (filter (gir/argument-direction? '(o io)) args))))
       (let ([invocation (g_function_info_invoke funinfo args-in args-out)])
         (gi-arg->value-of-type invocation return-type)))))
 
@@ -187,23 +183,35 @@
                        returninfo)])
     (format "~a (~a) → ~a" (g_base_info_get_name funinfo) (string-join args ", ") return-type)))
 
-(struct argument (value type direction))
 
-(define (make-argument arginfo value)
-  (define arg-ctype ((compose1 type-info->ctype g_arg_info_get_type) arginfo))
-  (argument ((ctype->value->gi-argument arg-ctype) value)
-            arg-ctype
-            (g_arg_info_get_direction arginfo)))
+;;; Constants
+(define-gir g_constant_info_get_type (_fun _gi-base-info -> _gi-base-info))
 
-(define (argument-direction? dir)
-  (lambda (argument)
-    (memq (argument-direction argument) dir)))
+(define-gir g_constant_info_get_value (_fun _gi-base-info
+                                            [r : (_ptr o _gi-argument)]
+                                            -> (size : _int)
+                                            -> r))
 
 (define (gir/constant info)
   (let ([ctype ((compose1 type-info->ctype
                           g_constant_info_get_type) info)]
         [value (g_constant_info_get_value info)])
     (gi-arg->value-of-type value ctype)))
+
+
+;;; Structs
+(define-gir g_struct_info_get_n_fields (_fun _gi-base-info -> _int))
+
+(define-gir g_struct_info_get_field (_fun _gi-base-info _int -> _gi-base-info)
+  #:wrap (allocator g_base_info_unref))
+
+(define-gir g_struct_info_get_n_methods (_fun _gi-base-info -> _int))
+
+(define-gir g_struct_info_get_method (_fun _gi-base-info _int -> _gi-base-info)
+  #:wrap (allocator g_base_info_unref))
+
+(define-gir g_struct_info_find_method (_fun _gi-base-info _string -> _gi-base-info)
+  #:wrap (allocator g_base_info_unref))
 
 (struct gir/struct (info fields methods)
   #:property prop:procedure
@@ -221,13 +229,49 @@
                              (curry g_struct_info_get_method info))])
     (gir/struct info fields methods)))
 
-(define (gir/object info)
+
+;;; Objects
+(define-gir g_object_info_get_parent (_fun _gi-base-info -> _gi-base-info)
+  #:wrap (allocator g_base_info_unref))
+
+(define-gir g_object_info_get_class_struct (_fun _gi-base-info -> _gi-base-info)
+  #:wrap (allocator g_base_info_unref))
+
+(struct gir/object (info fields methods properties signals))
+
+(define (make-gir/object info)
   (letrec ([hierarchy (lambda (infos)
                         (define parentinfo (g_object_info_get_parent (car infos)))
                         (if parentinfo
                             (hierarchy (cons parentinfo infos))
                             infos))])
     (make-gir/struct (g_object_info_get_class_struct info))))
+
+
+;;; Introspection
+(define (introspection-info namespace)
+  (g_irepository_require namespace #f 0)
+  (for/list ([i (in-range (g_irepository_get_n_infos namespace))])
+    (let ([_info (g_irepository_get_info namespace i)])
+      (cons (g_base_info_get_type _info) (g_base_info_get_name _info)))))
+
+(define (introspection namesym)
+  (let ([namespace (symbol->string namesym)])
+    (g_irepository_require namespace #f 0)
+    (lambda (name)
+      (let ([info (or (g_irepository_find_by_name namespace (symbol->string name))
+                      (raise-argument-error 'introspection "name in GIR namespace" name))])
+        (gi-binding info)))))
+
+(define (gi-binding info)
+  (let ([info-type (g_base_info_get_type info)]
+        [info-name (string->symbol (g_base_info_get_name info))])
+    (case info-type
+      ['GI_INFO_TYPE_FUNCTION (make-gir/function info)]
+      ['GI_INFO_TYPE_STRUCT (make-gir/struct info)]
+      ['GI_INFO_TYPE_OBJECT (gir/object info)]
+      ['GI_INFO_TYPE_CONSTANT (gir/constant info)]
+      [else (cons info-type (info-name))])))
 
 (define (type-info->ctype info)
   (let ([type-tag (g_type_info_get_tag info)])
@@ -245,7 +289,7 @@
       ['GI_TYPE_TAG_FLOAT _float]
       ['GI_TYPE_TAG_DOUBLE _double]
       [(GI_TYPE_TAG_UTF8 GI_TYPE_TAG_FILENAME) _string]
-      ;; ['GI_TYPE_TAG_GTYPE ]
+      ;; ['GI_TYPE_TAG_GTYPE]
       ;; ['GI_TYPE_TAG_ARRAY]
       ;; ['GI_TYPE_TAG_INTERFACE]
       ;; ['GI_TYPE_TAG_GLIST]
