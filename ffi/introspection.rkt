@@ -106,6 +106,12 @@
                                          -> (invoked : _bool)
                                          -> (if invoked r (error (gerror-message err)))))
 
+(define-gir g_constant_info_get_type (_fun _gi-base-info -> _gi-base-info))
+(define-gir g_constant_info_get_value (_fun _gi-base-info
+                                            [r : (_ptr o _gi-argument)]
+                                            -> (size : _int)
+                                            -> r))
+
 (define (introspection-info namespace)
   (g_irepository_require namespace #f 0)
   (for/list ([i (in-range (g_irepository_get_n_infos namespace))])
@@ -124,6 +130,7 @@
         [info-name (string->symbol (g_base_info_get_name info))])
     (case info-type
       ['GI_INFO_TYPE_FUNCTION (gir/function info)]
+      ['GI_INFO_TYPE_CONSTANT (gir/constant info)]
       [else (cons info-type info-name)])))
 
 (struct gir/function (info)
@@ -169,6 +176,12 @@
 (define (argument-direction? dir)
   (lambda (argument)
     (memq (argument-direction argument) dir)))
+
+(define (gir/constant info)
+  (let ([ctype ((compose1 type-info->ctype
+                          g_constant_info_get_type) info)]
+        [value (g_constant_info_get_value info)])
+    (gi-arg->value-of-type value ctype)))
 
 (define (type-info->ctype info)
   (let ([type-tag (g_type_info_get_tag info)])
