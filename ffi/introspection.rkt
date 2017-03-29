@@ -134,20 +134,21 @@
   (let ([info-type (g_base_info_get_type info)]
         [info-name (string->symbol (g_base_info_get_name info))])
     (case info-type
-      ['GI_INFO_TYPE_FUNCTION (gir/function info)]
+      ['GI_INFO_TYPE_FUNCTION (let ([args (build-list (g_callable_info_get_n_args info)
+                                                      (curry g_callable_info_get_arg))]
+                                    [returns (g_callable_info_get_return_type info)])
+                                (gir/function info args returns))]
       ['GI_INFO_TYPE_CONSTANT (gir/constant info)]
       [else (cons info-type info-name)])))
 
-(struct gir/function (info)
+(struct gir/function (info args returns)
   #:property prop:procedure
   (lambda (fn . arguments)
     (let* ([funinfo (gir/function-info fn)]
-           [n_args (g_callable_info_get_n_args funinfo)])
-      (when (not (eqv? (length arguments) n_args))
-        (apply raise-arity-error fn n_args arguments))
-      (define arginfos (build-list n_args (curry g_callable_info_get_arg funinfo)))
-      (define return-type (type-info->ctype
-                           (g_callable_info_get_return_type funinfo)))
+           [arginfos (gir/function-args fn)]
+           [return-type (type-info->ctype (gir/function-returns fn))])
+      (when (not (eqv? (length arguments) (length arginfos)))
+        (apply raise-arity-error fn (length arginfos) arguments))
       (define args (map make-argument arginfos arguments))
       (define-values (args-in args-out)
         (values (map argument-value (filter (argument-direction? '(i io)) args))
@@ -157,18 +158,17 @@
 
 (define (gir/function-describe fn)
   (let* ([funinfo (gir/function-info fn)]
-         [arginfos (build-list (g_callable_info_get_n_args funinfo)
-                           (curry g_callable_info_get_arg funinfo))]
+         [arginfos (gir/function-args fn)]
+         [returninfo (gir/function-returns fn)]
          [args (map (lambda (arg)
                       (let ([argtype ((compose1 g_type_tag_to_string
                                                 g_type_info_get_tag
                                                 g_arg_info_get_type) arg)]
                             [argname (g_base_info_get_name arg)])
                         (format "~a ~a" argtype argname))) arginfos)]
-         [return ((compose1 g_type_tag_to_string
-                                 g_type_info_get_tag
-                                 g_callable_info_get_return_type) funinfo)])
-    (format "~a (~a) -> ~a" (g_base_info_get_name funinfo) (string-join args ", ") return)))
+         [return-type ((compose1 g_type_tag_to_string g_type_info_get_tag)
+                       returninfo)])
+    (format "~a (~a) → ~a" (g_base_info_get_name funinfo) (string-join args ", ") return-type)))
 
 (struct argument (value type direction))
 
