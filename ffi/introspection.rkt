@@ -177,6 +177,8 @@
 (define-gir g_callable_info_get_return_type (_fun _gi-base-info -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
 
+(define-gir g_callable_info_is_method (_fun _gi-base-info -> _bool))
+
 (define-gir g_arg_info_get_type (_fun _gi-base-info -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
 
@@ -209,15 +211,21 @@
   (lambda (fn . arguments)
     (let* ([funinfo (gir/function-info fn)]
            [arginfos (gir/function-args fn)]
-           [return-type (gir/function-returns fn)])
-      (when (not (eqv? (length arguments) (length arginfos)))
-        (apply raise-arity-error fn (length arginfos) arguments))
-      (define args (map make-gir/argument arginfos arguments))
+           [return-type (gir/function-returns fn)]
+           [method? (g_callable_info_is_method funinfo)]
+           [n-args (if method? (add1 (length arginfos)) (length arginfos))])
+      (when (not (eqv? (length arguments) n-args))
+        (apply raise-arity-error fn n-args arguments))
+      (define args (map make-gir/argument arginfos (if (and method? (pair? arguments)) (cdr arguments) arguments)))
       (define-values (args-in args-out)
         (values (map gir/argument-value (filter (gir/argument-direction? '(i io)) args))
                 (map gir/argument-value (filter (gir/argument-direction? '(o io)) args))))
-      (let ([invocation (g_function_info_invoke funinfo args-in args-out)])
-        (gi-arg->value-of-type invocation return-type)))))
+      (let* ([args-in (if method?
+                          (cons ((ctype->value->gi-argument _pointer) (car arguments)) args-in)
+                          args-in)]
+             [invocation (g_function_info_invoke funinfo args-in args-out)])
+        (gi-arg->value-of-type invocation return-type))))
+  #:property prop:cpointer 0)
 
 (define (make-gir/function fninfo)
   (let ([args (build-list (g_callable_info_get_n_args fninfo)
@@ -270,12 +278,17 @@
 
 (struct gir/struct (info fields methods)
   #:property prop:procedure
-  (lambda (structure)
+  (lambda (structure pointer)
     (let* ([structinfo (gir/struct-info structure)]
            [fields (gir/struct-fields structure)]
            [methods (gir/struct-methods structure)])
-      (hash 'fields (map g_base_info_get_name fields)
-            'methods (map describe-gir/function methods)))))
+      ;; TODO: make-struct-type here
+      (lambda (name . args)
+        (let ([method (g_struct_info_find_method pointer (symbol->string name))])
+          (if method
+              (apply (make-gir/function method) pointer args)
+              #f)))))
+  #:property prop:cpointer 0)
 
 (define (make-gir/struct info)
   (let ([fields (build-list (g_struct_info_get_n_fields info)
@@ -284,6 +297,13 @@
                              (compose1 make-gir/function
                                        (curry g_struct_info_get_method info)))])
     (gir/struct info fields methods)))
+
+(define (describe-gir/struct strct)
+  (let* ([structinfo (gir/struct-info strct)]
+         [fields (gir/struct-fields strct)]
+         [methodinfos (gir/struct-methods strct)])
+    (hash 'fields (map g_base_info_get_name fields)
+          'methods (map describe-gir/function methodinfos))))
 
 
 ;;; Objects
