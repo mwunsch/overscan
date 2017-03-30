@@ -108,6 +108,63 @@
 
 (define-gir g_type_tag_to_string (_fun _gi-type-tag -> _string))
 
+(define-gir g_type_info_get_interface (_fun _gi-base-info -> _gi-base-info))
+
+(define-gir g_info_type_to_string (_fun _gi-info-type -> _string))
+
+(define (describe-gir/type typeinfo)
+  (let ([typetag (g_type_info_get_tag typeinfo)])
+    (define typestring (if (eq? 'GI_TYPE_TAG_INTERFACE typetag)
+                           (g_base_info_get_name (g_type_info_get_interface typeinfo))
+                           (g_type_tag_to_string typetag)))
+    (string-append typestring (if (g_type_info_is_pointer typeinfo) "*" ""))))
+
+
+(define (type-info->ctype info)
+  (let ([type-tag (g_type_info_get_tag info)])
+    (case type-tag
+      ['GI_TYPE_TAG_VOID _void]
+      ['GI_TYPE_TAG_BOOLEAN _bool]
+      ['GI_TYPE_TAG_INT8 _int8]
+      ['GI_TYPE_TAG_UINT8 _uint8]
+      ['GI_TYPE_TAG_INT16 _int16]
+      ['GI_TYPE_TAG_UINT16 _uint16]
+      ['GI_TYPE_TAG_INT32 _int32]
+      ['GI_TYPE_TAG_UINT32 _uint32]
+      ['GI_TYPE_TAG_INT64 _int64]
+      ['GI_TYPE_TAG_UINT64 _uint64]
+      ['GI_TYPE_TAG_FLOAT _float]
+      ['GI_TYPE_TAG_DOUBLE _double]
+      [(GI_TYPE_TAG_UTF8 GI_TYPE_TAG_FILENAME) _string]
+      ;; ['GI_TYPE_TAG_GTYPE]
+      ;; ['GI_TYPE_TAG_ARRAY]
+      ['GI_TYPE_TAG_INTERFACE _pointer]
+      ;; ['GI_TYPE_TAG_GLIST]
+      ;; ['GI_TYPE_TAG_GSLIST]
+      ;; ['GI_TYPE_TAG_GHASH]
+      ['GI_TYPE_TAG_ERROR _gerror-pointer]
+      ;; ['GI_TYPE_TAG_UNICHAR]
+      [else _pointer])))
+
+(define (ctype->value->gi-argument ctype)
+  (let* ([giarg-ptr (malloc _gi-argument)]
+         [union-val (ptr-ref giarg-ptr _gi-argument)]
+         [index (or (index-of gi-argument-type-list ctype)
+                    (sub1 (length gi-argument-type-list)))])
+    (lambda (value)
+      (union-set! union-val index value)
+      union-val)))
+
+(define (gi-arg->value-of-type giarg typeinfo)
+  (let* ([ctype (type-info->ctype typeinfo)]
+         [value (union-ref giarg (or (index-of gi-argument-type-list ctype)
+                                                (sub1 (length gi-argument-type-list))))])
+    (when (cpointer? value)
+      (cpointer-push-tag! value (g_base_info_get_name (g_type_info_get_interface typeinfo))))
+    (if (eq? ctype _void)
+        (void value)
+        value)))
+
 
 ;;; Functions & Callables
 (define-gir g_callable_info_get_n_args (_fun _gi-base-info -> _int))
@@ -130,8 +187,8 @@
 (define (make-gir/argument arginfo value)
   (define arg-ctype ((compose1 type-info->ctype g_arg_info_get_type) arginfo))
   (gir/argument ((ctype->value->gi-argument arg-ctype) value)
-            arg-ctype
-            (g_arg_info_get_direction arginfo)))
+                arg-ctype
+                (g_arg_info_get_direction arginfo)))
 
 (define (gir/argument-direction? dir)
   (lambda (argument)
@@ -152,7 +209,7 @@
   (lambda (fn . arguments)
     (let* ([funinfo (gir/function-info fn)]
            [arginfos (gir/function-args fn)]
-           [return-type (type-info->ctype (gir/function-returns fn))])
+           [return-type (gir/function-returns fn)])
       (when (not (eqv? (length arguments) (length arginfos)))
         (apply raise-arity-error fn (length arginfos) arguments))
       (define args (map make-gir/argument arginfos arguments))
@@ -173,14 +230,12 @@
          [arginfos (gir/function-args fn)]
          [returninfo (gir/function-returns fn)]
          [args (map (lambda (arg)
-                      (let ([argtype ((compose1 g_type_tag_to_string
-                                                g_type_info_get_tag
+                      (let ([argtype ((compose1 describe-gir/type
                                                 g_arg_info_get_type) arg)]
                             [argname (g_base_info_get_name arg)])
                         (format "~a ~a" argtype argname)))
                     arginfos)]
-         [return-type ((compose1 g_type_tag_to_string g_type_info_get_tag)
-                       returninfo)])
+         [return-type (describe-gir/type returninfo)])
     (format "~a (~a) → ~a" (g_base_info_get_name funinfo) (string-join args ", ") return-type)))
 
 
@@ -220,13 +275,14 @@
            [fields (gir/struct-fields structure)]
            [methods (gir/struct-methods structure)])
       (hash 'fields (map g_base_info_get_name fields)
-            'methods (map (compose1 describe-gir/function make-gir/function) methods)))))
+            'methods (map describe-gir/function methods)))))
 
 (define (make-gir/struct info)
   (let ([fields (build-list (g_struct_info_get_n_fields info)
                             (curry g_struct_info_get_field info))]
         [methods (build-list (g_struct_info_get_n_methods info)
-                             (curry g_struct_info_get_method info))])
+                             (compose1 make-gir/function
+                                       (curry g_struct_info_get_method info)))])
     (gir/struct info fields methods)))
 
 
@@ -269,46 +325,6 @@
     (case info-type
       ['GI_INFO_TYPE_FUNCTION (make-gir/function info)]
       ['GI_INFO_TYPE_STRUCT (make-gir/struct info)]
-      ['GI_INFO_TYPE_OBJECT (gir/object info)]
+      ;; ['GI_INFO_TYPE_OBJECT (gir/object info)]
       ['GI_INFO_TYPE_CONSTANT (gir/constant info)]
       [else (cons info-type (info-name))])))
-
-(define (type-info->ctype info)
-  (let ([type-tag (g_type_info_get_tag info)])
-    (case type-tag
-      ['GI_TYPE_TAG_VOID _void]
-      ['GI_TYPE_TAG_BOOLEAN _bool]
-      ['GI_TYPE_TAG_INT8 _int8]
-      ['GI_TYPE_TAG_UINT8 _uint8]
-      ['GI_TYPE_TAG_INT16 _int16]
-      ['GI_TYPE_TAG_UINT16 _uint16]
-      ['GI_TYPE_TAG_INT32 _int32]
-      ['GI_TYPE_TAG_UINT32 _uint32]
-      ['GI_TYPE_TAG_INT64 _int64]
-      ['GI_TYPE_TAG_UINT64 _uint64]
-      ['GI_TYPE_TAG_FLOAT _float]
-      ['GI_TYPE_TAG_DOUBLE _double]
-      [(GI_TYPE_TAG_UTF8 GI_TYPE_TAG_FILENAME) _string]
-      ;; ['GI_TYPE_TAG_GTYPE]
-      ;; ['GI_TYPE_TAG_ARRAY]
-      ;; ['GI_TYPE_TAG_INTERFACE]
-      ;; ['GI_TYPE_TAG_GLIST]
-      ;; ['GI_TYPE_TAG_GSLIST]
-      ;; ['GI_TYPE_TAG_GHASH]
-      ['GI_TYPE_TAG_ERROR _gerror-pointer]
-      ;; ['GI_TYPE_TAG_UNICHAR]
-      [else _pointer])))
-
-(define (ctype->value->gi-argument ctype)
-  (let* ([giarg-ptr (malloc _gi-argument)]
-         [union-val (ptr-ref giarg-ptr _gi-argument)]
-         [index (or (index-of gi-argument-type-list ctype)
-                    (sub1 (length gi-argument-type-list)))])
-    (lambda (value)
-      (union-set! union-val index value)
-      union-val)))
-
-(define (gi-arg->value-of-type giarg ctype)
-  (let ([value (union-ref giarg (or (index-of gi-argument-type-list ctype)
-                                    (sub1 (length gi-argument-type-list))))])
-    (if (eq? ctype _void) (void value) value)))
