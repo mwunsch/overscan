@@ -112,17 +112,37 @@
 
 (define-gir g_info_type_to_string (_fun _gi-info-type -> _string))
 
-(define (describe-gir/type typeinfo)
-  (let ([typetag (g_type_info_get_tag typeinfo)])
+(struct gi-type (info)
+  #:property prop:procedure
+  (lambda (type gi-arg)
+    (let* ([ctype (gi-type->ctype type)]
+           [value (union-ref gi-arg (or (index-of gi-argument-type-list ctype)
+                                        (sub1 (length gi-argument-type-list))))])
+      (when (cpointer? value)
+        (cpointer-push-tag! value
+                            ((compose1 g_base_info_get_name
+                                       g_type_info_get_interface) type)))
+      (if (eq? ctype _void)
+          (void value)
+          value)))
+  #:property prop:cpointer 0)
+
+(define (gi-type-tag type)
+  (g_type_info_get_tag type))
+
+(define (gi-type-pointer? type)
+  (g_type_info_is_pointer type))
+
+(define (describe-gi-type type)
+  (let ([typetag (gi-type-tag type)])
     (define typestring (if (eq? 'GI_TYPE_TAG_INTERFACE typetag)
-                           (g_base_info_get_name (g_type_info_get_interface typeinfo))
+                           (g_base_info_get_name (g_type_info_get_interface type))
                            (g_type_tag_to_string typetag)))
-    (string-append typestring (if (g_type_info_is_pointer typeinfo) "*" ""))))
+    (string-append typestring (if (gi-type-pointer? type) "*" ""))))
 
-
-(define (type-info->ctype info)
-  (let ([type-tag (g_type_info_get_tag info)])
-    (case type-tag
+(define (gi-type->ctype type)
+  (let ([typetag (gi-type-tag type)])
+    (case typetag
       ['GI_TYPE_TAG_VOID _void]
       ['GI_TYPE_TAG_BOOLEAN _bool]
       ['GI_TYPE_TAG_INT8 _int8]
@@ -146,24 +166,13 @@
       ;; ['GI_TYPE_TAG_UNICHAR]
       [else _pointer])))
 
-(define (ctype->value->gi-argument ctype)
-  (let* ([giarg-ptr (malloc _gi-argument)]
-         [union-val (ptr-ref giarg-ptr _gi-argument)]
+(define (ctype->_gi-argument ctype value)
+  (let* ([gi-argument-pointer (malloc _gi-argument)]
+         [union-val (ptr-ref gi-argument-pointer _gi-argument)]
          [index (or (index-of gi-argument-type-list ctype)
                     (sub1 (length gi-argument-type-list)))])
-    (lambda (value)
-      (union-set! union-val index value)
-      union-val)))
-
-(define (gi-arg->value-of-type giarg typeinfo)
-  (let* ([ctype (type-info->ctype typeinfo)]
-         [value (union-ref giarg (or (index-of gi-argument-type-list ctype)
-                                                (sub1 (length gi-argument-type-list))))])
-    (when (cpointer? value)
-      (cpointer-push-tag! value (g_base_info_get_name (g_type_info_get_interface typeinfo))))
-    (if (eq? ctype _void)
-        (void value)
-        value)))
+    (union-set! union-val index value)
+    union-val))
 
 
 ;;; Functions & Callables
@@ -184,17 +193,31 @@
 
 (define-gir g_arg_info_get_direction (_fun _gi-base-info -> _gi-direction))
 
-(struct gir/argument (value type direction))
+(struct gi-arg (info)
+  #:property prop:procedure
+  (lambda (arg value)
+    (gi-arg->_gi-argument arg value))
+  #:property prop:cpointer 0)
 
-(define (make-gir/argument arginfo value)
-  (define arg-ctype ((compose1 type-info->ctype g_arg_info_get_type) arginfo))
-  (gir/argument ((ctype->value->gi-argument arg-ctype) value)
-                arg-ctype
-                (g_arg_info_get_direction arginfo)))
+(define (gi-arg-type arg)
+  (gi-type (g_arg_info_get_type arg)))
 
-(define (gir/argument-direction? dir)
-  (lambda (argument)
-    (memq (gir/argument-direction argument) dir)))
+(define (gi-arg-direction arg)
+  (g_arg_info_get_direction arg))
+
+(define (gi-arg-direction? arg dir)
+  (memq (gi-arg-direction arg) dir))
+
+(define (gi-arg->_gi-argument arg value)
+  (let* ([ctype ((compose1 gi-type->ctype gi-arg-type) arg)])
+    (ctype->_gi-argument ctype value)))
+
+(define (describe-gi-arg arg)
+  (let ([argtype (gi-arg-type arg)]
+        [argname (g_base_info_get_name arg)])
+    (format "~a ~a"
+            (describe-gi-type argtype)
+            argname)))
 
 (define-gir g_function_info_get_flags (_fun _gi-base-info -> _gi-function-info-flags))
 
@@ -206,60 +229,82 @@
                                          -> (invoked : _bool)
                                          -> (if invoked r (error (gerror-message err)))))
 
-(struct gir/function (info args returns)
+(struct gi-function (info)
   #:property prop:procedure
   (lambda (fn . arguments)
-    (let* ([funinfo (gir/function-info fn)]
-           [arginfos (gir/function-args fn)]
-           [return-type (gir/function-returns fn)]
-           [method? (g_callable_info_is_method funinfo)]
-           [n-args (if method? (add1 (length arginfos)) (length arginfos))])
-      (when (not (eqv? (length arguments) n-args))
-        (apply raise-arity-error fn n-args arguments))
-      (define args (map make-gir/argument arginfos (if (and method? (pair? arguments)) (cdr arguments) arguments)))
-      (define-values (args-in args-out)
-        (values (map gir/argument-value (filter (gir/argument-direction? '(i io)) args))
-                (map gir/argument-value (filter (gir/argument-direction? '(o io)) args))))
-      (let* ([args-in (if method?
-                          (cons ((ctype->value->gi-argument _pointer) (car arguments)) args-in)
-                          args-in)]
-             [invocation (g_function_info_invoke funinfo args-in args-out)])
-        (gi-arg->value-of-type invocation return-type))))
+    (let ([args (gi-function-args fn)]
+          [returns (gi-function-returns fn)]
+          [method? (gi-function-method? fn)]
+          [arity (gi-function-arity fn)])
+      (unless (eqv? (length arguments) arity)
+        (apply raise-arity-error fn arity arguments))
+      (define arguments-without-self
+        (if (and method? (pair? arguments))
+            (cdr arguments)
+            arguments))
+      (define _gi-args-direction-pairs
+        (map (lambda (arg value) (cons (arg value) (gi-arg-direction arg)))
+             args
+             arguments-without-self))
+      (define-values (in-args-without-self out-args)
+        (values (filter-map (lambda (pair) (and (memq (cdr pair) '(i io))
+                                           (car pair))) _gi-args-direction-pairs)
+                (filter-map (lambda (pair) (and (memq (cdr pair) '(o io))
+                                           (car pair))) _gi-args-direction-pairs)))
+      (define in-args
+        (if method?
+            (cons (ctype->_gi-argument _pointer (car arguments)) in-args-without-self)
+            in-args-without-self))
+      (returns (g_function_info_invoke fn in-args out-args))))
   #:property prop:cpointer 0)
 
-(define (make-gir/function fninfo)
-  (let ([args (build-list (g_callable_info_get_n_args fninfo)
-                          (curry g_callable_info_get_arg fninfo))]
-        [returns (g_callable_info_get_return_type fninfo)])
-    (gir/function fninfo args returns)))
+(define (gi-function-method? fn)
+  (g_callable_info_is_method fn))
 
-(define (describe-gir/function fn)
-  (let* ([funinfo (gir/function-info fn)]
-         [arginfos (gir/function-args fn)]
-         [returninfo (gir/function-returns fn)]
-         [args (map (lambda (arg)
-                      (let ([argtype ((compose1 describe-gir/type
-                                                g_arg_info_get_type) arg)]
-                            [argname (g_base_info_get_name arg)])
-                        (format "~a ~a" argtype argname)))
-                    arginfos)]
-         [return-type (describe-gir/type returninfo)])
-    (format "~a (~a) → ~a" (g_base_info_get_name funinfo) (string-join args ", ") return-type)))
+(define (gi-function-args fn)
+  (build-list (g_callable_info_get_n_args fn)
+              (compose1 gi-arg (curry g_callable_info_get_arg fn))))
+
+(define (gi-function-arity fn)
+  (let ([args (gi-function-args fn)])
+    (if (gi-function-method? fn)
+        (add1 (length args))
+        (length args))))
+
+(define (gi-function-returns fn)
+  (gi-type (g_callable_info_get_return_type fn)))
+
+(define (describe-gi-function fn)
+  (let ([name (g_base_info_get_name fn)]
+        [args (map describe-gi-arg (gi-function-args fn))]
+        [returns (describe-gi-type (gi-function-returns fn))])
+    (format "~a (~a) → ~a" name (string-join args ", ") returns)))
 
 
 ;;; Constants
-(define-gir g_constant_info_get_type (_fun _gi-base-info -> _gi-base-info))
+(define-gir g_constant_info_get_type (_fun _gi-base-info -> _gi-base-info)
+  #:wrap (allocator g_base_info_unref))
 
 (define-gir g_constant_info_get_value (_fun _gi-base-info
                                             [r : (_ptr o _gi-argument)]
                                             -> (size : _int)
                                             -> r))
 
-(define (gir/constant info)
-  (let ([ctype ((compose1 type-info->ctype
-                          g_constant_info_get_type) info)]
-        [value (g_constant_info_get_value info)])
-    (gi-arg->value-of-type value ctype)))
+(struct gi-constant (info)
+  #:property prop:procedure
+  (lambda (constant)
+    (gi-constant-value constant))
+  #:property prop:cpointer 0)
+
+(define (gi-constant-type constant)
+  (gi-type (g_constant_info_get_type constant)))
+
+(define (gi-constant-value constant)
+  (let ([type (gi-constant-type constant)])
+    (type (g_constant_info_get_value constant))))
+
+(define (describe-gi-constant constant)
+  (g_base_info_get_name constant))
 
 
 ;;; Structs
@@ -276,34 +321,32 @@
 (define-gir g_struct_info_find_method (_fun _gi-base-info _string -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
 
-(struct gir/struct (info fields methods)
+(struct gi-struct (info)
   #:property prop:procedure
   (lambda (structure pointer)
-    (let* ([structinfo (gir/struct-info structure)]
-           [fields (gir/struct-fields structure)]
-           [methods (gir/struct-methods structure)])
-      ;; TODO: make-struct-type here
-      (lambda (name . args)
-        (let ([method (g_struct_info_find_method pointer (symbol->string name))])
-          (if method
-              (apply (make-gir/function method) pointer args)
-              #f)))))
+    (lambda (name)
+      (let ([method (gi-struct-find-method structure name)])
+        (curry method pointer))))
   #:property prop:cpointer 0)
 
-(define (make-gir/struct info)
-  (let ([fields (build-list (g_struct_info_get_n_fields info)
-                            (curry g_struct_info_get_field info))]
-        [methods (build-list (g_struct_info_get_n_methods info)
-                             (compose1 make-gir/function
-                                       (curry g_struct_info_get_method info)))])
-    (gir/struct info fields methods)))
+(define (gi-struct-fields structure)
+  (build-list (g_struct_info_get_n_fields structure)
+              (curry g_struct_info_get_field structure)))
 
-(define (describe-gir/struct strct)
-  (let* ([structinfo (gir/struct-info strct)]
-         [fields (gir/struct-fields strct)]
-         [methodinfos (gir/struct-methods strct)])
-    (hash 'fields (map g_base_info_get_name fields)
-          'methods (map describe-gir/function methodinfos))))
+(define (gi-struct-methods structure)
+  (build-list (g_struct_info_get_n_methods structure)
+              (compose1 gi-function
+                        (curry g_struct_info_get_method structure))))
+
+(define (gi-struct-find-method structure method)
+  (let ([found-method (g_struct_info_find_method structure method)])
+    (if found-method
+        (gi-function found-method)
+        (raise-argument-error 'gi-struct-find-method "struct-method?" method))))
+
+(define (describe-gi-struct structure)
+  (hash 'fields (map g_base_info_get_name (gi-struct-fields structure))
+        'methods (map describe-gi-function (gi-struct-methods structure))))
 
 
 ;;; Objects
@@ -313,15 +356,15 @@
 (define-gir g_object_info_get_class_struct (_fun _gi-base-info -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
 
-(struct gir/object (info fields methods properties signals))
+;; (struct gir/object (info fields methods properties signals))
 
-(define (make-gir/object info)
-  (letrec ([hierarchy (lambda (infos)
-                        (define parentinfo (g_object_info_get_parent (car infos)))
-                        (if parentinfo
-                            (hierarchy (cons parentinfo infos))
-                            infos))])
-    (make-gir/struct (g_object_info_get_class_struct info))))
+;; (define (make-gir/object info)
+;;   (letrec ([hierarchy (lambda (infos)
+;;                         (define parentinfo (g_object_info_get_parent (car infos)))
+;;                         (if parentinfo
+;;                             (hierarchy (cons parentinfo infos))
+;;                             infos))])
+;;     (make-gir/struct (g_object_info_get_class_struct info))))
 
 
 ;;; Introspection
@@ -343,8 +386,8 @@
   (let ([info-type (g_base_info_get_type info)]
         [info-name (string->symbol (g_base_info_get_name info))])
     (case info-type
-      ['GI_INFO_TYPE_FUNCTION (make-gir/function info)]
-      ['GI_INFO_TYPE_STRUCT (make-gir/struct info)]
+      ['GI_INFO_TYPE_FUNCTION (gi-function info)]
+      ['GI_INFO_TYPE_STRUCT (gi-struct info)]
       ;; ['GI_INFO_TYPE_OBJECT (gir/object info)]
-      ['GI_INFO_TYPE_CONSTANT (gir/constant info)]
+      ['GI_INFO_TYPE_CONSTANT (gi-constant info)]
       [else (cons info-type (info-name))])))
