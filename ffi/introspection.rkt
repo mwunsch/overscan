@@ -285,10 +285,14 @@
 (define-gir g_constant_info_get_type (_fun _gi-base-info -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
 
+(define-gir g_constant_info_free_value (_fun _gi-base-info (_ptr i _gi-argument) -> _void)
+  #:wrap (deallocator cadr))
+
 (define-gir g_constant_info_get_value (_fun _gi-base-info
                                             [r : (_ptr o _gi-argument)]
                                             -> (size : _int)
-                                            -> r))
+                                            -> r)
+  #:wrap (allocator g_constant_info_free_value))
 
 (struct gi-constant (info)
   #:property prop:procedure
@@ -313,6 +317,20 @@
 (define-gir g_struct_info_get_field (_fun _gi-base-info _int -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
 
+(define-gir g_field_info_get_type (_fun _gi-base-info -> _gi-base-info)
+  #:wrap (allocator g_base_info_unref))
+
+(struct gi-field (info)
+  #:property prop:cpointer 0)
+
+(define (gi-field-type field)
+  (gi-type (g_field_info_get_type field)))
+
+(define (describe-gi-field field)
+  (format "~a ~a"
+          (describe-gi-type (gi-field-type field))
+          (g_base_info_get_name field)))
+
 (define-gir g_struct_info_get_n_methods (_fun _gi-base-info -> _int))
 
 (define-gir g_struct_info_get_method (_fun _gi-base-info _int -> _gi-base-info)
@@ -331,7 +349,8 @@
 
 (define (gi-struct-fields structure)
   (build-list (g_struct_info_get_n_fields structure)
-              (curry g_struct_info_get_field structure)))
+              (compose1 gi-field
+                        (curry g_struct_info_get_field structure))))
 
 (define (gi-struct-methods structure)
   (build-list (g_struct_info_get_n_methods structure)
@@ -345,8 +364,11 @@
         (raise-argument-error 'gi-struct-find-method "struct-method?" method))))
 
 (define (describe-gi-struct structure)
-  (hash 'fields (map g_base_info_get_name (gi-struct-fields structure))
-        'methods (map describe-gi-function (gi-struct-methods structure))))
+  (define fields (string-join (map describe-gi-field (gi-struct-fields structure))
+                              "\n  "))
+  (define methods (string-join (map describe-gi-function (gi-struct-methods structure))
+                               "\n  "))
+  (format "struct ~a {~n  ~a ~n~n  ~a ~n}" (g_base_info_get_name structure) fields methods))
 
 
 ;;; Objects
