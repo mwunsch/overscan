@@ -11,8 +11,6 @@
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
 
 ;;; CTypes
-(define _gi-base-info (_cpointer/null 'GIBaseInfo))
-
 (define _gi-info-type (_enum '(GI_INFO_TYPE_INVALID
                                GI_INFO_TYPE_FUNCTION
                                GI_INFO_TYPE_CALLBACK
@@ -77,17 +75,19 @@
 
 
 ;;; BaseInfo
-(define-gir g_base_info_get_namespace (_fun _gi-base-info -> _symbol))
+(struct gi-base (info)
+  #:property prop:cpointer 0)
 
-(define-gir g_base_info_get_name (_fun _gi-base-info -> _symbol))
+(define _gi-base-info (_cpointer/null 'GIBaseInfo _pointer values gi-base))
+
+(define-gir g_base_info_get_namespace (_fun _gi-base-info -> _string))
+
+(define-gir g_base_info_get_name (_fun _gi-base-info -> _string))
 
 (define-gir g_base_info_get_type (_fun _gi-base-info -> _gi-info-type))
 
 (define-gir g_base_info_unref (_fun _gi-base-info -> _void)
   #:wrap (deallocator))
-
-(struct gi-base (info)
-  #:property prop:cpointer 0)
 
 (define (gi-base-type base)
   (g_base_info_get_type base))
@@ -124,13 +124,8 @@
 (struct gi-type gi-base ()
   #:property prop:procedure
   (lambda (type gi-arg)
-    (let* ([ctype (gi-type->ctype type)]
-           [value (union-ref gi-arg (or (index-of gi-argument-type-list ctype)
-                                        (sub1 (length gi-argument-type-list))))])
-      (cond
-        [(eq? ctype _void) (void value)]
-        [(cpointer? value) (cast value _pointer ctype)]
-        [else value]))))
+    (let* ([ctype (gi-type->ctype type)])
+      (_gi-argument->ctype gi-arg ctype))))
 
 (define (gi-type-tag type)
   (g_type_info_get_tag type))
@@ -144,7 +139,7 @@
 (define (describe-gi-type type)
   (let ([typetag (gi-type-tag type)])
     (define typestring (if (eq? 'GI_TYPE_TAG_INTERFACE typetag)
-                           (g_base_info_get_name (g_type_info_get_interface type))
+                           (gi-base-name (gi-type-interface type))
                            (g_type_tag_to_string typetag)))
     (string-append typestring (if (gi-type-pointer? type) "*" ""))))
 
@@ -185,6 +180,14 @@
     (union-set! union-val index value)
     union-val))
 
+(define (_gi-argument->ctype gi-arg ctype)
+  (let* ([value (union-ref gi-arg (or (index-of gi-argument-type-list ctype)
+                                      (sub1 (length gi-argument-type-list))))])
+    (cond
+      [(eq? ctype _void) (void value)]
+      [(cpointer? value) (cast value _pointer ctype)]
+      [else value])))
+
 
 ;;; Functions & Callables
 (define-gir g_callable_info_get_n_args (_fun _gi-base-info -> _int))
@@ -204,11 +207,10 @@
 
 (define-gir g_arg_info_get_direction (_fun _gi-base-info -> _gi-direction))
 
-(struct gi-arg (info)
+(struct gi-arg gi-base ()
   #:property prop:procedure
   (lambda (arg value)
-    (gi-arg->_gi-argument arg value))
-  #:property prop:cpointer 0)
+    (gi-arg->_gi-argument arg value)))
 
 (define (gi-arg-type arg)
   (gi-type (g_arg_info_get_type arg)))
@@ -225,7 +227,7 @@
 
 (define (describe-gi-arg arg)
   (let ([argtype (gi-arg-type arg)]
-        [argname (g_base_info_get_name arg)])
+        [argname (gi-base-name arg)])
     (format "~a ~a"
             (describe-gi-type argtype)
             argname)))
@@ -240,7 +242,7 @@
                                          -> (invoked : _bool)
                                          -> (if invoked r (error (gerror-message err)))))
 
-(struct gi-function (info)
+(struct gi-function gi-base ()
   #:property prop:procedure
   (lambda (fn . arguments)
     (let ([args (gi-function-args fn)]
@@ -266,8 +268,7 @@
         (if method?
             (cons (ctype->_gi-argument _pointer (car arguments)) in-args-without-self)
             in-args-without-self))
-      (returns (g_function_info_invoke fn in-args out-args))))
-  #:property prop:cpointer 0)
+      (returns (g_function_info_invoke fn in-args out-args)))))
 
 (define (gi-function-method? fn)
   (g_callable_info_is_method fn))
@@ -286,7 +287,7 @@
   (gi-type (g_callable_info_get_return_type fn)))
 
 (define (describe-gi-function fn)
-  (let ([name (g_base_info_get_name fn)]
+  (let ([name (gi-base-name fn)]
         [args (map describe-gi-arg (gi-function-args fn))]
         [returns (describe-gi-type (gi-function-returns fn))])
     (format "~a (~a) → ~a" name (string-join args ", ") returns)))
@@ -305,11 +306,10 @@
                                             -> r)
   #:wrap (allocator g_constant_info_free_value))
 
-(struct gi-constant (info)
+(struct gi-constant gi-base ()
   #:property prop:procedure
   (lambda (constant)
-    (gi-constant-value constant))
-  #:property prop:cpointer 0)
+    (gi-constant-value constant)))
 
 (define (gi-constant-type constant)
   (gi-type (g_constant_info_get_type constant)))
@@ -319,7 +319,7 @@
     (type (g_constant_info_get_value constant))))
 
 (define (describe-gi-constant constant)
-  (g_base_info_get_name constant))
+  (gi-base-name constant))
 
 
 ;;; Structs
@@ -331,8 +331,7 @@
 (define-gir g_field_info_get_type (_fun _gi-base-info -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
 
-(struct gi-field (info)
-  #:property prop:cpointer 0)
+(struct gi-field gi-base ())
 
 (define (gi-field-type field)
   (gi-type (g_field_info_get_type field)))
@@ -340,7 +339,7 @@
 (define (describe-gi-field field)
   (format "~a ~a"
           (describe-gi-type (gi-field-type field))
-          (g_base_info_get_name field)))
+          (gi-base-name field)))
 
 (define-gir g_struct_info_get_n_methods (_fun _gi-base-info -> _int))
 
@@ -350,13 +349,12 @@
 (define-gir g_struct_info_find_method (_fun _gi-base-info _symbol -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
 
-(struct gi-struct (info)
+(struct gi-struct gi-base ()
   #:property prop:procedure
   (lambda (structure pointer)
     (lambda (name)
       (let ([method (gi-struct-find-method structure name)])
-        (curry method pointer))))
-  #:property prop:cpointer 0)
+        (curry method pointer)))))
 
 (define (gi-struct-fields structure)
   (build-list (g_struct_info_get_n_fields structure)
@@ -374,16 +372,22 @@
         (gi-function found-method)
         (raise-argument-error 'gi-struct-find-method "struct-method?" method))))
 
+(define (make-gi-struct-type structure)
+  (let ([name (string->symbol (gi-base-name structure))]
+        [field-cnt (g_struct_info_get_n_fields structure)])
+    (make-struct-type name #f field-cnt 0)))
+
 (define (gi-struct->ctype structure)
-  (let ([name (string->symbol (g_base_info_get_name structure))])
-    (_cpointer name)))
+  ;; TODO: This should be a _cpointer that uses `make-gi-struct-type`
+  ;; to wrap its value
+  (apply _list-struct (map (compose1 gi-type->ctype gi-field-type) (gi-struct-fields structure))))
 
 (define (describe-gi-struct structure)
   (define fields (string-join (map describe-gi-field (gi-struct-fields structure))
                               "\n  "))
   (define methods (string-join (map describe-gi-function (gi-struct-methods structure))
                                "\n  "))
-  (format "struct ~a {~n  ~a ~n~n  ~a ~n}" (g_base_info_get_name structure) fields methods))
+  (format "struct ~a {~n  ~a ~n~n  ~a ~n}" (gi-base-name structure) fields methods))
 
 
 ;;; Objects
@@ -409,7 +413,7 @@
   (g_irepository_require namespace #f 0)
   (for/list ([i (in-range (g_irepository_get_n_infos namespace))])
     (let ([_info (g_irepository_get_info namespace i)])
-      (cons (g_base_info_get_type _info) (g_base_info_get_name _info)))))
+      (cons (gi-base-type _info) (gi-base-name _info)))))
 
 (define (introspection namespace)
   (g_irepository_require namespace #f 0)
@@ -419,8 +423,8 @@
       (gi-binding info))))
 
 (define (gi-binding info)
-  (let ([info-type (g_base_info_get_type info)]
-        [info-name (g_base_info_get_name info)])
+  (let ([info-type (gi-base-type info)]
+        [info-name (gi-base-name info)])
     (case info-type
       ['GI_INFO_TYPE_FUNCTION (gi-function info)]
       ['GI_INFO_TYPE_STRUCT (gi-struct info)]
