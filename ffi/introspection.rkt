@@ -86,6 +86,15 @@
 (define-gir g_base_info_unref (_fun _gi-base-info -> _void)
   #:wrap (deallocator))
 
+(struct gi-base (info)
+  #:property prop:cpointer 0)
+
+(define (gi-base-type base)
+  (g_base_info_get_type base))
+
+(define (gi-base-name base)
+  (g_base_info_get_name base))
+
 ;;; Repositories
 (define-gir g_irepository_require (_fun (_pointer = #f) _string _string _int (err : (_ptr io _gerror-pointer/null) = #f)
                                         -> (r : _pointer)
@@ -112,26 +121,25 @@
 
 (define-gir g_info_type_to_string (_fun _gi-info-type -> _string))
 
-(struct gi-type (info)
+(struct gi-type gi-base ()
   #:property prop:procedure
   (lambda (type gi-arg)
     (let* ([ctype (gi-type->ctype type)]
            [value (union-ref gi-arg (or (index-of gi-argument-type-list ctype)
                                         (sub1 (length gi-argument-type-list))))])
-      (when (cpointer? value)
-        (cpointer-push-tag! value
-                            ((compose1 g_base_info_get_name
-                                       g_type_info_get_interface) type)))
-      (if (eq? ctype _void)
-          (void value)
-          value)))
-  #:property prop:cpointer 0)
+      (cond
+        [(eq? ctype _void) (void value)]
+        [(cpointer? value) (cast value _pointer ctype)]
+        [else value]))))
 
 (define (gi-type-tag type)
   (g_type_info_get_tag type))
 
 (define (gi-type-pointer? type)
   (g_type_info_is_pointer type))
+
+(define (gi-type-interface type)
+  (g_type_info_get_interface type))
 
 (define (describe-gi-type type)
   (let ([typetag (gi-type-tag type)])
@@ -158,7 +166,10 @@
       [(GI_TYPE_TAG_UTF8 GI_TYPE_TAG_FILENAME) _string]
       ;; ['GI_TYPE_TAG_GTYPE]
       ;; ['GI_TYPE_TAG_ARRAY]
-      ['GI_TYPE_TAG_INTERFACE _pointer]
+      ['GI_TYPE_TAG_INTERFACE (let ([type-interface (gi-type-interface type)])
+                                (case (gi-base-type type-interface)
+                                  ['GI_INFO_TYPE_STRUCT (gi-struct->ctype type-interface)]
+                                  [else _pointer]))]
       ;; ['GI_TYPE_TAG_GLIST]
       ;; ['GI_TYPE_TAG_GSLIST]
       ;; ['GI_TYPE_TAG_GHASH]
@@ -362,6 +373,10 @@
     (if found-method
         (gi-function found-method)
         (raise-argument-error 'gi-struct-find-method "struct-method?" method))))
+
+(define (gi-struct->ctype structure)
+  (let ([name (string->symbol (g_base_info_get_name structure))])
+    (_cpointer name)))
 
 (define (describe-gi-struct structure)
   (define fields (string-join (map describe-gi-field (gi-struct-fields structure))
