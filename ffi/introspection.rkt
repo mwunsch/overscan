@@ -57,12 +57,12 @@
                               GI_TYPE_TAG_ERROR
                               GI_TYPE_TAG_UNICHAR)))
 
-(define _gi-function-info-flags (_bitmask '(GI_FUNCTION_IS_METHOD
-                                            GI_FUNCTION_IS_CONSTRUCTOR
-                                            GI_FUNCTION_IS_GETTER
-                                            GI_FUNCTION_IS_SETTER
-                                            GI_FUNCTION_WRAPS_VFUNC
-                                            GI_FUNCTION_THROWS)))
+(define _gi-function-info-flags (_bitmask '(method?
+                                            constructor?
+                                            getter?
+                                            setter?
+                                            wraps?
+                                            throws?)))
 
 (define gi-argument-type-list (list _bool _int8 _uint8 _int16 _uint16 _int32 _uint32
                                     _int64 _uint64 _float _double
