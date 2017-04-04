@@ -78,8 +78,19 @@
 (struct gi-base (info)
   #:property prop:cpointer 0)
 
-(define _gi-base-info (_cpointer/null 'GIBaseInfo _pointer values gi-base))
+(define (make-gi-base info-pointer)
+  (let* ([base (gi-base info-pointer)]
+         [type (gi-base-type base)])
+    (case type
+      ['GI_INFO_TYPE_FUNCTION (gi-function base)]
+      ['GI_INFO_TYPE_STRUCT (gi-struct base)]
+      ['GI_INFO_TYPE_CONSTANT (gi-constant base)]
+      ['GI_INFO_TYPE_FIELD (gi-field base)]
+      ['GI_INFO_TYPE_ARG (gi-arg base)]
+      ['GI_INFO_TYPE_TYPE (gi-type base)]
+      [else base])))
 
+(define _gi-base-info (_cpointer/null 'GIBaseInfo _pointer values make-gi-base))
 (define-gir gi-base-namespace (_fun _gi-base-info -> _string)
   #:c-id g_base_info_get_namespace)
 
@@ -194,8 +205,7 @@
   #:c-id g_callable_info_get_n_args)
 
 (define-gir gi-callable-arg (_fun _gi-base-info _int
-                                  -> (res : _gi-base-info)
-                                  -> (gi-arg res))
+                                  -> _gi-base-info)
   #:c-id g_callable_info_get_arg
   #:wrap (allocator g_base_info_unref))
 
@@ -207,8 +217,7 @@
   #:c-id g_callable_info_can_throw_gerror)
 
 (define-gir gi-callable-returns (_fun _gi-base-info
-                                      -> (res : _gi-base-info)
-                                      -> (gi-type res))
+                                      -> _gi-base-info)
   #:c-id g_callable_info_get_return_type
   #:wrap (allocator g_base_info_unref))
 
@@ -227,8 +236,7 @@
     (gi-arg->_gi-argument arg value)))
 
 (define-gir gi-arg-type (_fun _gi-base-info
-                              -> (res : _gi-base-info)
-                              -> (gi-type res))
+                              -> _gi-base-info)
   #:c-id g_arg_info_get_type
   #:wrap (allocator g_base_info_unref))
 
@@ -303,8 +311,7 @@
     (gi-constant-value constant)))
 
 (define-gir gi-constant-type (_fun _gi-base-info
-                                   -> (res : _gi-base-info)
-                                   -> (gi-type res))
+                                   -> _gi-base-info)
   #:c-id g_constant_info_get_type
   #:wrap (allocator g_base_info_unref))
 
@@ -347,8 +354,7 @@
   #:c-id g_struct_info_get_n_fields)
 
 (define-gir gi-struct-field (_fun _gi-base-info _int
-                                  -> (res : _gi-base-info)
-                                  -> (gi-field res))
+                                  -> _gi-base-info)
   #:c-id g_struct_info_get_field
   #:wrap (allocator g_base_info_unref))
 
@@ -359,8 +365,7 @@
               (curry gi-struct-field structure)))
 
 (define-gir gi-field-type (_fun _gi-base-info
-                                -> (res : _gi-base-info)
-                                -> (gi-type res))
+                                -> _gi-base-info)
   #:c-id g_field_info_get_type
   #:wrap (allocator g_base_info_unref))
 
@@ -381,8 +386,7 @@
   #:c-id g_struct_info_get_n_methods)
 
 (define-gir gi-struct-method (_fun _gi-base-info _int
-                                   -> (res : _gi-base-info)
-                                   -> (gi-function res))
+                                   -> _gi-base-info)
   #:c-id g_struct_info_get_method
   #:wrap (allocator g_base_info_unref))
 
@@ -392,8 +396,7 @@
 
 (define-gir gi-struct-find-method (_fun _gi-base-info (method : _symbol)
                                         -> (res : _gi-base-info)
-                                        -> (if res
-                                               (gi-function res)
+                                        -> (or res
                                                (raise-argument-error 'gi-struct-find-method "struct-method?" method)))
   #:c-id g_struct_info_find_method
   #:wrap (allocator g_base_info_unref))
@@ -447,16 +450,5 @@
 (define (introspection namespace)
   (g_irepository_require namespace #f 0)
   (lambda (name)
-    (let ([info (or (g_irepository_find_by_name namespace name)
-                    (raise-argument-error 'introspection "name in GIR namespace" name))])
-      (gi-binding info))))
-
-(define (gi-binding info)
-  (let ([info-type (gi-base-type info)]
-        [info-name (gi-base-name info)])
-    (case info-type
-      ['GI_INFO_TYPE_FUNCTION (gi-function info)]
-      ['GI_INFO_TYPE_STRUCT (gi-struct info)]
-      ;; ['GI_INFO_TYPE_OBJECT (gir/object info)]
-      ['GI_INFO_TYPE_CONSTANT (gi-constant info)]
-      [else (cons info-type (info-name))])))
+    (or (g_irepository_find_by_name namespace name)
+        (raise-argument-error 'introspection "name in GIR namespace" name))))
