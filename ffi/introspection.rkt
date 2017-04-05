@@ -69,7 +69,7 @@
 
 (define _gi-argument (apply _union gi-argument-type-list))
 
-(define _gi-direction (_enum '(i o io)))
+(define _gi-direction (_enum '(in out inout)))
 
 (define-cstruct _gerror ([domain _uint32] [code _int] [message _string]))
 
@@ -287,9 +287,9 @@
              args
              arguments-without-self))
       (define-values (in-args-without-self out-args)
-        (values (filter-map (lambda (pair) (and (memq (cdr pair) '(i io))
+        (values (filter-map (lambda (pair) (and (memq (cdr pair) '(in inout))
                                            (car pair))) _gi-args-direction-pairs)
-                (filter-map (lambda (pair) (and (memq (cdr pair) '(o io))
+                (filter-map (lambda (pair) (and (memq (cdr pair) '(out inout))
                                            (car pair))) _gi-args-direction-pairs)))
       (define in-args
         (if method?
@@ -335,14 +335,19 @@
 ;;; Registered Types
 (struct gi-registered-type gi-base ())
 
+(define-gir gi-registered-type-name (_fun _gi-base-info -> _string)
+  #:c-id g_registered_type_info_get_type_name)
+
+(define (gi-registered-type-sym registered)
+  (let ([name (gi-registered-type-name registered)])
+    (string->symbol name)))
+
 
 ;;; Structs
 (struct gi-struct gi-registered-type ()
   #:property prop:procedure
-  (lambda (structure pointer)
-    (lambda (name)
-      (let ([method (gi-struct-find-method structure name)])
-        (curry method pointer)))))
+  (lambda (structure)
+    (make-gi-struct-type structure)))
 
 (define-gir gi-struct-alignment (_fun _gi-base-info -> _size)
   #:c-id g_struct_info_get_alignment)
@@ -369,13 +374,19 @@
   #:c-id g_field_info_get_type
   #:wrap (allocator g_base_info_unref))
 
-(define-gir g_field_info_get_field (_fun _gi-base-info _pointer
-                                         [r : (_ptr o _gi-argument)]
-                                         -> (success? : _bool)))
+(define-gir gi-field-ref (_fun (field : _gi-base-info) _pointer
+                               [r : (_ptr o _gi-argument)]
+                               -> (success? : _bool)
+                               -> (if success?
+                                      (let ([type (gi-field-type field)])
+                                        (type r))
+                                      (error "oh no")))
+  #:c-id g_field_info_get_field)
 
 (define-gir g_field_info_set_field (_fun _gi-base-info _pointer
                                          [r : (_ptr i _gi-argument)]
-                                         -> (success? : _bool)))
+                                         -> (success? : _bool)
+                                         -> (if success? (void) (error "oh no"))))
 
 (define (describe-gi-field field)
   (format "~a ~a"
@@ -402,17 +413,22 @@
   #:wrap (allocator g_base_info_unref))
 
 (define (make-gi-struct-type structure)
-  (let ([name (string->symbol (gi-base-name structure))]
-        [field-cnt (gi-struct-n-fields structure)])
-    (make-struct-type name #f field-cnt 0)))
+  (let* ([name (gi-registered-type-sym structure)]
+         [arity (gi-struct-n-fields structure)])
+    (make-struct-type name #f (add1 arity) 0 #f
+                      (list
+                       (cons prop:cpointer arity))
+                      (current-inspector) #f
+                      (list arity))))
 
 (define (gi-struct->ctype structure)
-  ;; TODO: This should be a _cpointer that uses `make-gi-struct-type`
-  ;; to wrap its value
-  (define cstruct (make-cstruct-type (map (compose1 gi-type->ctype gi-field-type) (gi-struct-fields structure))))
-  (_cpointer 'mystruct _pointer
-             values
-             (curryr ptr-ref cstruct)))
+  (let* ([name (gi-registered-type-sym structure)]
+         [fields (gi-struct-fields structure)]
+         [_fields (map (compose1 gi-type->ctype gi-field-type) fields)])
+    (_cpointer name _pointer
+               values
+               (lambda (ptr)
+                 (map (curryr gi-field-ref ptr) fields)))))
 
 (define (describe-gi-struct structure)
   (define fields (string-join (map describe-gi-field (gi-struct-fields structure))
