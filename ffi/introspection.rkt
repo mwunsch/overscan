@@ -341,8 +341,9 @@
   #:c-id g_registered_type_info_get_type_name)
 
 (define (gi-registered-type-sym registered)
-  (let ([name (gi-registered-type-name registered)])
-    (string->symbol name)))
+  (let* ([name (gi-base-name registered)]
+         [dashed (regexp-replace* #rx"([a-z]+)([A-Z]+)" name "\\1-\\2")])
+    ((compose1 string->symbol string-downcase) dashed)))
 
 
 ;;; Structs
