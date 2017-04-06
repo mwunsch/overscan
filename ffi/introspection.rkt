@@ -188,6 +188,9 @@
     (union-set! union-val index value)
     union-val))
 
+(define (gi-type->_gi-argument type value)
+  (ctype->_gi-argument (gi-type->ctype type) value))
+
 (define (_gi-argument->ctype gi-arg ctype)
   (let* ([value (union-ref gi-arg (or (index-of gi-argument-type-list ctype)
                                       (sub1 (length gi-argument-type-list))))])
@@ -247,8 +250,7 @@
   (memq (gi-arg-direction arg) dir))
 
 (define (gi-arg->_gi-argument arg value)
-  (let* ([ctype ((compose1 gi-type->ctype gi-arg-type) arg)])
-    (ctype->_gi-argument ctype value)))
+  (gi-type->_gi-argument (gi-arg-type arg) value))
 
 (define (describe-gi-arg arg)
   (let ([argtype (gi-arg-type arg)]
@@ -363,7 +365,10 @@
   #:c-id g_struct_info_get_field
   #:wrap (allocator g_base_info_unref))
 
-(struct gi-field gi-base ())
+(struct gi-field gi-base ()
+  #:property prop:procedure
+  (lambda (field value)
+    (gi-type->_gi-argument (gi-field-type field) value)))
 
 (define (gi-struct-fields structure)
   (build-list (gi-struct-n-fields structure)
@@ -374,7 +379,7 @@
   #:c-id g_field_info_get_type
   #:wrap (allocator g_base_info_unref))
 
-(define-gir gi-field-ref (_fun (field : _gi-base-info) _pointer
+(define-gir gi-field-ref (_fun [field : _gi-base-info] _pointer
                                [r : (_ptr o _gi-argument)]
                                -> (success? : _bool)
                                -> (if success?
@@ -383,10 +388,12 @@
                                       (error "oh no")))
   #:c-id g_field_info_get_field)
 
-(define-gir g_field_info_set_field (_fun _gi-base-info _pointer
-                                         [r : (_ptr i _gi-argument)]
-                                         -> (success? : _bool)
-                                         -> (if success? (void) (error "oh no"))))
+(define-gir gi-field-set! (_fun [field : _gi-base-info] _pointer
+                                [arg : _?]
+                                [r : (_ptr i _gi-argument) = (field arg)]
+                                -> (success? : _bool)
+                                -> (if success? (void) (error "oh no")))
+  #:c-id g_field_info_set_field)
 
 (define (describe-gi-field field)
   (format "~a ~a"
