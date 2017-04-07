@@ -71,6 +71,8 @@
 
 (define _gi-direction (_enum '(in out inout)))
 
+(define _gtype (make-ctype _size #f #f))
+
 (define-cstruct _gerror ([domain _uint32] [code _int] [message _string]))
 
 
@@ -91,6 +93,7 @@
       [else base])))
 
 (define _gi-base-info (_cpointer/null 'GIBaseInfo _pointer values make-gi-base))
+
 (define-gir gi-base-namespace (_fun _gi-base-info -> _string)
   #:c-id g_base_info_get_namespace)
 
@@ -115,6 +118,9 @@
   #:wrap (allocator g_base_info_unref))
 
 (define-gir g_irepository_find_by_name (_fun (_pointer = #f) _symbol _symbol -> _gi-base-info)
+  #:wrap (allocator g_base_info_unref))
+
+(define-gir g_irepository_find_by_gtype (_fun (_pointer = #f) _gtype -> _gi-base-info)
   #:wrap (allocator g_base_info_unref))
 
 
@@ -149,36 +155,33 @@
 (define (gi-type->ctype type)
   (let* ([typetag (gi-type-tag type)]
          [tagsym (string->symbol (g_type_tag_to_string typetag))])
-    (if (gi-type-pointer? type)
-        (case typetag
-          [(GI_TYPE_TAG_UTF8 GI_TYPE_TAG_FILENAME) _string]
-          ['GI_TYPE_TAG_INTERFACE (let* ([type-interface (gi-type-interface type)]
-                                         [info-type (gi-base-type type-interface)])
-                                    (case info-type
-                                      ['GI_INFO_TYPE_STRUCT (gi-struct->ctype type-interface)]
-                                      [else (_cpointer/null info-type)]))]
-          ['GI_TYPE_TAG_ERROR _gerror-pointer]
-          [else (_cpointer/null tagsym)])
-        (case typetag
-          ['GI_TYPE_TAG_VOID _void]
-          ['GI_TYPE_TAG_BOOLEAN _bool]
-          ['GI_TYPE_TAG_INT8 _int8]
-          ['GI_TYPE_TAG_UINT8 _uint8]
-          ['GI_TYPE_TAG_INT16 _int16]
-          ['GI_TYPE_TAG_UINT16 _uint16]
-          ['GI_TYPE_TAG_INT32 _int32]
-          ['GI_TYPE_TAG_UINT32 _uint32]
-          ['GI_TYPE_TAG_INT64 _int64]
-          ['GI_TYPE_TAG_UINT64 _uint64]
-          ['GI_TYPE_TAG_FLOAT _float]
-          ['GI_TYPE_TAG_DOUBLE _double]
-          ;; ['GI_TYPE_TAG_GTYPE]
-          ;; ['GI_TYPE_TAG_ARRAY]
-          ;; ['GI_TYPE_TAG_GLIST]
-          ;; ['GI_TYPE_TAG_GSLIST]
-          ;; ['GI_TYPE_TAG_GHASH]
-          ;; ['GI_TYPE_TAG_UNICHAR]
-          [else (_cpointer/null typetag)]))))
+    (case typetag
+      ['GI_TYPE_TAG_VOID _void]
+      ['GI_TYPE_TAG_BOOLEAN _bool]
+      ['GI_TYPE_TAG_INT8 _int8]
+      ['GI_TYPE_TAG_UINT8 _uint8]
+      ['GI_TYPE_TAG_INT16 _int16]
+      ['GI_TYPE_TAG_UINT16 _uint16]
+      ['GI_TYPE_TAG_INT32 _int32]
+      ['GI_TYPE_TAG_UINT32 _uint32]
+      ['GI_TYPE_TAG_INT64 _int64]
+      ['GI_TYPE_TAG_UINT64 _uint64]
+      ['GI_TYPE_TAG_FLOAT _float]
+      ['GI_TYPE_TAG_DOUBLE _double]
+      [(GI_TYPE_TAG_UTF8 GI_TYPE_TAG_FILENAME) _string]
+      ['GI_TYPE_TAG_INTERFACE (let* ([type-interface (gi-type-interface type)]
+                                     [info-type (gi-base-type type-interface)])
+                                (case info-type
+                                  ['GI_INFO_TYPE_STRUCT (gi-struct->ctype type-interface)]
+                                  [else (_cpointer/null info-type)]))]
+      ['GI_TYPE_TAG_ERROR _gerror-pointer]
+      ;; ['GI_TYPE_TAG_GTYPE]
+      ;; ['GI_TYPE_TAG_ARRAY]
+      ;; ['GI_TYPE_TAG_GLIST]
+      ;; ['GI_TYPE_TAG_GSLIST]
+      ;; ['GI_TYPE_TAG_GHASH]
+      ;; ['GI_TYPE_TAG_UNICHAR]
+      [else (_cpointer/null tagsym)])))
 
 (define (ctype->_gi-argument ctype value)
   (let* ([gi-argument-pointer (malloc _gi-argument)]
@@ -337,8 +340,11 @@
 ;;; Registered Types
 (struct gi-registered-type gi-base ())
 
-(define-gir gi-registered-type-name (_fun _gi-base-info -> _string)
+(define-gir gi-registered-type-name (_fun _gi-base-info -> _symbol)
   #:c-id g_registered_type_info_get_type_name)
+
+(define-gir gi-registered-type-gtype (_fun _gi-base-info -> _gtype)
+  #:c-id g_registered_type_info_get_g_type)
 
 (define (gi-registered-type-sym registered)
   (let* ([name (gi-base-name registered)]
@@ -433,10 +439,10 @@
   (let* ([name (gi-registered-type-sym structure)]
          [fields (gi-struct-fields structure)]
          [_fields (map (compose1 gi-type->ctype gi-field-type) fields)])
-    (_cpointer name _pointer
-               values
-               (lambda (ptr)
-                 (map (curryr gi-field-ref ptr) fields)))))
+    (_cpointer name ;; _pointer
+               ;; racket->c
+               ;; c->racket
+               )))
 
 (define (describe-gi-struct structure)
   (define fields (string-join (map describe-gi-field (gi-struct-fields structure))
