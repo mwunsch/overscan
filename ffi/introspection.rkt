@@ -171,8 +171,8 @@
       [(GI_TYPE_TAG_UTF8 GI_TYPE_TAG_FILENAME) _string]
       ['GI_TYPE_TAG_INTERFACE (let* ([type-interface (gi-type-interface type)]
                                      [info-type (gi-base-type type-interface)])
-                                (case info-type
-                                  ['GI_INFO_TYPE_STRUCT (gi-struct->ctype type-interface)]
+                                (cond
+                                  [(gi-registered-type? type-interface) (gi-registered-type->ctype type-interface)]
                                   [else (_cpointer/null info-type)]))]
       ['GI_TYPE_TAG_ERROR _gerror-pointer]
       ;; ['GI_TYPE_TAG_GTYPE]
@@ -351,12 +351,18 @@
          [dashed (regexp-replace* #rx"([a-z]+)([A-Z]+)" name "\\1-\\2")])
     ((compose1 string->symbol string-downcase) dashed)))
 
+(struct gtype-instance (gtype pointer)
+  #:property prop:cpointer 1)
+
+(define (gi-registered-type->ctype registered)
+  (let* ([name (gi-registered-type-sym registered)]
+         [gtype (gi-registered-type-gtype registered)])
+    (_cpointer name _pointer
+               values
+               (curry gtype-instance gtype))))
 
 ;;; Structs
-(struct gi-struct gi-registered-type ()
-  #:property prop:procedure
-  (lambda (structure)
-    (make-gi-struct-type structure)))
+(struct gi-struct gi-registered-type ())
 
 (define-gir gi-struct-alignment (_fun _gi-base-info -> _size)
   #:c-id g_struct_info_get_alignment)
@@ -425,24 +431,6 @@
                                                (raise-argument-error 'gi-struct-find-method "struct-method?" method)))
   #:c-id g_struct_info_find_method
   #:wrap (allocator g_base_info_unref))
-
-(define (make-gi-struct-type structure)
-  (let* ([name (gi-registered-type-sym structure)]
-         [arity (gi-struct-n-fields structure)])
-    (make-struct-type name #f (add1 arity) 0 #f
-                      (list
-                       (cons prop:cpointer arity))
-                      (current-inspector) #f
-                      (list arity))))
-
-(define (gi-struct->ctype structure)
-  (let* ([name (gi-registered-type-sym structure)]
-         [fields (gi-struct-fields structure)]
-         [_fields (map (compose1 gi-type->ctype gi-field-type) fields)])
-    (_cpointer name ;; _pointer
-               ;; racket->c
-               ;; c->racket
-               )))
 
 (define (describe-gi-struct structure)
   (define fields (string-join (map describe-gi-field (gi-struct-fields structure))
