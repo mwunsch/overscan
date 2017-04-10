@@ -173,6 +173,7 @@
       ['GI_TYPE_TAG_INTERFACE (let* ([type-interface (gi-type-interface type)]
                                      [info-type (gi-base-type type-interface)])
                                 (cond
+                                  [(gi-struct? type-interface) (gi-struct->ctype type-interface)]
                                   [(gi-registered-type? type-interface) (gi-registered-type->ctype type-interface)]
                                   [else (_cpointer/null info-type)]))]
       ['GI_TYPE_TAG_ERROR _gerror-pointer]
@@ -364,6 +365,25 @@
 
 ;;; Structs
 (struct gi-struct gi-registered-type ())
+
+(struct gstruct-instance gtype-instance (base fields)
+  #:transparent
+  #:property prop:procedure
+  (lambda (instance method-name . arguments)
+    (let* ([base (gstruct-instance-base instance)])
+      (apply (gi-struct-find-method base method-name)
+             instance
+             arguments))))
+
+(define (gi-struct->ctype structure)
+  (let* ([name (gi-registered-type-sym structure)]
+         [gtype (gi-registered-type-gtype structure)]
+         [fields (gi-struct-fields structure)])
+    (_cpointer name _pointer
+               values
+               (lambda (ptr)
+                 (let ([field-values (map (curryr gi-field-ref ptr) fields)])
+                   (gstruct-instance gtype ptr structure field-values))))))
 
 (define-gir gi-struct-alignment (_fun _gi-base-info -> _size)
   #:c-id g_struct_info_get_alignment)
