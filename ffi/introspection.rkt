@@ -6,7 +6,8 @@
          racket/class
          (only-in racket/list index-of partition last filter-map)
          (only-in racket/string string-join)
-         (only-in racket/function curry curryr))
+         (only-in racket/function curry curryr)
+         (for-syntax racket/base))
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
 
