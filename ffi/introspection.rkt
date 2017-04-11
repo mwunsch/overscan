@@ -87,6 +87,7 @@
     (case type
       ['GI_INFO_TYPE_FUNCTION (gi-function base)]
       ['GI_INFO_TYPE_STRUCT (gi-struct base)]
+      ['GI_INFO_TYPE_ENUM (gi-enum base)]
       ['GI_INFO_TYPE_CONSTANT (gi-constant base)]
       ['GI_INFO_TYPE_FIELD (gi-field base)]
       ['GI_INFO_TYPE_ARG (gi-arg base)]
@@ -459,6 +460,40 @@
   (define methods (string-join (map describe-gi-function (gi-struct-methods structure))
                                "\n  "))
   (format "struct ~a {~n  ~a ~n~n  ~a ~n}" (gi-base-name structure) fields methods))
+
+
+;;; Enums
+(struct gi-enum gi-registered-type ())
+
+(define-gir gi-enum-n-values (_fun _gi-base-info -> _int)
+  #:c-id g_enum_info_get_n_values)
+
+(define-gir gi-enum-value (_fun _gi-base-info _int
+                                -> _gi-base-info)
+  #:c-id g_enum_info_get_value
+  #:wrap (allocator g_base_info_unref))
+
+(struct gi-value gi-base ())
+
+(define (gi-enum-values enum)
+  (build-list (gi-enum-n-values enum)
+              (curry gi-enum-value enum)))
+
+(define (gi-enum->list enum)
+  (map (compose1 string->symbol gi-base-name)
+       (gi-enum-values enum)))
+
+(define-gir gi-enum-n-methods (_fun _gi-base-info -> _int)
+  #:c-id g_enum_info_get_n_methods)
+
+(define-gir gi-enum-method (_fun _gi-base-info _int
+                                 -> _gi-base-info)
+  #:c-id g_enum_info_get_method
+  #:wrap (allocator g_base_info_unref))
+
+(define (gi-enum-methods enum)
+  (build-list (gi-enum-n-methods enum)
+              (curry gi-enum-value enum)))
 
 
 ;;; Objects
