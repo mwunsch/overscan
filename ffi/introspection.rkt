@@ -89,6 +89,7 @@
       ['GI_INFO_TYPE_STRUCT (gi-struct base)]
       ['GI_INFO_TYPE_ENUM (gi-enum base)]
       ['GI_INFO_TYPE_CONSTANT (gi-constant base)]
+      ['GI_INFO_TYPE_VALUE (gi-value base)]
       ['GI_INFO_TYPE_FIELD (gi-field base)]
       ['GI_INFO_TYPE_ARG (gi-arg base)]
       ['GI_INFO_TYPE_TYPE (gi-type base)]
@@ -176,6 +177,8 @@
                                 (cond
                                   [(gi-struct? type-interface)
                                    (gi-struct->ctype type-interface)]
+                                  [(gi-enum? type-interface)
+                                   (gi-enum->ctype type-interface)]
                                   [(gi-registered-type? type-interface)
                                    (gi-registered-type->ctype type-interface)]
                                   [else (_cpointer/null info-type)]))]
@@ -189,6 +192,7 @@
       [else (_cpointer/null tagsym)])))
 
 (define (ctype->_gi-argument ctype value)
+  ;; TODO: Choose union index based on ctype->layout of given ctype
   (let* ([gi-argument-pointer (malloc _gi-argument)]
          [union-val (ptr-ref gi-argument-pointer _gi-argument)]
          [index (or (index-of gi-argument-type-list ctype)
@@ -473,15 +477,39 @@
   #:c-id g_enum_info_get_value
   #:wrap (allocator g_base_info_unref))
 
-(struct gi-value gi-base ())
+(define-gir gi-enum-storage-type (_fun _gi-base-info ->
+                                       [tag : _gi-type-tag]
+                                       -> (case tag
+                                            ['GI_TYPE_TAG_INT8 _int8]
+                                            ['GI_TYPE_TAG_UINT8 _uint8]
+                                            ['GI_TYPE_TAG_INT16 _int16]
+                                            ['GI_TYPE_TAG_UINT16 _uint16]
+                                            ['GI_TYPE_TAG_INT32 _int32]
+                                            ['GI_TYPE_TAG_UINT32 _uint32]
+                                            ['GI_TYPE_TAG_INT64 _int64]
+                                            ['GI_TYPE_TAG_UINT64 _uint64]
+                                            [else _int64]))
+  #:c-id g_enum_info_get_storage_type)
+
+(struct gi-value gi-base ()
+  #:property prop:procedure
+  (compose1 string->symbol gi-base-name))
+
+(define-gir gi-value-get (_fun _gi-base-info
+                               -> _int)
+  #:c-id g_value_info_get_value)
 
 (define (gi-enum-values enum)
   (build-list (gi-enum-n-values enum)
               (curry gi-enum-value enum)))
 
 (define (gi-enum->list enum)
-  (map (compose1 string->symbol gi-base-name)
+  (map (lambda (val) (val))
        (gi-enum-values enum)))
+
+(define (gi-enum->hash enum)
+  (make-hash (map (lambda (val) (cons (gi-value-get val) (val)))
+                  (gi-enum-values enum))))
 
 (define-gir gi-enum-n-methods (_fun _gi-base-info -> _int)
   #:c-id g_enum_info_get_n_methods)
@@ -494,6 +522,15 @@
 (define (gi-enum-methods enum)
   (build-list (gi-enum-n-methods enum)
               (curry gi-enum-value enum)))
+
+(define (gi-enum->ctype enum)
+  (let* ([enum-hash (gi-enum->hash enum)])
+    (make-ctype _int64
+                (lambda (val)
+                  (for/first ([k+v (in-hash-pairs enum-hash)]
+                              #:when (eq? val (cdr k+v)))
+                    (car k+v)))
+                (curry hash-ref enum-hash))))
 
 
 ;;; Objects
