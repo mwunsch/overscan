@@ -4,7 +4,7 @@
          ffi/unsafe/define
          ffi/unsafe/alloc
          racket/class
-         (only-in racket/list index-of partition last filter-map)
+         (only-in racket/list index-of filter-map)
          (only-in racket/string string-join)
          (only-in racket/function curry curryr)
          (for-syntax racket/base))
@@ -192,25 +192,49 @@
       [else (_cpointer/null tagsym)])))
 
 (define (ctype->_gi-argument ctype value)
-  ;; TODO: Choose union index based on ctype->layout of given ctype
   (let* ([gi-argument-pointer (malloc _gi-argument)]
          [union-val (ptr-ref gi-argument-pointer _gi-argument)]
-         [index (or (index-of gi-argument-type-list ctype)
-                    (sub1 (length gi-argument-type-list)))])
-    (union-set! union-val index value)
+         [_arg-type (_gi-argument-type-of ctype)]
+         [index (_gi-argument-index-of ctype)])
+    (union-set! union-val index (if (eq? _arg-type ctype)
+                                    value
+                                    (cast value ctype _arg-type)))
     union-val))
 
 (define (gi-type->_gi-argument type value)
   (ctype->_gi-argument (gi-type->ctype type) value))
 
 (define (_gi-argument->ctype gi-arg ctype)
-  (let* ([value (union-ref gi-arg (or (index-of gi-argument-type-list ctype)
-                                      (sub1 (length gi-argument-type-list))))])
+  (let* ([index (_gi-argument-index-of ctype)]
+         [_arg-type (_gi-argument-type-of ctype)]
+         [value (union-ref gi-arg index)])
     (cond
       [(eq? ctype _void) (void value)]
-      ;; [(cpointer? value) (ptr-ref value ctype)]
-      [(cpointer? value) (cast value _pointer ctype)]
+      [(not (eq? _arg-type ctype)) (cast value _arg-type ctype)]
       [else value])))
+
+(define (_gi-argument-index-of ctype)
+  (define _gi-argument-type (_gi-argument-type-of ctype))
+  (or (index-of gi-argument-type-list _gi-argument-type)
+      (sub1 (length gi-argument-type-list))))
+
+(define (_gi-argument-type-of ctype)
+  (if (member ctype gi-argument-type-list)
+      ctype
+      (case (ctype->layout ctype)
+        ['bool _bool]
+        ['int8 _int8]
+        ['uint8 _uint8]
+        ['int16 _int16]
+        ['uint16 _uint16]
+        ['int32 _int32]
+        ['uint32 _uint32]
+        ['int64 _int64]
+        ['uint64 _uint64]
+        ['float _float]
+        ['double _double]
+        ['bytes _string]
+        [else _pointer])))
 
 
 ;;; Functions & Callables
