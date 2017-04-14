@@ -109,6 +109,11 @@
 (define-gir g_base_info_unref (_fun _gi-base-info -> _void)
   #:wrap (deallocator))
 
+(define (gi-build-list info numproc getter)
+  (build-list (numproc info)
+              (curry getter info)))
+
+
 ;;; Repositories
 (define-gir g_irepository_require (_fun (_pointer = #f) _symbol _string _int (err : (_ptr io _gerror-pointer/null) = #f)
                                         -> (r : _pointer)
@@ -249,8 +254,7 @@
   #:wrap (allocator g_base_info_unref))
 
 (define (gi-callable-args fn)
-  (build-list (gi-callable-n-args fn)
-              (curry gi-callable-arg fn)))
+  (gi-build-list fn gi-callable-n-args gi-callable-arg))
 
 (define-gir gi-callable-throws? (_fun _gi-base-info -> _bool)
   #:c-id g_callable_info_can_throw_gerror)
@@ -434,8 +438,7 @@
     (gi-type->_gi-argument (gi-field-type field) value)))
 
 (define (gi-struct-fields structure)
-  (build-list (gi-struct-n-fields structure)
-              (curry gi-struct-field structure)))
+  (gi-build-list structure gi-struct-n-fields gi-struct-field))
 
 (define-gir gi-field-type (_fun _gi-base-info
                                 -> _gi-base-info)
@@ -472,8 +475,7 @@
   #:wrap (allocator g_base_info_unref))
 
 (define (gi-struct-methods structure)
-  (build-list (gi-struct-n-methods structure)
-              (curry gi-struct-method structure)))
+  (gi-build-list structure gi-struct-n-methods gi-struct-method))
 
 (define-gir gi-struct-find-method (_fun _gi-base-info (method : _symbol)
                                         -> (res : _gi-base-info)
@@ -524,8 +526,7 @@
   #:c-id g_value_info_get_value)
 
 (define (gi-enum-values enum)
-  (build-list (gi-enum-n-values enum)
-              (curry gi-enum-value enum)))
+  (gi-build-list enum gi-enum-n-values gi-enum-value))
 
 (define (gi-enum->list enum)
   (map (lambda (val) (val))
@@ -544,8 +545,7 @@
   #:wrap (allocator g_base_info_unref))
 
 (define (gi-enum-methods enum)
-  (build-list (gi-enum-n-methods enum)
-              (curry gi-enum-value enum)))
+  (gi-build-list enum gi-enum-n-methods gi-enum-value))
 
 (define (gi-enum->ctype enum)
   (let* ([enum-hash (gi-enum->hash enum)])
