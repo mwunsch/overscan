@@ -88,6 +88,7 @@
       ['GI_INFO_TYPE_FUNCTION (gi-function base)]
       ['GI_INFO_TYPE_STRUCT (gi-struct base)]
       ['GI_INFO_TYPE_ENUM (gi-enum base)]
+      ['GI_INFO_TYPE_OBJECT (gi-object base)]
       ['GI_INFO_TYPE_CONSTANT (gi-constant base)]
       ['GI_INFO_TYPE_VALUE (gi-value base)]
       ['GI_INFO_TYPE_FIELD (gi-field base)]
@@ -558,21 +559,67 @@
 
 
 ;;; Objects
-(define-gir g_object_info_get_parent (_fun _gi-base-info -> _gi-base-info)
+(struct gi-object gi-registered-type ())
+
+(define-gir gi-object-parent (_fun _gi-base-info -> _gi-base-info)
+  #:c-id g_object_info_get_parent
   #:wrap (allocator g_base_info_unref))
 
-(define-gir g_object_info_get_class_struct (_fun _gi-base-info -> _gi-base-info)
+(define-gir gi-object-n-constants (_fun _gi-base-info -> _int)
+  #:c-id g_object_info_get_n_constants)
+
+(define-gir gi-object-constant (_fun _gi-base-info _int
+                                   -> _gi-base-info)
+  #:c-id g_object_info_get_constant
   #:wrap (allocator g_base_info_unref))
 
-;; (struct gir/object (info fields methods properties signals))
+(define (gi-object-constants obj)
+  (gi-build-list obj gi-object-n-constants gi-object-constant))
 
-;; (define (make-gir/object info)
-;;   (letrec ([hierarchy (lambda (infos)
-;;                         (define parentinfo (g_object_info_get_parent (car infos)))
-;;                         (if parentinfo
-;;                             (hierarchy (cons parentinfo infos))
-;;                             infos))])
-;;     (make-gir/struct (g_object_info_get_class_struct info))))
+(define-gir gi-object-n-fields (_fun _gi-base-info -> _int)
+  #:c-id g_object_info_get_n_fields)
+
+(define-gir gi-object-field (_fun _gi-base-info _int
+                                   -> _gi-base-info)
+  #:c-id g_object_info_get_field
+  #:wrap (allocator g_base_info_unref))
+
+(define (gi-object-fields obj)
+  (gi-build-list obj gi-object-n-fields gi-object-field))
+
+(define-gir gi-object-n-methods (_fun _gi-base-info -> _int)
+  #:c-id g_object_info_get_n_methods)
+
+(define-gir gi-object-method (_fun _gi-base-info _int
+                                   -> _gi-base-info)
+  #:c-id g_object_info_get_method
+  #:wrap (allocator g_base_info_unref))
+
+(define (gi-object-methods obj)
+  (gi-build-list obj gi-object-n-methods gi-object-method))
+
+(define-gir gi-object-n-properties (_fun _gi-base-info -> _int)
+  #:c-id g_object_info_get_n_properties)
+
+(define-gir gi-object-property (_fun _gi-base-info _int
+                                   -> _gi-base-info)
+  #:c-id g_object_info_get_property
+  #:wrap (allocator g_base_info_unref))
+
+(define (gi-object-properties obj)
+  (gi-build-list obj gi-object-n-properties gi-object-property))
+
+(define-gir gi-object-n-signals (_fun _gi-base-info -> _int)
+  #:c-id g_object_info_get_n_signals)
+
+(define-gir gi-object-signal (_fun _gi-base-info _int
+                                   -> _gi-base-info)
+  #:c-id g_object_info_get_signal
+  #:wrap (allocator g_base_info_unref))
+
+(define (gi-object-signals obj)
+  (gi-build-list obj gi-object-n-signals gi-object-signal))
+
 
 
 ;;; Introspection
