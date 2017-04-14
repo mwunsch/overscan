@@ -96,7 +96,10 @@
       ['GI_INFO_TYPE_TYPE (gi-type base)]
       [else base])))
 
-(define _gi-base-info (_cpointer/null 'GIBaseInfo _pointer values make-gi-base))
+(define _gi-base-info (_cpointer/null 'GIBaseInfo _pointer
+                                      values
+                                      (lambda (cval)
+                                        (((allocator g_base_info_unref) make-gi-base) cval))))
 
 (define-gir gi-base-namespace (_fun _gi-base-info -> _string)
   #:c-id g_base_info_get_namespace)
@@ -123,14 +126,11 @@
 
 (define-gir g_irepository_get_n_infos (_fun (_pointer = #f) _symbol -> _int))
 
-(define-gir g_irepository_get_info (_fun (_pointer = #f) _symbol _int -> _gi-base-info)
-  #:wrap (allocator g_base_info_unref))
+(define-gir g_irepository_get_info (_fun (_pointer = #f) _symbol _int -> _gi-base-info))
 
-(define-gir g_irepository_find_by_name (_fun (_pointer = #f) _symbol _symbol -> _gi-base-info)
-  #:wrap (allocator g_base_info_unref))
+(define-gir g_irepository_find_by_name (_fun (_pointer = #f) _symbol _symbol -> _gi-base-info))
 
-(define-gir g_irepository_find_by_gtype (_fun (_pointer = #f) _gtype -> _gi-base-info)
-  #:wrap (allocator g_base_info_unref))
+(define-gir g_irepository_find_by_gtype (_fun (_pointer = #f) _gtype -> _gi-base-info))
 
 
 ;;; Types
@@ -149,8 +149,7 @@
 (define-gir g_type_tag_to_string (_fun _gi-type-tag -> _string))
 
 (define-gir gi-type-interface (_fun _gi-base-info -> _gi-base-info)
-  #:c-id g_type_info_get_interface
-  #:wrap (allocator g_base_info_unref))
+  #:c-id g_type_info_get_interface)
 
 (define-gir g_info_type_to_string (_fun _gi-info-type -> _string))
 
@@ -251,8 +250,7 @@
 
 (define-gir gi-callable-arg (_fun _gi-base-info _int
                                   -> _gi-base-info)
-  #:c-id g_callable_info_get_arg
-  #:wrap (allocator g_base_info_unref))
+  #:c-id g_callable_info_get_arg)
 
 (define (gi-callable-args fn)
   (gi-build-list fn gi-callable-n-args gi-callable-arg))
@@ -262,8 +260,7 @@
 
 (define-gir gi-callable-returns (_fun _gi-base-info
                                       -> _gi-base-info)
-  #:c-id g_callable_info_get_return_type
-  #:wrap (allocator g_base_info_unref))
+  #:c-id g_callable_info_get_return_type)
 
 (define-gir gi-callable-method? (_fun _gi-base-info -> _bool)
   #:c-id g_callable_info_is_method)
@@ -281,8 +278,7 @@
 
 (define-gir gi-arg-type (_fun _gi-base-info
                               -> _gi-base-info)
-  #:c-id g_arg_info_get_type
-  #:wrap (allocator g_base_info_unref))
+  #:c-id g_arg_info_get_type)
 
 (define-gir gi-arg-direction (_fun _gi-base-info -> _gi-direction)
   #:c-id g_arg_info_get_direction)
@@ -355,8 +351,7 @@
 
 (define-gir gi-constant-type (_fun _gi-base-info
                                    -> _gi-base-info)
-  #:c-id g_constant_info_get_type
-  #:wrap (allocator g_base_info_unref))
+  #:c-id g_constant_info_get_type)
 
 (define-gir g_constant_info_free_value (_fun _gi-base-info (_ptr i _gi-argument) -> _void)
   #:wrap (deallocator cadr))
@@ -430,8 +425,7 @@
 
 (define-gir gi-struct-field (_fun _gi-base-info _int
                                   -> _gi-base-info)
-  #:c-id g_struct_info_get_field
-  #:wrap (allocator g_base_info_unref))
+  #:c-id g_struct_info_get_field)
 
 (struct gi-field gi-base ()
   #:property prop:procedure
@@ -443,8 +437,7 @@
 
 (define-gir gi-field-type (_fun _gi-base-info
                                 -> _gi-base-info)
-  #:c-id g_field_info_get_type
-  #:wrap (allocator g_base_info_unref))
+  #:c-id g_field_info_get_type)
 
 (define-gir gi-field-ref (_fun [field : _gi-base-info] _pointer
                                [r : (_ptr o _gi-argument)]
@@ -472,8 +465,7 @@
 
 (define-gir gi-struct-method (_fun _gi-base-info _int
                                    -> _gi-base-info)
-  #:c-id g_struct_info_get_method
-  #:wrap (allocator g_base_info_unref))
+  #:c-id g_struct_info_get_method)
 
 (define (gi-struct-methods structure)
   (gi-build-list structure gi-struct-n-methods gi-struct-method))
@@ -482,8 +474,7 @@
                                         -> (res : _gi-base-info)
                                         -> (or res
                                                (raise-argument-error 'gi-struct-find-method "struct-method?" method)))
-  #:c-id g_struct_info_find_method
-  #:wrap (allocator g_base_info_unref))
+  #:c-id g_struct_info_find_method)
 
 (define (describe-gi-struct structure)
   (define fields (string-join (map describe-gi-field (gi-struct-fields structure))
@@ -501,8 +492,7 @@
 
 (define-gir gi-enum-value (_fun _gi-base-info _int
                                 -> _gi-base-info)
-  #:c-id g_enum_info_get_value
-  #:wrap (allocator g_base_info_unref))
+  #:c-id g_enum_info_get_value)
 
 (define-gir gi-enum-storage-type (_fun _gi-base-info ->
                                        [tag : _gi-type-tag]
@@ -542,8 +532,7 @@
 
 (define-gir gi-enum-method (_fun _gi-base-info _int
                                  -> _gi-base-info)
-  #:c-id g_enum_info_get_method
-  #:wrap (allocator g_base_info_unref))
+  #:c-id g_enum_info_get_method)
 
 (define (gi-enum-methods enum)
   (gi-build-list enum gi-enum-n-methods gi-enum-value))
@@ -562,16 +551,14 @@
 (struct gi-object gi-registered-type ())
 
 (define-gir gi-object-parent (_fun _gi-base-info -> _gi-base-info)
-  #:c-id g_object_info_get_parent
-  #:wrap (allocator g_base_info_unref))
+  #:c-id g_object_info_get_parent)
 
 (define-gir gi-object-n-constants (_fun _gi-base-info -> _int)
   #:c-id g_object_info_get_n_constants)
 
 (define-gir gi-object-constant (_fun _gi-base-info _int
                                    -> _gi-base-info)
-  #:c-id g_object_info_get_constant
-  #:wrap (allocator g_base_info_unref))
+  #:c-id g_object_info_get_constant)
 
 (define (gi-object-constants obj)
   (gi-build-list obj gi-object-n-constants gi-object-constant))
@@ -581,8 +568,7 @@
 
 (define-gir gi-object-field (_fun _gi-base-info _int
                                    -> _gi-base-info)
-  #:c-id g_object_info_get_field
-  #:wrap (allocator g_base_info_unref))
+  #:c-id g_object_info_get_field)
 
 (define (gi-object-fields obj)
   (gi-build-list obj gi-object-n-fields gi-object-field))
@@ -592,8 +578,7 @@
 
 (define-gir gi-object-method (_fun _gi-base-info _int
                                    -> _gi-base-info)
-  #:c-id g_object_info_get_method
-  #:wrap (allocator g_base_info_unref))
+  #:c-id g_object_info_get_method)
 
 (define (gi-object-methods obj)
   (gi-build-list obj gi-object-n-methods gi-object-method))
@@ -603,8 +588,7 @@
 
 (define-gir gi-object-property (_fun _gi-base-info _int
                                    -> _gi-base-info)
-  #:c-id g_object_info_get_property
-  #:wrap (allocator g_base_info_unref))
+  #:c-id g_object_info_get_property)
 
 (define (gi-object-properties obj)
   (gi-build-list obj gi-object-n-properties gi-object-property))
@@ -614,8 +598,7 @@
 
 (define-gir gi-object-signal (_fun _gi-base-info _int
                                    -> _gi-base-info)
-  #:c-id g_object_info_get_signal
-  #:wrap (allocator g_base_info_unref))
+  #:c-id g_object_info_get_signal)
 
 (define (gi-object-signals obj)
   (gi-build-list obj gi-object-n-signals gi-object-signal))
