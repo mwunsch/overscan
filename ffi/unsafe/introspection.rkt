@@ -91,6 +91,8 @@
       ['GI_INFO_TYPE_OBJECT (gi-object base)]
       ['GI_INFO_TYPE_CONSTANT (gi-constant base)]
       ['GI_INFO_TYPE_VALUE (gi-value base)]
+      ['GI_INFO_TYPE_SIGNAL (gi-signal base)]
+      ['GI_INFO_TYPE_PROPERTY (gi-property base)]
       ['GI_INFO_TYPE_FIELD (gi-field base)]
       ['GI_INFO_TYPE_ARG (gi-arg base)]
       ['GI_INFO_TYPE_TYPE (gi-type base)]
@@ -548,7 +550,13 @@
 
 
 ;;; Objects
-(struct gi-object gi-registered-type ())
+(struct gi-object gi-registered-type ()
+  #:property prop:procedure
+  (lambda (object method-name . arguments)
+    (let ([method (gi-object-find-method object method-name)])
+      (if (not (gi-callable-method? method))
+          (apply method arguments)
+          (raise-argument-error 'gi-object-find-method "class-function?" method)))))
 
 (define-gir gi-object-parent (_fun _gi-base-info -> _gi-base-info)
   #:c-id g_object_info_get_parent)
@@ -583,6 +591,12 @@
 (define (gi-object-methods obj)
   (gi-build-list obj gi-object-n-methods gi-object-method))
 
+(define-gir gi-object-find-method (_fun _gi-base-info (method : _symbol)
+                                        -> (res : _gi-base-info)
+                                        -> (or res
+                                               (raise-argument-error 'gi-object-find-method "object-method?" method)))
+  #:c-id g_object_info_find_method)
+
 (define-gir gi-object-n-properties (_fun _gi-base-info -> _int)
   #:c-id g_object_info_get_n_properties)
 
@@ -593,6 +607,8 @@
 (define (gi-object-properties obj)
   (gi-build-list obj gi-object-n-properties gi-object-property))
 
+(struct gi-property gi-base ())
+
 (define-gir gi-object-n-signals (_fun _gi-base-info -> _int)
   #:c-id g_object_info_get_n_signals)
 
@@ -602,6 +618,8 @@
 
 (define (gi-object-signals obj)
   (gi-build-list obj gi-object-n-signals gi-object-signal))
+
+(struct gi-signal gi-callable ())
 
 
 
