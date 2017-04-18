@@ -5,8 +5,8 @@
          ffi/unsafe/alloc
          racket/class
          (only-in racket/list index-of filter-map)
-         (only-in racket/string string-join)
-         (only-in racket/function curry curryr)
+         (only-in racket/string string-join string-replace)
+         (only-in racket/function curry curryr identity)
          (for-syntax racket/base))
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
@@ -101,13 +101,25 @@
 (define _gi-base-info (_cpointer/null 'GIBaseInfo _pointer
                                       values
                                       (lambda (cval)
-                                        (((allocator g_base_info_unref) make-gi-base) cval))))
+                                        (if cval
+                                            (((allocator g_base_info_unref) make-gi-base) cval)
+                                            #f))))
 
 (define-gir gi-base-namespace (_fun _gi-base-info -> _string)
   #:c-id g_base_info_get_namespace)
 
 (define-gir gi-base-name (_fun _gi-base-info -> _string)
   #:c-id g_base_info_get_name)
+
+(define (gi-base-sym info)
+  (let* ([name (gi-base-name info)]
+         [dashed (regexp-replace* #rx"([a-z]+)([A-Z]+)" name "\\1-\\2")])
+    ((compose1 string->symbol
+               (if (gi-object? info)
+                   (curryr string-append "%")
+                   identity)
+               (curryr string-replace "_" "-")
+               string-downcase) dashed)))
 
 (define-gir gi-base-type (_fun _gi-base-info -> _gi-info-type)
   #:c-id g_base_info_get_type)
@@ -186,6 +198,8 @@
                                    (gi-struct->ctype type-interface)]
                                   [(gi-enum? type-interface)
                                    (gi-enum->ctype type-interface)]
+                                  [(gi-object? type-interface)
+                                   (gi-object->ctype type-interface)]
                                   [(gi-registered-type? type-interface)
                                    (gi-registered-type->ctype type-interface)]
                                   [else (_cpointer/null info-type)]))]
@@ -381,19 +395,26 @@
 (define-gir gi-registered-type-gtype (_fun _gi-base-info -> _gtype)
   #:c-id g_registered_type_info_get_g_type)
 
-(define (gi-registered-type-sym registered)
-  (let* ([name (gi-base-name registered)]
-         [dashed (regexp-replace* #rx"([a-z]+)([A-Z]+)" name "\\1-\\2")])
-    ((compose1 string->symbol string-downcase) dashed)))
-
 (struct gtype-instance (type pointer)
   #:property prop:cpointer 1)
 
+(define (gtype-instance-gtype gtype)
+  (gi-registered-type-gtype (gtype-instance-type gtype)))
+
+(define (gtype-instance-type-name gtype)
+  (gi-registered-type-name (gtype-instance-type gtype)))
+
+(define (gtype-instance-name gtype)
+  (gi-base-sym (gtype-instance-type gtype)))
+
 (define (gi-registered-type->ctype registered)
-  (let* ([name (gi-registered-type-sym registered)])
-    (_cpointer name _pointer
-               values
-               (curry gtype-instance registered))))
+  (let* ([name (gi-base-sym registered)])
+    (_cpointer/null name _pointer
+                    values
+                    (lambda (ptr)
+                      (if ptr
+                          (gtype-instance registered ptr)
+                          #f)))))
 
 ;;; Structs
 (struct gi-struct gi-registered-type ())
@@ -408,7 +429,7 @@
              arguments))))
 
 (define (gi-struct->ctype structure)
-  (let* ([name (gi-registered-type-sym structure)]
+  (let* ([name (gi-base-sym structure)]
          [fields (gi-struct-fields structure)])
     (_cpointer name _pointer
                values
@@ -557,6 +578,39 @@
       (if (not (gi-callable-method? method))
           (apply method arguments)
           (raise-argument-error 'gi-object-find-method "class-function?" method)))))
+
+(define (gi-object->class obj)
+  (eval (gi-object-quasiclass obj)))
+
+(define (gi-object-quasiclass obj)
+  ;; (define parent% (gi-object-parent obj))
+  `(class object% ;,(if parent% (gi-object->class parent%) `object%)
+     (init-field pointer
+                 [base-info ,obj])
+
+     (super-new)
+
+     ;; ,(unless (zero? (gi-object-n-fields obj))
+     ;;    `(field
+     ;;      ,@(for/list ([field (gi-object-fields obj)])
+     ;;          `[,(gi-base-sym field) (gi-field-ref ,field pointer)])))
+
+     ,@(for/list ([method (gi-object-methods obj)]
+                  #:when (gi-callable-method? method))
+         (let ([args (map gi-base-sym (gi-callable-args method))])
+           `(define/public (,(gi-base-sym method)
+                            ,@args)
+              (,method pointer ,@args))))))
+
+(define (gi-object->ctype obj)
+  (let ([name (gi-base-name obj)]
+        [gobject% (gi-object->class obj)])
+    (_cpointer/null name _pointer
+               (curry dynamic-get-field 'pointer)
+               (lambda (ptr)
+                 (if ptr
+                     (new gobject% [pointer ptr])
+                     #f)))))
 
 (define-gir gi-object-parent (_fun _gi-base-info -> _gi-base-info)
   #:c-id g_object_info_get_parent)
