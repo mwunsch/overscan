@@ -465,17 +465,19 @@
 (define-gir gi-field-ref (_fun [field : _gi-base-info] _pointer
                                [r : (_ptr o _gi-argument)]
                                -> (success? : _bool)
-                               -> (if success?
-                                      (let ([type (gi-field-type field)])
-                                        (type r))
-                                      (error "oh no")))
+                               -> (let ([type (gi-field-type field)])
+                                    (type r)))
   #:c-id g_field_info_get_field)
 
 (define-gir gi-field-set! (_fun [field : _gi-base-info] _pointer
                                 [arg : _?]
                                 [r : (_ptr i _gi-argument) = (field arg)]
                                 -> (success? : _bool)
-                                -> (if success? (void) (error "oh no")))
+                                -> (if success?
+                                       (void)
+                                       (raise-arguments-error 'gi-field-set! "failed to set field"
+                                                              "field" (gi-base-name field)
+                                                              "arg" arg)))
   #:c-id g_field_info_set_field)
 
 (define (describe-gi-field field)
