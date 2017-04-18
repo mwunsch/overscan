@@ -167,6 +167,27 @@
 
 (define-gir g_info_type_to_string (_fun _gi-info-type -> _string))
 
+(define (gi-type-array? type)
+  (eq? (gi-type-tag type) 'GI_TYPE_TAG_ARRAY))
+
+(define-gir gi-type-array-length (_fun _gi-base-info -> _int)
+  #:c-id g_type_info_get_array_length)
+
+(define-gir gi-type-array-fixed-size (_fun _gi-base-info -> _int)
+  #:c-id g_type_info_get_array_fixed_size)
+
+(define-gir gi-type-param-type (_fun _gi-base-info _int -> _gi-base-info)
+  #:c-id g_type_info_get_param_type)
+
+(define-gir gi-type-zero-terminated? (_fun _gi-base-info -> _bool)
+  #:c-id g_type_info_is_zero_terminated)
+
+(define-gir gi-type-array-type (_fun _gi-base-info -> (_enum '(carray
+                                                               garray
+                                                               ptr-array
+                                                               byte-array)))
+  #:c-id g_type_info_get_array_type)
+
 (define (describe-gi-type type)
   (let ([typetag (gi-type-tag type)])
     (define typestring (if (eq? 'GI_TYPE_TAG_INTERFACE typetag)
@@ -204,8 +225,8 @@
                                    (gi-registered-type->ctype type-interface)]
                                   [else (_cpointer/null info-type)]))]
       ['GI_TYPE_TAG_ERROR _gerror-pointer]
-      ;; ['GI_TYPE_TAG_GTYPE]
-      ;; ['GI_TYPE_TAG_ARRAY]
+      ['GI_TYPE_TAG_GTYPE _gtype]
+      ['GI_TYPE_TAG_ARRAY (_garray type)]
       ;; ['GI_TYPE_TAG_GLIST]
       ;; ['GI_TYPE_TAG_GSLIST]
       ;; ['GI_TYPE_TAG_GHASH]
@@ -233,6 +254,25 @@
       [(eq? ctype _void) (void value)]
       [(not (eq? _arg-type ctype)) (cast value _arg-type ctype)]
       [else value])))
+
+(define (_garray type)
+  (let ([length (gi-type-array-length type)]
+        [_paramtype (gi-type->ctype (gi-type-param-type type 0))]
+        [zero-term? (gi-type-zero-terminated? type)])
+    (_cpointer (gi-type-array-type type)
+               _pointer
+               values
+               (lambda (ptr)
+                 (ptr-ref ptr
+                          (_array/vector _paramtype
+                                         (cond
+                                           [(positive? length) length]
+                                           [zero-term? (letrec ([deref (lambda (offset)
+                                                                         (if (ptr-ref ptr _paramtype offset)
+                                                                             (deref (add1 offset))
+                                                                             offset))])
+                                                         (deref 0))]
+                                           [else 0])))))))
 
 (define (_gi-argument-index-of ctype)
   (define _gi-argument-type (_gi-argument-type-of ctype))
