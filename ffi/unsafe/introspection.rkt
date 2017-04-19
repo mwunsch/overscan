@@ -4,6 +4,7 @@
          ffi/unsafe/define
          ffi/unsafe/alloc
          racket/class
+         (rename-in racket/contract [-> ->>])
          (only-in racket/list index-of filter-map)
          (only-in racket/string string-join string-replace)
          (only-in racket/function curry curryr identity)
@@ -537,10 +538,14 @@
 (define (gi-struct-methods structure)
   (gi-build-list structure gi-struct-n-methods gi-struct-method))
 
-(define-gir gi-struct-find-method (_fun _gi-base-info (method : _symbol)
+(define (gi-struct-known-method? structure)
+  (apply one-of/c (map (compose1 string->symbol gi-base-name) (gi-struct-methods structure))))
+
+(define-gir gi-struct-find-method (_fun (structure : _gi-base-info) (method : _symbol)
                                         -> (res : _gi-base-info)
                                         -> (or res
-                                               (raise-argument-error 'gi-struct-find-method "struct-method?" method)))
+                                               (raise-argument-error 'gi-object-find-method
+                                                                     (format "~v" (gi-struct-known-method? structure)) method)))
   #:c-id g_struct_info_find_method)
 
 (define (describe-gi-struct structure)
@@ -619,9 +624,7 @@
   #:property prop:procedure
   (lambda (object method-name . arguments)
     (let ([method (gi-object-find-method object method-name)])
-      (if (not (gi-callable-method? method))
-          (apply method arguments)
-          (raise-argument-error 'gi-object-find-method "class-function?" method)))))
+      (apply method arguments))))
 
 (define (gi-object->class obj)
   (eval (gi-object-quasiclass obj)))
@@ -689,10 +692,14 @@
 (define (gi-object-methods obj)
   (gi-build-list obj gi-object-n-methods gi-object-method))
 
-(define-gir gi-object-find-method (_fun _gi-base-info (method : _symbol)
+(define (gi-object-known-method? obj)
+  (apply one-of/c (map (compose1 string->symbol gi-base-name) (gi-object-methods obj))))
+
+(define-gir gi-object-find-method (_fun (obj : _gi-base-info) (method : _symbol)
                                         -> (res : _gi-base-info)
                                         -> (or res
-                                               (raise-argument-error 'gi-object-find-method "object-method?" method)))
+                                               (raise-argument-error 'gi-object-find-method
+                                                                     (format "~v" (gi-object-known-method? obj)) method)))
   #:c-id g_object_info_find_method)
 
 (define-gir gi-object-n-properties (_fun _gi-base-info -> _int)
