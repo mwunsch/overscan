@@ -102,9 +102,8 @@
 (define _gi-base-info (_cpointer/null 'GIBaseInfo _pointer
                                       values
                                       (lambda (cval)
-                                        (if cval
-                                            (((allocator gi-base-unref!) make-gi-base) cval)
-                                            #f))))
+                                        (and cval
+                                            (((allocator gi-base-unref!) make-gi-base) cval)))))
 
 (define-gir gi-base-namespace (_fun _gi-base-info -> _string)
   #:c-id g_base_info_get_namespace)
@@ -263,20 +262,21 @@
         [zero-term? (gi-type-zero-terminated? type)])
     (if (eq? _paramtype _void)
         _void             ; An array of void should be treated as void
-        (_cpointer (gi-type-array-type type)
-                   _pointer
-                   values
-                   (lambda (ptr)
-                     (ptr-ref ptr
-                              (_array/vector _paramtype
-                                             (cond
-                                               [(positive? length) length]
-                                               [zero-term? (letrec ([deref (lambda (offset)
-                                                                             (if (ptr-ref ptr _paramtype offset)
-                                                                                 (deref (add1 offset))
-                                                                                 offset))])
-                                                             (deref 0))]
-                                               [else 0]))))))))
+        (_cpointer/null (gi-type-array-type type)
+                        _pointer
+                        values
+                        (lambda (ptr)
+                          (and ptr
+                               (ptr-ref ptr
+                                        (_array/vector _paramtype
+                                                       (cond
+                                                         [(positive? length) length]
+                                                         [zero-term? (letrec ([deref (lambda (offset)
+                                                                                       (if (ptr-ref ptr _paramtype offset)
+                                                                                           (deref (add1 offset))
+                                                                                           offset))])
+                                                                       (deref 0))]
+                                                         [else 0])))))))))
 
 (define (_gi-argument-index-of ctype)
   (define _gi-argument-type (_gi-argument-type-of ctype))
@@ -479,11 +479,12 @@
 (define (gi-struct->ctype structure)
   (let* ([name (gi-base-sym structure)]
          [fields (gi-struct-fields structure)])
-    (_cpointer name _pointer
-               values
-               (lambda (ptr)
-                 (let ([field-values (map (curryr gi-field-ref ptr) fields)])
-                   (gstruct-instance structure ptr field-values))))))
+    (_cpointer/null name _pointer
+                    values
+                    (lambda (ptr)
+                      (and ptr
+                           (let ([field-values (map (curryr gi-field-ref ptr) fields)])
+                             (gstruct-instance structure ptr field-values)))))))
 
 (define-gir gi-struct-alignment (_fun _gi-base-info -> _size)
   #:c-id g_struct_info_get_alignment)
@@ -513,8 +514,9 @@
 (define-gir gi-field-ref (_fun [field : _gi-base-info] _pointer
                                [r : (_ptr o _gi-argument)]
                                -> (success? : _bool)
-                               -> (let ([type (gi-field-type field)])
-                                    (type r)))
+                               -> (and success?
+                                       (let ([type (gi-field-type field)])
+                                         (type r))))
   #:c-id g_field_info_get_field)
 
 (define-gir gi-field-set! (_fun [field : _gi-base-info] _pointer
@@ -616,7 +618,7 @@
 
 (define (gi-enum->ctype enum)
   (let* ([enum-hash (gi-enum->hash enum)])
-    (make-ctype _int64
+    (make-ctype _int
                 (lambda (val)
                   (for/first ([k+v (in-hash-pairs enum-hash)]
                               #:when (eq? val (cdr k+v)))
@@ -636,16 +638,16 @@
 
 (define (gi-object-quasiclass obj)
   ;; (define parent% (gi-object-parent obj))
-  `(class object% ;,(if parent% (gi-object->class parent%) `object%)
+  `(class object%   ;,(if parent% (gi-object->class parent%) `object%)
      (init-field pointer
                  [base-info ,obj])
 
      (super-new)
 
-     ;; ,(unless (zero? (gi-object-n-fields obj))
-     ;;    `(field
-     ;;      ,@(for/list ([field (gi-object-fields obj)])
-     ;;          `[,(gi-base-sym field) (gi-field-ref ,field pointer)])))
+     ,(unless (zero? (gi-object-n-fields obj))
+        `(field
+          ,@(for/list ([field (gi-object-fields obj)])
+              `[,(gi-base-sym field) (gi-field-ref ,field pointer)])))
 
      ,@(for/list ([method (gi-object-methods obj)]
                   #:when (gi-callable-method? method))
