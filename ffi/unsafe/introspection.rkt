@@ -259,20 +259,22 @@
   (let ([length (gi-type-array-length type)]
         [_paramtype (gi-type->ctype (gi-type-param-type type 0))]
         [zero-term? (gi-type-zero-terminated? type)])
-    (_cpointer (gi-type-array-type type)
-               _pointer
-               values
-               (lambda (ptr)
-                 (ptr-ref ptr
-                          (_array/vector _paramtype
-                                         (cond
-                                           [(positive? length) length]
-                                           [zero-term? (letrec ([deref (lambda (offset)
-                                                                         (if (ptr-ref ptr _paramtype offset)
-                                                                             (deref (add1 offset))
-                                                                             offset))])
-                                                         (deref 0))]
-                                           [else 0])))))))
+    (if (eq? _paramtype _void)
+        _void             ; An array of void should be treated as void
+        (_cpointer (gi-type-array-type type)
+                   _pointer
+                   values
+                   (lambda (ptr)
+                     (ptr-ref ptr
+                              (_array/vector _paramtype
+                                             (cond
+                                               [(positive? length) length]
+                                               [zero-term? (letrec ([deref (lambda (offset)
+                                                                             (if (ptr-ref ptr _paramtype offset)
+                                                                                 (deref (add1 offset))
+                                                                                 offset))])
+                                                             (deref 0))]
+                                               [else 0]))))))))
 
 (define (_gi-argument-index-of ctype)
   (define _gi-argument-type (_gi-argument-type-of ctype))
