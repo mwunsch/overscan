@@ -461,14 +461,18 @@
                           #f)))))
 
 ;;; Structs
-(struct gi-struct gi-registered-type ())
+(struct gi-struct gi-registered-type ()
+  #:property prop:procedure
+  (lambda (structure method-name . arguments)
+    (let ([method (gi-struct-find-method structure method-name)])
+      (apply method arguments))))
 
 (struct gstruct-instance gtype-instance (fields)
   #:transparent
   #:property prop:procedure
   (lambda (instance method-name . arguments)
     (let* ([base (gtype-instance-type instance)])
-      (apply (gi-struct-find-method base method-name)
+      (apply (base method-name)
              instance
              arguments))))
 
