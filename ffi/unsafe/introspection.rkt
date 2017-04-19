@@ -103,7 +103,7 @@
                                       values
                                       (lambda (cval)
                                         (if cval
-                                            (((allocator g_base_info_unref) make-gi-base) cval)
+                                            (((allocator gi-base-unref!) make-gi-base) cval)
                                             #f))))
 
 (define-gir gi-base-namespace (_fun _gi-base-info -> _string)
@@ -125,8 +125,9 @@
 (define-gir gi-base-type (_fun _gi-base-info -> _gi-info-type)
   #:c-id g_base_info_get_type)
 
-(define-gir g_base_info_unref (_fun _gi-base-info -> _void)
-  #:wrap (deallocator))
+(define-gir gi-base-unref! (_fun _gi-base-info -> _void)
+  #:wrap (deallocator)
+  #:c-id g_base_info_unref)
 
 (define (gi-build-list info numproc getter)
   (build-list (numproc info)
