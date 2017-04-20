@@ -552,7 +552,8 @@
                                         -> (res : _gi-base-info)
                                         -> (or res
                                                (raise-argument-error 'gi-object-find-method
-                                                                     (format "~v" (gi-struct-known-method? structure)) method)))
+                                                                     (format "~v" (gi-struct-known-method? structure))
+                                                                     method)))
   #:c-id g_struct_info_find_method)
 
 (define (describe-gi-struct structure)
@@ -589,10 +590,10 @@
 
 (struct gi-value gi-base ()
   #:property prop:procedure
-  (compose1 string->symbol gi-base-name))
+  gi-base-sym)
 
 (define-gir gi-value-get (_fun _gi-base-info
-                               -> _int)
+                               -> _int64)
   #:c-id g_value_info_get_value)
 
 (define (gi-enum-values enum)
@@ -617,13 +618,8 @@
   (gi-build-list enum gi-enum-n-methods gi-enum-value))
 
 (define (gi-enum->ctype enum)
-  (let* ([enum-hash (gi-enum->hash enum)])
-    (make-ctype _int
-                (lambda (val)
-                  (for/first ([k+v (in-hash-pairs enum-hash)]
-                              #:when (eq? val (cdr k+v)))
-                    (car k+v)))
-                (curry hash-ref enum-hash))))
+  (_enum (gi-enum->list enum)
+         (gi-enum-storage-type enum)))
 
 
 ;;; Objects
@@ -639,10 +635,11 @@
 (define (gi-object-quasiclass obj)
   ;; (define parent% (gi-object-parent obj))
   `(class object%   ;,(if parent% (gi-object->class parent%) `object%)
-     (init-field pointer
-                 [base-info ,obj])
+     (init-field pointer)
 
      (super-new)
+
+     (field [base-info ,obj])
 
      ,(unless (zero? (gi-object-n-fields obj))
         `(field
@@ -662,9 +659,8 @@
     (_cpointer/null name _pointer
                (curry dynamic-get-field 'pointer)
                (lambda (ptr)
-                 (if ptr
-                     (new gobject% [pointer ptr])
-                     #f)))))
+                 (and ptr
+                     (new gobject% [pointer ptr]))))))
 
 (define-gir gi-object-parent (_fun _gi-base-info -> _gi-base-info)
   #:c-id g_object_info_get_parent)
@@ -706,7 +702,8 @@
                                         -> (res : _gi-base-info)
                                         -> (or res
                                                (raise-argument-error 'gi-object-find-method
-                                                                     (format "~v" (gi-object-known-method? obj)) method)))
+                                                                     (format "~v" (gi-object-known-method? obj))
+                                                                     method)))
   #:c-id g_object_info_find_method)
 
 (define-gir gi-object-n-properties (_fun _gi-base-info -> _int)
