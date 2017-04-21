@@ -7,8 +7,8 @@
          (rename-in racket/contract [-> ->>])
          (only-in racket/list index-of filter-map)
          (only-in racket/string string-join string-replace)
-         (only-in racket/function curry curryr identity)
-         (for-syntax racket/base))
+         (only-in racket/function curry curryr)
+         (for-syntax racket/base syntax/parse))
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
 
@@ -117,7 +117,7 @@
     ((compose1 string->symbol
                (if (gi-object? info)
                    (curryr string-append "%")
-                   identity)
+                   values)
                (curryr string-replace "_" "-")
                string-downcase) dashed)))
 
@@ -134,18 +134,51 @@
 
 
 ;;; Repositories
-(define-gir g_irepository_require (_fun (_pointer = #f) _symbol _string _int (err : (_ptr io _gerror-pointer/null) = #f)
-                                        -> (r : _pointer)
-                                        -> (or r
-                                               (error (gerror-message err)))))
+(struct gi-repository (namespace version info-hash))
 
-(define-gir g_irepository_get_n_infos (_fun (_pointer = #f) _symbol -> _int))
+(define-gir gir-require (_fun (_pointer = #f) (namespace : _symbol) (version : _string)
+                              (_int = 0) ; Lazy mode
+                              (err : (_ptr io _gerror-pointer/null) = #f)
+                              -> (r : _pointer)
+                              -> (if r
+                                     (gi-repository namespace
+                                                    version
+                                                    (for/hash ([info (gir-infos namespace)])
+                                                      (values (string->symbol (gi-base-name info))
+                                                              info)))
+                                     (error (gerror-message err))))
+  #:c-id g_irepository_require)
 
-(define-gir g_irepository_get_info (_fun (_pointer = #f) _symbol _int -> _gi-base-info))
+(define-gir gir-n-infos (_fun (_pointer = #f) _symbol -> _int)
+  #:c-id g_irepository_get_n_infos)
 
-(define-gir g_irepository_find_by_name (_fun (_pointer = #f) _symbol _symbol -> _gi-base-info))
+(define-gir gir-info (_fun (_pointer = #f) _symbol _int -> _gi-base-info)
+  #:c-id g_irepository_get_info)
 
-(define-gir g_irepository_find_by_gtype (_fun (_pointer = #f) _gtype -> _gi-base-info))
+(define (gir-infos namespace)
+  (gi-build-list namespace gir-n-infos gir-info))
+
+(define-gir gir-find-by-name (_fun (_pointer = #f) _symbol _symbol -> _gi-base-info)
+  #:c-id g_irepository_find_by_name)
+
+(define (gi-repository-find-name repo name)
+  (define namespace (gi-repository-namespace repo))
+  (or (gir-find-by-name namespace name)
+      (raise-argument-error 'gi-repository-find-name
+                            (format "(gir-member/c ~v)" namespace)
+                            name)))
+
+(define-gir gir-find-by-gtype (_fun (_pointer = #f) _gtype -> _gi-base-info)
+  #:c-id g_irepository_find_by_gtype)
+
+(define (gi-repository-find-gtype repo gtype)
+  (gir-find-by-gtype (gi-repository-namespace repo) gtype))
+
+(define (gi-repository-member/c repo)
+  (gir-member/c (gi-repository-namespace repo)))
+
+(define (gir-member/c namespace)
+  (apply symbols (map (compose1 string->symbol gi-base-name) (gir-infos namespace))))
 
 
 ;;; Types
@@ -695,14 +728,14 @@
 (define (gi-object-methods obj)
   (gi-build-list obj gi-object-n-methods gi-object-method))
 
-(define (gi-object-known-method? obj)
-  (apply one-of/c (map (compose1 string->symbol gi-base-name) (gi-object-methods obj))))
+(define (gi-object-method/c obj)
+  (apply symbols (map (compose1 string->symbol gi-base-name) (gi-object-methods obj))))
 
 (define-gir gi-object-find-method (_fun (obj : _gi-base-info) (method : _symbol)
                                         -> (res : _gi-base-info)
                                         -> (or res
                                                (raise-argument-error 'gi-object-find-method
-                                                                     (format "~v" (gi-object-known-method? obj))
+                                                                     (format "~.v" (gi-object-method/c obj))
                                                                      method)))
   #:c-id g_object_info_find_method)
 
@@ -730,17 +763,9 @@
 
 (struct gi-signal gi-callable ())
 
-
-
 ;;; Introspection
-(define (introspection-info namespace)
-  (g_irepository_require namespace #f 0)
-  (for/list ([i (in-range (g_irepository_get_n_infos namespace))])
-    (let ([_info (g_irepository_get_info namespace i)])
-      (cons (gi-base-type _info) (gi-base-name _info)))))
-
-(define (introspection namespace)
-  (g_irepository_require namespace #f 0)
-  (lambda (name)
-    (or (g_irepository_find_by_name namespace name)
-        (raise-argument-error 'introspection "name in GIR namespace" name))))
+(define (introspection namespace [version #f])
+  (let ([repo  (gir-require namespace version)])
+    (case-lambda
+      [() (gi-repository-info-hash repo)]
+      [(name) (gi-repository-find-name repo name)])))
