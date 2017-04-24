@@ -133,54 +133,6 @@
               (curry getter info)))
 
 
-;;; Repositories
-(struct gi-repository (namespace version info-hash))
-
-(define-gir gir-require (_fun (_pointer = #f) (namespace : _symbol) (version : _string)
-                              (_int = 0) ; Lazy mode
-                              (err : (_ptr io _gerror-pointer/null) = #f)
-                              -> (r : _pointer)
-                              -> (if r
-                                     (gi-repository namespace
-                                                    version
-                                                    (for/hash ([info (gir-infos namespace)])
-                                                      (values (string->symbol (gi-base-name info))
-                                                              info)))
-                                     (error (gerror-message err))))
-  #:c-id g_irepository_require)
-
-(define-gir gir-n-infos (_fun (_pointer = #f) _symbol -> _int)
-  #:c-id g_irepository_get_n_infos)
-
-(define-gir gir-info (_fun (_pointer = #f) _symbol _int -> _gi-base-info)
-  #:c-id g_irepository_get_info)
-
-(define (gir-infos namespace)
-  (gi-build-list namespace gir-n-infos gir-info))
-
-(define-gir gir-find-by-name (_fun (_pointer = #f) _symbol _symbol -> _gi-base-info)
-  #:c-id g_irepository_find_by_name)
-
-(define (gi-repository-find-name repo name)
-  (define namespace (gi-repository-namespace repo))
-  (or (gir-find-by-name namespace name)
-      (raise-argument-error 'gi-repository-find-name
-                            (format "(gir-member/c ~v)" namespace)
-                            name)))
-
-(define-gir gir-find-by-gtype (_fun (_pointer = #f) _gtype -> _gi-base-info)
-  #:c-id g_irepository_find_by_gtype)
-
-(define (gi-repository-find-gtype repo gtype)
-  (gir-find-by-gtype (gi-repository-namespace repo) gtype))
-
-(define (gi-repository-member/c repo)
-  (gir-member/c (gi-repository-namespace repo)))
-
-(define (gir-member/c namespace)
-  (apply symbols (map (compose1 string->symbol gi-base-name) (gir-infos namespace))))
-
-
 ;;; Types
 (struct gi-type gi-base ()
   #:property prop:procedure
@@ -763,9 +715,56 @@
 
 (struct gi-signal gi-callable ())
 
-;;; Introspection
+;;; Repositories
+(struct gi-repository (namespace version info-hash)
+  #:property prop:procedure
+  (case-lambda
+    [(repo) (gi-repository-info-hash repo)]
+    [(repo name) (gir-find-by-name repo name)]))
+
+(define-gir gir-require (_fun (_pointer = #f) (namespace : _symbol) (version : _string)
+                              (_int = 0) ; Lazy mode
+                              (err : (_ptr io _gerror-pointer/null) = #f)
+                              -> (r : _pointer)
+                              -> (if r
+                                     (gi-repository namespace
+                                                    version
+                                                    (for/hash ([info (gir-infos namespace)])
+                                                      (values (string->symbol (gi-base-name info))
+                                                              info)))
+                                     (error (gerror-message err))))
+  #:c-id g_irepository_require)
+
+(define-gir gir-n-infos (_fun (_pointer = #f) _symbol -> _int)
+  #:c-id g_irepository_get_n_infos)
+
+(define-gir gir-info (_fun (_pointer = #f) _symbol _int -> _gi-base-info)
+  #:c-id g_irepository_get_info)
+
+(define (gir-infos namespace)
+  (gi-build-list namespace gir-n-infos gir-info))
+
+(define-gir gir-find-by-name (_fun (_pointer = #f) _symbol _symbol -> _gi-base-info)
+  #:c-id g_irepository_find_by_name)
+
+(define (gi-repository-find-name repo name)
+  (define namespace (gi-repository-namespace repo))
+  (or (gir-find-by-name namespace name)
+      (raise-argument-error 'gi-repository-find-name
+                            (format "(gir-member/c ~v)" namespace)
+                            name)))
+
+(define-gir gir-find-by-gtype (_fun (_pointer = #f) _gtype -> _gi-base-info)
+  #:c-id g_irepository_find_by_gtype)
+
+(define (gi-repository-find-gtype repo gtype)
+  (gir-find-by-gtype (gi-repository-namespace repo) gtype))
+
+(define (gi-repository-member/c repo)
+  (gir-member/c (gi-repository-namespace repo)))
+
+(define (gir-member/c namespace)
+  (apply symbols (map (compose1 string->symbol gi-base-name) (gir-infos namespace))))
+
 (define (introspection namespace [version #f])
-  (let ([repo  (gir-require namespace version)])
-    (case-lambda
-      [() (gi-repository-info-hash repo)]
-      [(name) (gi-repository-find-name repo name)])))
+  (gir-require namespace version))
