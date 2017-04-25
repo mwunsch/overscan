@@ -364,7 +364,7 @@
           [method? (gi-callable-method? fn)]
           [arity (gi-callable-arity fn)])
       (unless (eqv? (length arguments) arity)
-        (apply raise-arity-error fn arity arguments))
+        (apply raise-arity-error (string->symbol (gi-base-name fn)) arity arguments))
       (define arguments-without-self
         (if (and method? (pair? arguments))
             (cdr arguments)
@@ -648,7 +648,7 @@
                (curry dynamic-get-field 'pointer)
                (lambda (ptr)
                  (and ptr
-                     (new gobject% [pointer ptr]))))))
+                      (new gobject% [pointer ptr]))))))
 
 (define-gir gi-object-parent (_fun _gi-base-info -> _gi-base-info)
   #:c-id g_object_info_get_parent)
@@ -723,7 +723,7 @@
   #:property prop:procedure
   (case-lambda
     [(repo) (gi-repository-info-hash repo)]
-    [(repo name) (gir-find-by-name repo name)]))
+    [(repo name) (gi-repository-find-name repo name)]))
 
 (define-gir gir-require (_fun (_pointer = #f) (namespace : _symbol) (version : _string)
                               (_int = 0) ; Lazy mode
