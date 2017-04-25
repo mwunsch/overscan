@@ -13,6 +13,19 @@
                      (only-in racket/function curry curryr)
                      (only-in racket/string string-replace)))
 
+(provide (contract-out [struct gi-base
+                         ((info cpointer?))]
+                       [introspection
+                        (->* (symbol?) (string?) gi-repository?)]
+                       [gi-repository-find-name
+                        (->> gi-repository? symbol? gi-base?)]
+                       [gi-base-name
+                        (->> gi-base? string?)]
+                       [gi-object->class
+                        (->> gi-object? class?)])
+         gir-member/c
+         gir/require)
+
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
 
 ;;; CTypes
