@@ -784,21 +784,3 @@
 
 (define (introspection namespace [version #f])
   (gir-require namespace version))
-
-(define-syntax (gir/require stx)
-  (syntax-case stx ()
-    [(_ namespace (names ...))
-     (let ([c-id->racket-id (lambda (str)
-                              ((compose1 string->symbol
-                                         (curryr string-replace "_" "-")
-                                         string-downcase)
-                               (regexp-replace* #rx"([a-z]+)([A-Z]+)" str "\\1-\\2")))]
-           [string-names (map (compose1 symbol->string syntax-e)
-                              (syntax->list #'(names ...)))])
-       (with-syntax ([(pretty-names ...) (map (curry format-id stx "~a") (map c-id->racket-id string-names))])
-         #`(begin
-             (define pretty-names
-               (or (gir-find-by-name namespace 'names)
-                   (raise-argument-error 'pretty-names
-                                         (format "(gir-member/c ~v)" namespace)
-                                         'names))) ...)))]))
