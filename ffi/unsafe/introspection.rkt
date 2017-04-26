@@ -9,13 +9,18 @@
          (only-in racket/function curry curryr)
          (for-syntax racket/base
                      racket/syntax
-                     (only-in racket/function curry curryr)
+                     syntax/parse
                      (only-in racket/string string-replace)))
 
 (provide (contract-out [struct gi-base
-                         ((info cpointer?))]
+                         ((info cpointer?))
+                         #:omit-constructor]
                        [struct gtype-instance
-                         ((type gi-base?) (pointer cpointer?))]
+                         ((type gi-registered-type?) (pointer cpointer?))
+                         #:omit-constructor]
+                       [struct (gobject gtype-instance)
+                         ((type gi-object?) (pointer cpointer?))
+                         #:omit-constructor]
                        [gtype-instance-type-name
                         (->> gtype-instance? symbol?)]
                        [gtype-instance-name
@@ -32,7 +37,7 @@
                         (->> symbol? gobject? any)]
                        [dynamic-set-field!
                         (->> symbol? gobject? any/c void?)])
-         (struct-out gobject)
+         send
          gir-member/c)
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
@@ -654,6 +659,14 @@
          [ptr (gtype-instance-pointer obj)]
          [field (gi-object-find-field base field-name)])
     (gi-field-set! field ptr v)))
+
+(define-syntax (send stx)
+  (syntax-parse stx
+    [(_ obj:expr method-id:id args:expr ...)
+     (with-syntax ([method-name (string->symbol (string-replace
+                                                 (symbol->string (syntax-e #'method-id))
+                                                 "-" "_"))])
+       #'(dynamic-send obj 'method-name args ...))]))
 
 (define (gi-object-quasiclass obj)
   ;; (define parent% (gi-object-parent obj))
