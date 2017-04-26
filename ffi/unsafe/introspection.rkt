@@ -3,7 +3,6 @@
 (require ffi/unsafe
          ffi/unsafe/define
          ffi/unsafe/alloc
-         racket/class
          (rename-in racket/contract [-> ->>])
          (only-in racket/list index-of filter-map)
          (only-in racket/string string-join string-replace)
@@ -15,16 +14,26 @@
 
 (provide (contract-out [struct gi-base
                          ((info cpointer?))]
+                       [struct gtype-instance
+                         ((type gi-base?) (pointer cpointer?))]
+                       [gtype-instance-type-name
+                        (->> gtype-instance? symbol?)]
+                       [gtype-instance-name
+                        (->> gtype-instance? symbol?)]
                        [introspection
                         (->* (symbol?) (string?) gi-repository?)]
                        [gi-repository-find-name
                         (->> gi-repository? symbol? gi-base?)]
                        [gi-base-name
                         (->> gi-base? string?)]
-                       [gi-object->class
-                        (->> gi-object? class?)])
-         gir-member/c
-         gir/require)
+                       [dynamic-send
+                        (->* (gobject? symbol?) #:rest (listof any/c) any)]
+                       [dynamic-get-field
+                        (->> symbol? gobject? any)]
+                       [dynamic-set-field!
+                        (->> symbol? gobject? any/c void?)])
+         (struct-out gobject)
+         gir-member/c)
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
 
@@ -131,9 +140,6 @@
   (let* ([name (gi-base-name info)]
          [dashed (regexp-replace* #rx"([a-z]+)([A-Z]+)" name "\\1-\\2")])
     ((compose1 string->symbol
-               (if (gi-object? info)
-                   (curryr string-append "%")
-                   values)
                (curryr string-replace "_" "-")
                string-downcase) dashed)))
 
@@ -630,17 +636,29 @@
     (let ([method (gi-object-find-method object method-name)])
       (apply method arguments))))
 
-(define (gi-object->class obj)
-  (eval (gi-object-quasiclass obj)))
+(struct gobject gtype-instance ())
+
+(define (dynamic-send obj method-name . arguments)
+  (let ([base (gtype-instance-type obj)]
+        [ptr (gtype-instance-pointer obj)])
+    (apply base method-name (cons ptr arguments))))
+
+(define (dynamic-get-field field-name obj)
+  (let* ([base (gtype-instance-type obj)]
+         [ptr (gtype-instance-pointer obj)]
+         [field (gi-object-find-field base field-name)])
+    (gi-field-ref field ptr)))
+
+(define (dynamic-set-field! field-name obj v)
+  (let* ([base (gtype-instance-type obj)]
+         [ptr (gtype-instance-pointer obj)]
+         [field (gi-object-find-field base field-name)])
+    (gi-field-set! field ptr v)))
 
 (define (gi-object-quasiclass obj)
   ;; (define parent% (gi-object-parent obj))
   `(class object%   ;,(if parent% (gi-object->class parent%) `object%)
-     (init-field pointer)
-
      (super-new)
-
-     (field [base-info ,obj])
 
      ,(unless (zero? (gi-object-n-fields obj))
         `(field
@@ -655,13 +673,12 @@
               (,method pointer ,@args))))))
 
 (define (gi-object->ctype obj)
-  (let ([name (gi-base-name obj)]
-        [gobject% (gi-object->class obj)])
+  (let ([name (gi-base-sym obj)])
     (_cpointer/null name _pointer
-               (curry dynamic-get-field 'pointer)
-               (lambda (ptr)
-                 (and ptr
-                      (new gobject% [pointer ptr]))))))
+                    values
+                    (lambda (ptr)
+                      (and ptr
+                           (gobject obj ptr))))))
 
 (define-gir gi-object-parent (_fun _gi-base-info -> _gi-base-info)
   #:c-id g_object_info_get_parent)
@@ -685,6 +702,20 @@
 
 (define (gi-object-fields obj)
   (gi-build-list obj gi-object-n-fields gi-object-field))
+
+(define (gi-object-field/c obj)
+  (apply symbols (map (compose1 string->symbol
+                                gi-base-name)
+                      (gi-object-fields obj))))
+
+(define (gi-object-find-field obj field-name)
+  (let ([fields (gi-object-fields obj)])
+    (or (findf (lambda (f) (equal? field-name
+                              (string->symbol (gi-base-name f))))
+               fields)
+        (raise-argument-error 'gi-object-find-field
+                              (format "~.v" (gi-object-field/c obj))
+                              field-name))))
 
 (define-gir gi-object-n-methods (_fun _gi-base-info -> _int)
   #:c-id g_object_info_get_n_methods)
