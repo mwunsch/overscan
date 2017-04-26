@@ -15,30 +15,31 @@
 (provide (contract-out [struct gi-base
                          ((info cpointer?))
                          #:omit-constructor]
+                       [gi-base-name
+                        (->> gi-base? string?)]
                        [struct gtype-instance
                          ((type gi-registered-type?) (pointer cpointer?))
-                         #:omit-constructor]
-                       [struct (gobject gtype-instance)
-                         ((type gi-object?) (pointer cpointer?))
                          #:omit-constructor]
                        [gtype-instance-type-name
                         (->> gtype-instance? symbol?)]
                        [gtype-instance-name
                         (->> gtype-instance? symbol?)]
-                       [introspection
-                        (->* (symbol?) (string?) gi-repository?)]
-                       [gi-repository-find-name
-                        (->> gi-repository? symbol? gi-base?)]
-                       [gi-base-name
-                        (->> gi-base? string?)]
+                       [struct (gobject gtype-instance)
+                         ((type gi-object?) (pointer cpointer?))
+                         #:omit-constructor]
                        [dynamic-send
                         (->* (gobject? symbol?) #:rest (listof any/c) any)]
                        [dynamic-get-field
                         (->> symbol? gobject? any)]
                        [dynamic-set-field!
-                        (->> symbol? gobject? any/c void?)])
+                        (->> symbol? gobject? any/c void?)]
+                       [introspection
+                        (->* (symbol?) (string?) gi-repository?)]
+                       [gi-repository-find-name
+                        (->> gi-repository? symbol? gi-base?)])
          send
-         gir-member/c)
+         gir-member/c
+         gi-repository-member/c)
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
 
@@ -564,7 +565,7 @@
                                         -> (res : _gi-base-info)
                                         -> (or res
                                                (raise-argument-error 'gi-object-find-method
-                                                                     (format "~v" (gi-struct-known-method? structure))
+                                                                     (format "~.v" (gi-struct-known-method? structure))
                                                                      method)))
   #:c-id g_struct_info_find_method)
 
