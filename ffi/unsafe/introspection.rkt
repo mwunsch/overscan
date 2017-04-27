@@ -3,6 +3,7 @@
 (require ffi/unsafe
          ffi/unsafe/define
          ffi/unsafe/alloc
+         ffi/cvector
          (rename-in racket/contract [-> ->>])
          (only-in racket/list index-of filter-map)
          (only-in racket/string string-join string-replace)
@@ -277,7 +278,12 @@
         _void             ; An array of void should be treated as void
         (_cpointer/null (gi-type-array-type type)
                         _pointer
-                        values
+                        (lambda (vec)
+                          (and vec
+                               (let ([ptr (cvector-ptr (list->cvector (vector->list vec)
+                                                                      _paramtype))])
+                                 (cpointer-push-tag! ptr (gi-type-array-type type))
+                                 ptr)))
                         (lambda (ptr)
                           (and ptr
                                (ptr-ref ptr
