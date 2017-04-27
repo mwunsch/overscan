@@ -344,6 +344,10 @@
 (define-gir gi-callable-method? (_fun _gi-base-info -> _bool)
   #:c-id g_callable_info_is_method)
 
+(define-gir gi-callable-caller-owns (_fun _gi-base-info ->
+                                          (_enum '(nothing container everything)))
+  #:c-id g_callable_info_get_caller_owns)
+
 (define (gi-callable-arity fn)
   (let ([args (gi-callable-args fn)])
     (if (gi-callable-method? fn)
@@ -570,7 +574,7 @@
 (define-gir gi-struct-find-method (_fun (structure : _gi-base-info) (method : _symbol)
                                         -> (res : _gi-base-info)
                                         -> (or res
-                                               (raise-argument-error 'gi-object-find-method
+                                               (raise-argument-error 'gi-struct-find-method
                                                                      (format "~.v" (gi-struct-known-method? structure))
                                                                      method)))
   #:c-id g_struct_info_find_method)
@@ -645,10 +649,18 @@
 (struct gi-object gi-registered-type ()
   #:property prop:procedure
   (lambda (object method-name . arguments)
-    (let ([method (gi-object-find-method object method-name)])
+    (let ([method (gi-object-method-lookup object method-name)])
       (apply method arguments))))
 
 (struct gobject gtype-instance ())
+
+(define (gi-object-method-lookup obj method-name)
+  (let ([method (gi-object-find-method obj method-name)]
+        [parent (gi-object-parent obj)])
+    (or method
+        (if parent
+            (gi-object-method-lookup parent method-name)
+            (error "method not found")))))
 
 (define (gobject-has-field? obj field-name)
   (let* ([base (gtype-instance-type obj)]
@@ -787,11 +799,7 @@
   (apply symbols (map (compose1 string->symbol gi-base-name) (gi-object-methods obj))))
 
 (define-gir gi-object-find-method (_fun (obj : _gi-base-info) (method : _symbol)
-                                        -> (res : _gi-base-info)
-                                        -> (or res
-                                               (raise-argument-error 'gi-object-find-method
-                                                                     (format "~.v" (gi-object-method/c obj))
-                                                                     method)))
+                                        -> _gi-base-info)
   #:c-id g_object_info_find_method)
 
 (define-gir gi-object-n-properties (_fun _gi-base-info -> _int)
