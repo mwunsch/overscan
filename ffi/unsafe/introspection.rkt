@@ -38,7 +38,7 @@
                         (->* (symbol?) (string?) gi-repository?)]
                        [gi-repository-find-name
                         (->> gi-repository? symbol? gi-base?)])
-         send
+         send get-field set-field! field-bound?
          gir-member/c
          gi-repository-member/c)
 
@@ -650,6 +650,12 @@
 
 (struct gobject gtype-instance ())
 
+(define (gobject-has-field? obj field-name)
+  (let* ([base (gtype-instance-type obj)]
+         [fields (map gi-base-sym (gi-object-fields base))])
+    (and (memq field-name fields)
+         #t)))
+
 (define (dynamic-send obj method-name . arguments)
   (let ([base (gtype-instance-type obj)]
         [ptr (gtype-instance-pointer obj)])
@@ -676,6 +682,34 @@
                                                  (symbol->string (syntax-e #'method-id))
                                                  "-" "_"))])
        #'(dynamic-send obj.c 'method-name args ...))]))
+
+(define-syntax (get-field stx)
+  (syntax-parse stx
+    [(_ field-id:id obj)
+     #:declare obj (expr/c #'gobject?
+                           #:name "instance")
+     (with-syntax ([field-name (string->symbol (string-replace
+                                                 (symbol->string (syntax-e #'field-id))
+                                                 "-" "_"))])
+       #'(dynamic-get-field 'field-name obj.c))]))
+
+(define-syntax (set-field! stx)
+  (syntax-parse stx
+    [(_ field-id:id obj val:expr)
+     #:declare obj (expr/c #'gobject?
+                           #:name "instance")
+     (with-syntax ([field-name (string->symbol (string-replace
+                                                 (symbol->string (syntax-e #'field-id))
+                                                 "-" "_"))])
+       #'(dynamic-set-field! 'field-name obj.c val))]))
+
+(define-syntax (field-bound? stx)
+  (syntax-parse stx
+    [(_ field-id:id obj)
+     #:declare obj (expr/c #'gobject?
+                           #:name "instance")
+     #'(gobject-has-field? obj.c 'field-id)]))
+
 
 (define (gi-object-quasiclass obj)
   ;; (define parent% (gi-object-parent obj))
