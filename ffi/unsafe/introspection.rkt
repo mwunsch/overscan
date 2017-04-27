@@ -669,11 +669,13 @@
 
 (define-syntax (send stx)
   (syntax-parse stx
-    [(_ obj:expr method-id:id args:expr ...)
+    [(_ obj method-id:id args:expr ...)
+     #:declare obj (expr/c #'gobject?
+                           #:name "receiver")
      (with-syntax ([method-name (string->symbol (string-replace
                                                  (symbol->string (syntax-e #'method-id))
                                                  "-" "_"))])
-       #'(dynamic-send obj 'method-name args ...))]))
+       #'(dynamic-send obj.c 'method-name args ...))]))
 
 (define (gi-object-quasiclass obj)
   ;; (define parent% (gi-object-parent obj))
