@@ -650,10 +650,18 @@
 (struct gi-object gi-registered-type ()
   #:property prop:procedure
   (lambda (object method-name . arguments)
-    (let ([method (gi-object-lookup-method object method-name)])
-      (if method
-          (apply method arguments)
-          (error "o no method not found")))))
+    (let* ([method (gi-object-lookup-method object method-name)]
+           [invocation (if method
+                           (apply method arguments)
+                           (error "o no method not found"))])
+      (if (and (gobject? invocation)
+               (memq 'constructor? (gi-function-flags method)))
+          (let ([base (gtype-instance-type invocation)])
+            ;; If a method is a constructor and the return type is a
+            ;; gobject, cast the return value to this class. This is
+            ;; potentially controversial...
+            (cast invocation (gi-object->ctype base) (gi-object->ctype object)))
+          invocation))))
 
 (struct gobject gtype-instance ())
 
@@ -709,7 +717,7 @@
      (with-syntax ([method-name (string->symbol (string-replace
                                                  (symbol->string (syntax-e #'method-id))
                                                  "-" "_"))])
-       #'(and (gi-object-method-lookup (gtype-instance-type obj.c)
+       #'(and (gi-object-lookup-method (gtype-instance-type obj.c)
                                        'method-name)
               #t))]))
 

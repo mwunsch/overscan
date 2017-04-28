@@ -24,4 +24,4 @@
 
 (define (pipeline-add-many pipeline . elements)
   (for/and ([element elements])
-    (bin 'add pipeline element)))
+    (send pipeline add element)))
