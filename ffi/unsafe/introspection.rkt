@@ -34,13 +34,14 @@
                         (->> symbol? gobject? any)]
                        [dynamic-set-field!
                         (->> symbol? gobject? any/c void?)]
+                       [method-names
+                        (->> gobject? (listof symbol?))]
                        [introspection
                         (->* (symbol?) (string?) gi-repository?)]
                        [gi-repository-find-name
                         (->> gi-repository? symbol? gi-base?)])
-         send get-field set-field! field-bound?
-         gir-member/c
-         gi-repository-member/c)
+         send get-field set-field! field-bound? responds-to?
+         gir-member/c gi-repository-member/c)
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
 
@@ -649,18 +650,23 @@
 (struct gi-object gi-registered-type ()
   #:property prop:procedure
   (lambda (object method-name . arguments)
-    (let ([method (gi-object-method-lookup object method-name)])
-      (apply method arguments))))
+    (let ([method (gi-object-lookup-method object method-name)])
+      (if method
+          (apply method arguments)
+          (error "o no method not found")))))
 
 (struct gobject gtype-instance ())
 
-(define (gi-object-method-lookup obj method-name)
+(define (gi-object-lookup-method obj method-name)
   (let ([method (gi-object-find-method obj method-name)]
         [parent (gi-object-parent obj)])
     (or method
-        (if parent
-            (gi-object-method-lookup parent method-name)
-            (error "method not found")))))
+        (and parent
+             (gi-object-lookup-method parent method-name)))))
+
+(define (method-names object)
+  (let ([base (gtype-instance-type object)])
+    (map gi-base-sym (gi-object-methods base))))
 
 (define (gobject-has-field? obj field-name)
   (let* ([base (gtype-instance-type obj)]
@@ -694,6 +700,18 @@
                                                  (symbol->string (syntax-e #'method-id))
                                                  "-" "_"))])
        #'(dynamic-send obj.c 'method-name args ...))]))
+
+(define-syntax (responds-to? stx)
+  (syntax-parse stx
+    [(_ obj method-id:id args:expr ...)
+     #:declare obj (expr/c #'gobject?
+                           #:name "receiver")
+     (with-syntax ([method-name (string->symbol (string-replace
+                                                 (symbol->string (syntax-e #'method-id))
+                                                 "-" "_"))])
+       #'(and (gi-object-method-lookup (gtype-instance-type obj.c)
+                                       'method-name)
+              #t))]))
 
 (define-syntax (get-field stx)
   (syntax-parse stx
