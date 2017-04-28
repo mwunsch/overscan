@@ -17,7 +17,7 @@
                          ((info cpointer?))
                          #:omit-constructor]
                        [gi-base-name
-                        (->> gi-base? string?)]
+                        (->> gi-base? symbol?)]
                        [struct gtype-instance
                          ((type gi-registered-type?) (pointer cpointer?))
                          #:omit-constructor]
@@ -141,12 +141,12 @@
 (define-gir gi-base-namespace (_fun _gi-base-info -> _string)
   #:c-id g_base_info_get_namespace)
 
-(define-gir gi-base-name (_fun _gi-base-info -> _string)
+(define-gir gi-base-name (_fun _gi-base-info -> _symbol)
   #:c-id g_base_info_get_name)
 
 (define (gi-base-sym info)
   (let* ([name (gi-base-name info)]
-         [dashed (regexp-replace* #rx"([a-z]+)([A-Z]+)" name "\\1-\\2")])
+         [dashed (regexp-replace* #rx"([a-z]+)([A-Z]+)" (symbol->string name) "\\1-\\2")])
     ((compose1 string->symbol
                (curryr string-replace "_" "-")
                string-downcase) dashed)))
@@ -207,7 +207,7 @@
 (define (describe-gi-type type)
   (let ([typetag (gi-type-tag type)])
     (define typestring (if (eq? 'GI_TYPE_TAG_INTERFACE typetag)
-                           (gi-base-name (gi-type-interface type))
+                           (symbol->string (gi-base-name (gi-type-interface type)))
                            (g_type_tag_to_string typetag)))
     (string-append typestring (if (gi-type-pointer? type) "*" ""))))
 
@@ -400,7 +400,7 @@
           [method? (gi-callable-method? fn)]
           [arity (gi-callable-arity fn)])
       (unless (eqv? (length arguments) arity)
-        (apply raise-arity-error (string->symbol (gi-base-name fn)) arity arguments))
+        (apply raise-arity-error (gi-base-name fn) arity arguments))
       (define arguments-without-self
         (if (and method? (pair? arguments))
             (cdr arguments)
@@ -473,7 +473,7 @@
   (gi-registered-type-name (gtype-instance-type gtype)))
 
 (define (gtype-instance-name gtype)
-  (gi-base-sym (gtype-instance-type gtype)))
+  (gi-base-name (gtype-instance-type gtype)))
 
 (define (gi-registered-type->ctype registered)
   (let* ([name (gi-base-sym registered)])
@@ -570,7 +570,7 @@
   (gi-build-list structure gi-struct-n-methods gi-struct-method))
 
 (define (gi-struct-known-method? structure)
-  (apply one-of/c (map (compose1 string->symbol gi-base-name) (gi-struct-methods structure))))
+  (apply one-of/c (map gi-base-name (gi-struct-methods structure))))
 
 (define-gir gi-struct-find-method (_fun (structure : _gi-base-info) (method : _symbol)
                                         -> (res : _gi-base-info)
@@ -790,14 +790,13 @@
   (gi-build-list obj gi-object-n-fields gi-object-field))
 
 (define (gi-object-field/c obj)
-  (apply symbols (map (compose1 string->symbol
-                                gi-base-name)
+  (apply symbols (map gi-base-name
                       (gi-object-fields obj))))
 
 (define (gi-object-find-field obj field-name)
   (let ([fields (gi-object-fields obj)])
     (or (findf (lambda (f) (equal? field-name
-                              (string->symbol (gi-base-name f))))
+                              (gi-base-name f)))
                fields)
         (raise-argument-error 'gi-object-find-field
                               (format "~.v" (gi-object-field/c obj))
@@ -814,7 +813,7 @@
   (gi-build-list obj gi-object-n-methods gi-object-method))
 
 (define (gi-object-method/c obj)
-  (apply symbols (map (compose1 string->symbol gi-base-name) (gi-object-methods obj))))
+  (apply symbols (map gi-base-name (gi-object-methods obj))))
 
 (define-gir gi-object-find-method (_fun (obj : _gi-base-info) (method : _symbol)
                                         -> _gi-base-info)
@@ -859,7 +858,7 @@
                                      (gi-repository namespace
                                                     version
                                                     (for/hash ([info (gir-infos namespace)])
-                                                      (values (string->symbol (gi-base-name info))
+                                                      (values (gi-base-name info)
                                                               info)))
                                      (error (gerror-message err))))
   #:c-id g_irepository_require)
@@ -893,7 +892,7 @@
   (gir-member/c (gi-repository-namespace repo)))
 
 (define (gir-member/c namespace)
-  (apply symbols (map (compose1 string->symbol gi-base-name) (gir-infos namespace))))
+  (apply symbols (map gi-base-name (gir-infos namespace))))
 
 (define (introspection namespace [version #f])
   (gir-require namespace version))
