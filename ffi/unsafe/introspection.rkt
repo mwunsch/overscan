@@ -44,6 +44,7 @@
          gir-member/c gi-repository-member/c)
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
+(define-ffi-definer define-gobject (ffi-lib "libgobject-2.0"))
 
 ;;; CTypes
 (define _gi-info-type (_enum '(GI_INFO_TYPE_INVALID
@@ -772,7 +773,16 @@
                     values
                     (lambda (ptr)
                       (and ptr
-                           (gobject obj ptr))))))
+                           (((allocator gobject-unref!) gobject) obj ptr))))))
+
+(define-gobject gobject-unref! (_fun [base-type : _?] _pointer
+                                     -> _void)
+  #:wrap (deallocator cadr)
+  #:c-id g_object_unref)
+
+(define-gobject gobject-ref-sink (_fun _pointer -> _pointer)
+  #:wrap (allocator gobject-unref!)
+  #:c-id g_object_ref_sink)
 
 (define-gir gi-object-parent (_fun _gi-base-info -> _gi-base-info)
   #:c-id g_object_info_get_parent)
