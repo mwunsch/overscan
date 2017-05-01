@@ -36,6 +36,9 @@
                         (->> symbol? gobject? any/c void?)]
                        [method-names
                         (->> gobject? (listof symbol?))]
+                       [connect
+                        (->> gobject? symbol? procedure? (or/c exact-integer?
+                                                               #f))]
                        [introspection
                         (->* (symbol?) (string?) gi-repository?)]
                        [gi-repository-find-name
@@ -859,7 +862,63 @@
 (define (gi-object-signals obj)
   (gi-build-list obj gi-object-n-signals gi-object-signal))
 
+(define-gir gi-object-find-signal (_fun _gi-base-info _symbol
+                                        -> _gi-base-info)
+  #:c-id g_object_info_find_signal)
+
 (struct gi-signal gi-callable ())
+
+(define (gi-signal->ctype signal)
+  (let ([args (gi-callable-args signal)]
+        [returns (gi-callable-returns signal)])
+    (_cprocedure (map (compose1 gi-type->ctype gi-arg-type) args)
+                 (gi-type->ctype returns))))
+
+(define _gsignal-flags (_bitmask '(run-first
+                                   run-last
+                                   run-cleanup
+                                   no-recurse
+                                   detailed
+                                   action
+                                   no-hooks
+                                   must-collect
+                                   deprecated)))
+
+(define-cstruct _gsignal-query ([id _uint]
+                                [name _string]
+                                [itype _gtype]
+                                [flags _gsignal-flags]
+                                [return-type _gtype]
+                                [n-params _uint]
+                                [param-types _bytes]))
+
+(define-gobject signal-query (_fun _int [query : (_ptr o _gsignal-query)]
+                                   -> _void
+                                   -> query)
+  #:c-id g_signal_query)
+
+(define-gobject signal-lookup (_fun _symbol _gtype -> _int)
+  #:c-id g_signal_lookup)
+
+(define-gobject signal-name (_fun _int -> _symbol)
+  #:c-id g_signal_name)
+
+(define-gobject signal-connect-data (_fun _pointer _string _pointer
+                                          (data : _pointer = #f)
+                                          (notify : _pointer = #f)
+                                          (_bitmask '(after swapped))
+                                          -> _ulong)
+  #:c-id g_signal_connect_data)
+
+(define (connect object signal-name proc)
+  (let* ([base (gtype-instance-type object)]
+         [ptr (gtype-instance-pointer object)]
+         [signal (gi-object-find-signal base signal-name)])
+    (and signal
+         (signal-connect-data ptr
+                              (symbol->string signal-name)
+                              (function-ptr proc (gi-signal->ctype signal))
+                              null))))
 
 ;;; Repositories
 (struct gi-repository (namespace version info-hash)
