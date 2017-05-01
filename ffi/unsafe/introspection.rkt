@@ -18,6 +18,8 @@
                          #:omit-constructor]
                        [gi-base-name
                         (->> gi-base? symbol?)]
+                       [gi-enum->list
+                        (->> gi-enum? list?)]
                        [struct gtype-instance
                          ((type gi-registered-type?) (pointer cpointer?))
                          #:omit-constructor]
