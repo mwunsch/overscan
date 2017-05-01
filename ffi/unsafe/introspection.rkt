@@ -20,6 +20,8 @@
                         (->> gi-base? symbol?)]
                        [gi-enum->list
                         (->> gi-enum? list?)]
+                       [gi-enum->hash
+                        (->> gi-enum? hash?)]
                        [struct gtype-instance
                          ((type gi-registered-type?) (pointer cpointer?))
                          #:omit-constructor]
@@ -46,6 +48,7 @@
                        [gi-repository-find-name
                         (->> gi-repository? symbol? gi-base?)])
          send get-field set-field! field-bound? responds-to?
+         describe-gi-function
          gir-member/c gi-repository-member/c)
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
@@ -127,7 +130,7 @@
     (case type
       ['GI_INFO_TYPE_FUNCTION (gi-function base)]
       ['GI_INFO_TYPE_STRUCT (gi-struct base)]
-      ['GI_INFO_TYPE_ENUM (gi-enum base)]
+      [(GI_INFO_TYPE_ENUM GI_INFO_TYPE_FLAGS) (gi-enum base)]
       ['GI_INFO_TYPE_OBJECT (gi-object base)]
       ['GI_INFO_TYPE_CONSTANT (gi-constant base)]
       ['GI_INFO_TYPE_VALUE (gi-value base)]
@@ -647,6 +650,7 @@
 (define (gi-enum-methods enum)
   (gi-build-list enum gi-enum-n-methods gi-enum-value))
 
+;;; TODO: Create a CType converter for bitmasks (aka flags)
 (define (gi-enum->ctype enum)
   (_enum (gi-enum->list enum)
          (gi-enum-storage-type enum)))
