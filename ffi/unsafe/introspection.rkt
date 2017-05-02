@@ -43,6 +43,10 @@
                        [connect
                         (->> gobject? symbol? procedure? (or/c exact-integer?
                                                                #f))]
+                       [gobject-get
+                        (->> gobject? string? ctype? any)]
+                       [gobject-set!
+                        (->> gobject? string? any/c ctype? void?)]
                        [introspection
                         (->* (symbol?) (string?) gi-repository?)]
                        [gi-repository-find-name
@@ -52,7 +56,8 @@
          gir-member/c gi-repository-member/c)
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
-(define-ffi-definer define-gobject (ffi-lib "libgobject-2.0"))
+(define libgobject (ffi-lib "libgobject-2.0"))
+(define-ffi-definer define-gobject libgobject)
 
 ;;; CTypes
 (define _gi-info-type (_enum '(GI_INFO_TYPE_INVALID
@@ -793,8 +798,24 @@
   #:wrap (allocator gobject-unref!)
   #:c-id g_object_ref_sink)
 
+(define-gobject gobject-get (_fun _pointer _string (ctype : _?)
+                                  [ret : (_ptr o ctype)] (_pointer = #f)
+                                  -> _void
+                                  -> ret)
+  #:c-id g_object_get)
+
+(define (gobject-set! gobject propname value ctype)
+  (let ([setter (get-ffi-obj "g_object_set"
+                             libgobject
+                             (_fun _pointer _string ctype (_pointer = #f)
+                                   -> _void))])
+    (setter gobject propname value)))
+
 (define-gir gi-object-parent (_fun _gi-base-info -> _gi-base-info)
   #:c-id g_object_info_get_parent)
+
+(define-gir gi-object-class (_fun _gi-base-info -> _gi-base-info)
+  #:c-id g_object_info_get_class_struct)
 
 (define-gir gi-object-n-constants (_fun _gi-base-info -> _int)
   #:c-id g_object_info_get_n_constants)
@@ -828,6 +849,16 @@
         (raise-argument-error 'gi-object-find-field
                               (format "~.v" (gi-object-field/c obj))
                               field-name))))
+
+(define-gir gi-object-n-interfaces (_fun _gi-base-info -> _int)
+  #:c-id g_object_info_get_n_interfaces)
+
+(define-gir gi-object-interface (_fun _gi-base-info _int
+                                          -> _gi-base-info)
+  #:c-id g_object_info_get_interface)
+
+(define (gi-object-interfaces obj)
+  (gi-build-list obj gi-object-n-interfaces gi-object-interface))
 
 (define-gir gi-object-n-methods (_fun _gi-base-info -> _int)
   #:c-id g_object_info_get_n_methods)
