@@ -642,7 +642,7 @@
        (gi-enum-values enum)))
 
 (define (gi-enum->hash enum)
-  (make-hash (map (lambda (val) (cons (gi-value-get val) (val)))
+  (make-hash (map (lambda (val) (cons (val) (gi-value-get val)))
                   (gi-enum-values enum))))
 
 (define-gir gi-enum-n-methods (_fun _gi-base-info -> _int)
@@ -657,8 +657,11 @@
 
 ;;; TODO: Create a CType converter for bitmasks (aka flags)
 (define (gi-enum->ctype enum)
-  (_enum (gi-enum->list enum)
-         (gi-enum-storage-type enum)))
+  (let ([symbols (apply append
+                        (for/list ([(key val) (in-hash (gi-enum->hash enum))])
+                          (list key '= val)))])
+    (_bitmask symbols
+              (gi-enum-storage-type enum))))
 
 
 ;;; Objects

@@ -15,11 +15,15 @@
 
 (define system-clock ((gst 'SystemClock) 'obtain))
 
+(define clock-time-none ((gst 'CLOCK_TIME_NONE)))
+
 (define (bin-add-many bin . elements)
   (for/and ([element elements])
     (send bin add element)))
 
 (define source (element-factory 'make "videotestsrc" "source"))
+(define filter (element-factory 'make "vertigotv" "vertigo"))
+(define converter (element-factory 'make "videoconvert" "converter"))
 ;; (define sink (element-factory 'make "autovideosink" "sink"))
 (define sink (element-factory 'make "osxvideosink" "sink"))
 
@@ -31,8 +35,14 @@
                                      chroma-zone-plate solid ball smpte100 bar
                                      pinwheel spokes gradient colors)))
 
-(bin-add-many pipeline source sink)
+(bin-add-many pipeline source filter converter sink)
 
-(send source link sink)
+(send source link filter)
+(send filter link converter)
+(send converter link sink)
 
-;; (send pipeline set-state 'playing)
+(send pipeline set-state 'playing)
+
+(define bus (send pipeline get-bus))
+
+(define msg (send bus timed-pop-filtered clock-time-none 'error))
