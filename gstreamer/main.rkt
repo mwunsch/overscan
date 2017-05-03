@@ -21,6 +21,14 @@
   (for/and ([element elements])
     (send bin add element)))
 
+(define (element-link-many elements)
+  (let link ([head (car elements)]
+             [tail (cdr elements)])
+    (if (pair? tail)
+        (and (send head link (car tail))
+             (link (car tail) (cdr tail)))
+        #t)))
+
 (define source (element-factory 'make "videotestsrc" "source"))
 (define filter (element-factory 'make "vertigotv" "vertigo"))
 (define converter (element-factory 'make "videoconvert" "converter"))
@@ -37,12 +45,4 @@
 
 (bin-add-many pipeline source filter converter sink)
 
-(send source link filter)
-(send filter link converter)
-(send converter link sink)
-
-(send pipeline set-state 'playing)
-
-(define bus (send pipeline get-bus))
-
-(define msg (send bus timed-pop-filtered clock-time-none 'error))
+(element-link-many (list source filter converter sink))
