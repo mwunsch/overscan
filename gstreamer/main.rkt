@@ -21,7 +21,7 @@
   (for/and ([element elements])
     (send bin add element)))
 
-(define (element-link-many elements)
+(define (element-link-many . elements)
   (let link ([head (car elements)]
              [tail (cdr elements)])
     (if (pair? tail)
@@ -29,20 +29,34 @@
              (link (car tail) (cdr tail)))
         #t)))
 
-(define source (element-factory 'make "videotestsrc" "source"))
-(define filter (element-factory 'make "vertigotv" "vertigo"))
-(define converter (element-factory 'make "videoconvert" "converter"))
-;; (define sink (element-factory 'make "autovideosink" "sink"))
-(define sink (element-factory 'make "osxvideosink" "sink"))
+(define source (element-factory 'make "uridecodebin" "source"))
+(define converter (element-factory 'make "audioconvert" "convert"))
+(define sink (element-factory 'make "osxaudiosink" "sink"))
 
 (define pipeline ((gst 'Pipeline) 'new "test-pipeline"))
 
-(define _test-pattern (_enum '(smpte snow black white red green blue
-                                     checkers1 checkers2 checkers4 checkers8
-                                     circular blink smpte75 zone-plate gamut
-                                     chroma-zone-plate solid ball smpte100 bar
-                                     pinwheel spokes gradient colors)))
+(bin-add-many pipeline source converter sink)
 
-(bin-add-many pipeline source filter converter sink)
+(send converter link sink)
 
-(element-link-many (list source filter converter sink))
+(gobject-set! source "uri" "http://movietrailers.apple.com/movies/marvel/thor-ragnarok/thor-ragnarok-trailer-1_h480p.mov" _string)
+
+(define (pad-handler el new-pad user-data)
+  (define sink-pad (gobject-cast user-data (gst 'Pad)))
+  (if (send sink-pad is-linked)
+      (println "We are already linked. Ignoring.")
+      (let* ([pad-caps (send new-pad query-caps #f)]
+             [pad-struct (pad-caps 'get_structure 0)]
+             [pad-type (pad-struct 'get_name)])
+        (if (string=? pad-type "audio/x-raw")
+            (send new-pad link sink-pad)
+            (printf "It has type ~a which is not raw audio. Ignoring.~n" pad-type)))))
+
+(connect source 'pad-added pad-handler
+         #:data (send converter get-static-pad "sink"))
+
+;; (send pipeline set-state 'playing)
+
+(define bus (send pipeline get-bus))
+
+;; (send bus timed-pop-filtered clock-time-none '(error eos))
