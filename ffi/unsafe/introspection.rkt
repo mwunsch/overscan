@@ -41,8 +41,10 @@
                        [method-names
                         (->> gobject? (listof symbol?))]
                        [connect
-                        (->> gobject? symbol? procedure? (or/c exact-integer?
-                                                               #f))]
+                        (->* (gobject? symbol? procedure?) (#:data cpointer?)
+                             (or/c box? #f))]
+                       [gobject-cast
+                        (->> cpointer? gi-object? gobject?)]
                        [gobject-get
                         (->> gobject? string? ctype? any)]
                        [gobject-set!
@@ -494,9 +496,8 @@
     (_cpointer/null name _pointer
                     values
                     (lambda (ptr)
-                      (if ptr
-                          (gtype-instance registered ptr)
-                          #f)))))
+                      (and ptr
+                          (gtype-instance registered ptr))))))
 
 ;;; Structs
 (struct gi-struct gi-registered-type ()
@@ -801,6 +802,9 @@
   #:wrap (allocator gobject-unref!)
   #:c-id g_object_ref_sink)
 
+(define (gobject-cast pointer obj)
+  (cast pointer _pointer (gi-object->ctype obj)))
+
 (define-gobject gobject-get (_fun _pointer _string (ctype : _?)
                                   [ret : (_ptr o ctype)] (_pointer = #f)
                                   -> _void
@@ -908,10 +912,15 @@
 
 (struct gi-signal gi-callable ())
 
-(define (gi-signal->ctype signal)
+(define (gi-signal->ctype obj signal handle
+                          [_user-data _pointer])
   (let ([args (gi-callable-args signal)]
         [returns (gi-callable-returns signal)])
-    (_cprocedure (map (compose1 gi-type->ctype gi-arg-type) args)
+    (_cprocedure #:keep handle
+                 #:async-apply (lambda (thunk) (thunk)) ;; should make this safer
+                 (append (list (gi-object->ctype obj))
+                         (map (compose1 gi-type->ctype gi-arg-type) args)
+                         (list _user-data))
                  (gi-type->ctype returns))))
 
 (define _gsignal-flags (_bitmask '(run-first
@@ -943,22 +952,25 @@
 (define-gobject signal-name (_fun _int -> _symbol)
   #:c-id g_signal_name)
 
-(define-gobject signal-connect-data (_fun _pointer _string _pointer
-                                          (data : _pointer = #f)
-                                          (notify : _pointer = #f)
-                                          (_bitmask '(after swapped))
-                                          -> _ulong)
-  #:c-id g_signal_connect_data)
-
-(define (connect object signal-name proc)
+(define (connect object signal-name handler
+                 #:data [data #f])
   (let* ([base (gtype-instance-type object)]
          [ptr (gtype-instance-pointer object)]
-         [signal (gi-object-find-signal base signal-name)])
-    (and signal
-         (signal-connect-data ptr
-                              (symbol->string signal-name)
-                              (function-ptr proc (gi-signal->ctype signal))
-                              null))))
+         [signal (or (gi-object-find-signal base signal-name)
+                     (error "signal not found"))]
+         [handle (box #f)]
+         [_signal (gi-signal->ctype base signal handle)])
+    (define signal-connect-data
+      (get-ffi-obj "g_signal_connect_data" libgobject
+                   (_fun _pointer _string _signal _pointer
+                         (_pointer = #f) (_bitmask '(after swapped))
+                         -> _ulong)))
+    (and (> (signal-connect-data ptr
+                                 (symbol->string signal-name)
+                                 handler
+                                 data
+                                 null) 0)
+         handle)))
 
 ;;; Repositories
 (struct gi-repository (namespace version info-hash)
