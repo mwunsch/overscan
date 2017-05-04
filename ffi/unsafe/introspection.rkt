@@ -511,7 +511,7 @@
   #:property prop:procedure
   (lambda (instance method-name . arguments)
     (let* ([base (gtype-instance-type instance)])
-      (apply (base method-name)
+      (apply (curry base method-name)
              instance
              arguments))))
 
