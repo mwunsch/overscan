@@ -41,7 +41,9 @@
                        [method-names
                         (->> gobject? (listof symbol?))]
                        [connect
-                        (->* (gobject? symbol? procedure?) (#:data cpointer?)
+                        (->* (gobject? symbol? procedure?)
+                             (#:data cpointer?
+                              #:cast (or/c ctype? gi-object?))
                              (or/c box? #f))]
                        [gobject-cast
                         (->> cpointer? gi-object? gobject?)]
@@ -677,8 +679,7 @@
                (memq 'constructor? (gi-function-flags method)))
           (let ([base (gtype-instance-type invocation)])
             ;; If a method is a constructor and the return type is a
-            ;; gobject, cast the return value to this class. This is
-            ;; potentially controversial...
+            ;; gobject, cast the return value to this class.
             (cast invocation (gi-object->ctype base) (gi-object->ctype object)))
           invocation))))
 
@@ -953,13 +954,18 @@
   #:c-id g_signal_name)
 
 (define (connect object signal-name handler
-                 #:data [data #f])
+                 #:data [data #f]
+                 #:cast [_user-data _pointer])
   (let* ([base (gtype-instance-type object)]
          [ptr (gtype-instance-pointer object)]
          [signal (or (gi-object-find-signal base signal-name)
                      (error "signal not found"))]
          [handle (box #f)]
-         [_signal (gi-signal->ctype base signal handle)])
+         [_signal (gi-signal->ctype base signal handle
+                                    (cond
+                                      [(ctype? _user-data) _user-data]
+                                      [(gi-object? _user-data) (gi-object->ctype _user-data)]
+                                      [else _pointer]))])
     (define signal-connect-data
       (get-ffi-obj "g_signal_connect_data" libgobject
                    (_fun _pointer _string _signal _pointer

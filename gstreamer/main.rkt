@@ -41,8 +41,7 @@
 
 (gobject-set! source "uri" "http://movietrailers.apple.com/movies/marvel/thor-ragnarok/thor-ragnarok-trailer-1_h480p.mov" _string)
 
-(define (pad-handler el new-pad user-data)
-  (define sink-pad (gobject-cast user-data (gst 'Pad)))
+(define (pad-handler el new-pad sink-pad)
   (if (send sink-pad is-linked)
       (println "We are already linked. Ignoring.")
       (let* ([pad-caps (send new-pad query-caps #f)]
@@ -53,7 +52,8 @@
             (printf "It has type ~a which is not raw audio. Ignoring.~n" pad-type)))))
 
 (connect source 'pad-added pad-handler
-         #:data (send converter get-static-pad "sink"))
+         #:data (send converter get-static-pad "sink")
+         #:cast (gst 'Pad))
 
 ;; (send pipeline set-state 'playing)
 
