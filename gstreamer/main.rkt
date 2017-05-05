@@ -52,8 +52,7 @@
             (printf "It has type ~a which is not raw audio. Ignoring.~n" pad-type)))))
 
 (connect source 'pad-added pad-handler
-         #:data (send converter get-static-pad "sink")
-         #:cast (gst 'Pad))
+         #:data (send converter get-static-pad "sink"))
 
 ;; (send pipeline set-state 'playing)
 

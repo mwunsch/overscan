@@ -955,7 +955,7 @@
 
 (define (connect object signal-name handler
                  #:data [data #f]
-                 #:cast [_user-data _pointer])
+                 #:cast [_user-data #f])
   (let* ([base (gtype-instance-type object)]
          [ptr (gtype-instance-pointer object)]
          [signal (or (gi-object-find-signal base signal-name)
@@ -964,7 +964,10 @@
          [_signal (gi-signal->ctype base signal handle
                                     (cond
                                       [(ctype? _user-data) _user-data]
-                                      [(gi-object? _user-data) (gi-object->ctype _user-data)]
+                                      [(gi-object? _user-data)
+                                       (gi-object->ctype _user-data)]
+                                      [(gobject? data)
+                                       (gi-object->ctype (gtype-instance-type data))]
                                       [else _pointer]))])
     (define signal-connect-data
       (get-ffi-obj "g_signal_connect_data" libgobject
