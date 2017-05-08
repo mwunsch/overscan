@@ -29,33 +29,24 @@
              (link (car tail) (cdr tail)))
         #t)))
 
-(define source (element-factory 'make "uridecodebin" "source"))
-(define converter (element-factory 'make "audioconvert" "convert"))
-(define sink (element-factory 'make "osxaudiosink" "sink"))
+
+;;;;;
+
+
+(define cam1 (element-factory 'make "avfvideosrc" "camera1"))
+(define cam2 (element-factory 'make "avfvideosrc" "camera2"))
+(define selector (element-factory 'make "input-selector" "switch"))
+(define sink (element-factory 'make "osxvideosink" "sink"))
+
+(gobject-set! cam2 "device-index" 1 _int)
 
 (define pipeline ((gst 'Pipeline) 'new "test-pipeline"))
 
-(bin-add-many pipeline source converter sink)
+(bin-add-many pipeline cam1 cam2 selector sink)
 
-(send converter link sink)
+(send cam1 link selector)
+(send cam2 link selector)
+(send selector link sink)
 
-(gobject-set! source "uri" "http://movietrailers.apple.com/movies/marvel/thor-ragnarok/thor-ragnarok-trailer-1_h480p.mov" _string)
-
-(define (pad-handler el new-pad sink-pad)
-  (if (send sink-pad is-linked)
-      (println "We are already linked. Ignoring.")
-      (let* ([pad-caps (send new-pad query-caps #f)]
-             [pad-struct (pad-caps 'get_structure 0)]
-             [pad-type (pad-struct 'get_name)])
-        (if (string=? pad-type "audio/x-raw")
-            (send new-pad link sink-pad)
-            (printf "It has type ~a which is not raw audio. Ignoring.~n" pad-type)))))
-
-(connect source 'pad-added pad-handler
-         #:data (send converter get-static-pad "sink"))
-
-;; (send pipeline set-state 'playing)
-
-(define bus (send pipeline get-bus))
-
-;; (send bus timed-pop-filtered clock-time-none '(error eos))
+(define cam1src (send selector get-static-pad "sink_0"))
+(define cam2src (send selector get-static-pad "sink_1"))
