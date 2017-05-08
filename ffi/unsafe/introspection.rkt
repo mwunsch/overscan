@@ -44,7 +44,7 @@
                         (->* (gobject? symbol? procedure?)
                              (#:data cpointer?
                               #:cast (or/c ctype? gi-object?))
-                             (or/c box? #f))]
+                             exact-integer?)]
                        [gobject-cast
                         (->> cpointer? gi-object? gobject?)]
                        [gobject-get
@@ -913,13 +913,12 @@
 
 (struct gi-signal gi-callable ())
 
-(define (gi-signal->ctype obj signal handle
+(define (gi-signal->ctype obj signal
                           [_user-data _pointer])
   (let ([args (gi-callable-args signal)]
         [returns (gi-callable-returns signal)]
         [worker (make-signal-worker (gi-base-name signal))])
-    (_cprocedure #:keep handle
-                 #:async-apply (lambda (thunk)
+    (_cprocedure #:async-apply (lambda (thunk)
                                  (thread-send worker thunk))
                  (append (list (gi-object->ctype obj))
                          (map (compose1 gi-type->ctype gi-arg-type) args)
@@ -969,8 +968,7 @@
          [ptr (gtype-instance-pointer object)]
          [signal (or (gi-object-find-signal base signal-name)
                      (error "signal not found"))]
-         [handle (box #f)]
-         [_signal (gi-signal->ctype base signal handle
+         [_signal (gi-signal->ctype base signal
                                     (cond
                                       [(ctype? _user-data) _user-data]
                                       [(gi-object? _user-data)
@@ -983,12 +981,11 @@
                    (_fun _pointer _string _signal _pointer
                          (_pointer = #f) (_bitmask '(after swapped))
                          -> _ulong)))
-    (and (> (signal-connect-data ptr
-                                 (symbol->string signal-name)
-                                 handler
-                                 data
-                                 null) 0)
-         handle)))
+    (signal-connect-data ptr
+                         (symbol->string signal-name)
+                         handler
+                         data
+                         null)))
 
 ;;; Repositories
 (struct gi-repository (namespace version info-hash)
