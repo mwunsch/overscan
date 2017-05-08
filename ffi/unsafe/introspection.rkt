@@ -916,13 +916,22 @@
 (define (gi-signal->ctype obj signal handle
                           [_user-data _pointer])
   (let ([args (gi-callable-args signal)]
-        [returns (gi-callable-returns signal)])
+        [returns (gi-callable-returns signal)]
+        [worker (make-signal-worker (gi-base-name signal))])
     (_cprocedure #:keep handle
-                 #:async-apply (lambda (thunk) (thunk)) ;; should make this safer
+                 #:async-apply (lambda (thunk)
+                                 (thread-send worker thunk))
                  (append (list (gi-object->ctype obj))
                          (map (compose1 gi-type->ctype gi-arg-type) args)
                          (list _user-data))
                  (gi-type->ctype returns))))
+
+(define (make-signal-worker signal-name)
+  (thread (lambda ()
+            (let loop ()
+              (let ([callback (thread-receive)])
+                (callback)
+                (loop))))))
 
 (define _gsignal-flags (_bitmask '(run-first
                                    run-last
