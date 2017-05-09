@@ -37,11 +37,11 @@
                        [dynamic-send
                         (->* ((or/c gobject? gstruct?) symbol?) #:rest (listof any/c) any)]
                        [dynamic-get-field
-                        (->> symbol? gobject? any)]
+                        (->> symbol? (or/c gobject? gstruct?) any)]
                        [dynamic-set-field!
-                        (->> symbol? gobject? any/c void?)]
+                        (->> symbol? (or/c gobject? gstruct?) any/c void?)]
                        [method-names
-                        (->> gobject? (listof symbol?))]
+                        (->> (or/c gobject? gstruct?) (listof symbol?))]
                        [connect
                         (->* (gobject? symbol? procedure?)
                              (#:data cpointer?
@@ -483,6 +483,31 @@
 (define-gir gi-registered-type-gtype (_fun _gi-base-info -> _gtype)
   #:c-id g_registered_type_info_get_g_type)
 
+(define (gi-registered-type-methods registered)
+  (cond
+    [(gi-object? registered) (gi-object-methods registered)]
+    [(gi-struct? registered) (gi-struct-methods registered)]
+    [else (error "This type does not implement methods")]))
+
+(define (gi-registered-type-fields registered)
+  (cond
+    [(gi-object? registered) (gi-object-fields registered)]
+    [(gi-struct? registered) (gi-struct-fields registered)]
+    [else (error "This type does not implement fields")]))
+
+(define (gi-registered-type-field/c reg)
+  (apply symbols (map gi-base-name
+                      (gi-registered-type-fields reg))))
+
+(define (gi-registered-type-find-field registered field-name)
+  (let ([fields (gi-registered-type-fields registered)])
+    (or (findf (lambda (f) (equal? field-name
+                              (gi-base-name f)))
+               fields)
+        (raise-argument-error 'gi-registered-type-find-field
+                              (format "~.v" (gi-registered-type-field/c registered))
+                              field-name))))
+
 (struct gtype-instance (type pointer)
   #:property prop:cpointer 1)
 
@@ -693,11 +718,11 @@
 
 (define (method-names object)
   (let ([base (gtype-instance-type object)])
-    (map gi-base-sym (gi-object-methods base))))
+    (map gi-base-sym (gi-registered-type-methods base))))
 
 (define (gobject-has-field? obj field-name)
   (let* ([base (gtype-instance-type obj)]
-         [fields (map gi-base-sym (gi-object-fields base))])
+         [fields (map gi-base-sym (gi-registered-type-fields base))])
     (and (memq field-name fields)
          #t)))
 
@@ -709,19 +734,19 @@
 (define (dynamic-get-field field-name obj)
   (let* ([base (gtype-instance-type obj)]
          [ptr (gtype-instance-pointer obj)]
-         [field (gi-object-find-field base field-name)])
+         [field (gi-registered-type-find-field base field-name)])
     (gi-field-ref field ptr)))
 
 (define (dynamic-set-field! field-name obj v)
   (let* ([base (gtype-instance-type obj)]
          [ptr (gtype-instance-pointer obj)]
-         [field (gi-object-find-field base field-name)])
+         [field (gi-registered-type-find-field base field-name)])
     (gi-field-set! field ptr v)))
 
 (define-syntax (send stx)
   (syntax-parse stx
     [(_ obj method-id:id args:expr ...)
-     #:declare obj (expr/c #'gobject?
+     #:declare obj (expr/c #'(or/c gobject? gstruct?)
                            #:name "receiver")
      (with-syntax ([method-name (string->symbol (string-replace
                                                  (symbol->string (syntax-e #'method-id))
@@ -731,7 +756,7 @@
 (define-syntax (responds-to? stx)
   (syntax-parse stx
     [(_ obj method-id:id args:expr ...)
-     #:declare obj (expr/c #'gobject?
+     #:declare obj (expr/c #'(or/c gobject? gstruct?)
                            #:name "receiver")
      (with-syntax ([method-name (string->symbol (string-replace
                                                  (symbol->string (syntax-e #'method-id))
@@ -743,7 +768,7 @@
 (define-syntax (get-field stx)
   (syntax-parse stx
     [(_ field-id:id obj)
-     #:declare obj (expr/c #'gobject?
+     #:declare obj (expr/c #'(or/c gobject? gstruct?)
                            #:name "instance")
      (with-syntax ([field-name (string->symbol (string-replace
                                                  (symbol->string (syntax-e #'field-id))
@@ -753,7 +778,7 @@
 (define-syntax (set-field! stx)
   (syntax-parse stx
     [(_ field-id:id obj val:expr)
-     #:declare obj (expr/c #'gobject?
+     #:declare obj (expr/c #'(or/c gobject? gstruct?)
                            #:name "instance")
      (with-syntax ([field-name (string->symbol (string-replace
                                                  (symbol->string (syntax-e #'field-id))
@@ -843,19 +868,6 @@
 
 (define (gi-object-fields obj)
   (gi-build-list obj gi-object-n-fields gi-object-field))
-
-(define (gi-object-field/c obj)
-  (apply symbols (map gi-base-name
-                      (gi-object-fields obj))))
-
-(define (gi-object-find-field obj field-name)
-  (let ([fields (gi-object-fields obj)])
-    (or (findf (lambda (f) (equal? field-name
-                              (gi-base-name f)))
-               fields)
-        (raise-argument-error 'gi-object-find-field
-                              (format "~.v" (gi-object-field/c obj))
-                              field-name))))
 
 (define-gir gi-object-n-interfaces (_fun _gi-base-info -> _int)
   #:c-id g_object_info_get_n_interfaces)
