@@ -29,11 +29,13 @@
                         (->> gtype-instance? symbol?)]
                        [gtype-instance-name
                         (->> gtype-instance? symbol?)]
+                       [struct (gstruct gtype-instance)
+                         ((type gi-object?) (pointer cpointer?))]
                        [struct (gobject gtype-instance)
                          ((type gi-object?) (pointer cpointer?))
                          #:omit-constructor]
                        [dynamic-send
-                        (->* (gobject? symbol?) #:rest (listof any/c) any)]
+                        (->* ((or/c gobject? gstruct?) symbol?) #:rest (listof any/c) any)]
                        [dynamic-get-field
                         (->> symbol? gobject? any)]
                        [dynamic-set-field!
@@ -506,26 +508,23 @@
   #:property prop:procedure
   (lambda (structure method-name . arguments)
     (let ([method (gi-struct-find-method structure method-name)])
-      (apply method arguments))))
+      (if method
+          (apply method arguments)
+          (error "o no method not found")))))
 
-(struct gstruct-instance gtype-instance (fields)
-  #:transparent
+(struct gstruct gtype-instance ()
   #:property prop:procedure
   (lambda (instance method-name . arguments)
-    (let* ([base (gtype-instance-type instance)])
-      (apply (curry base method-name)
-             instance
-             arguments))))
+    (let ([base (gtype-instance-type instance)])
+      (apply base method-name (cons instance arguments)))))
 
 (define (gi-struct->ctype structure)
-  (let* ([name (gi-base-sym structure)]
-         [fields (gi-struct-fields structure)])
+  (let ([name (gi-base-sym structure)])
     (_cpointer/null name _pointer
                     values
                     (lambda (ptr)
                       (and ptr
-                           (let ([field-values (map (curryr gi-field-ref ptr) fields)])
-                             (gstruct-instance structure ptr field-values)))))))
+                           (gstruct structure ptr))))))
 
 (define-gir gi-struct-alignment (_fun _gi-base-info -> _size)
   #:c-id g_struct_info_get_alignment)
