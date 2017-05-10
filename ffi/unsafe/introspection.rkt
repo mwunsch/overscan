@@ -7,7 +7,7 @@
          (rename-in racket/contract [-> ->>])
          (only-in racket/list index-of filter-map)
          (only-in racket/string string-join string-replace)
-         (only-in racket/function curry curryr)
+         (only-in racket/function curry curryr thunk)
          (for-syntax racket/base
                      racket/syntax
                      syntax/parse
@@ -405,13 +405,18 @@
 (define-gir gi-function-flags (_fun _gi-base-info -> _gi-function-info-flags)
   #:c-id g_function_info_get_flags)
 
-(define-gir gi-function-invoke (_fun _gi-base-info
+(define-gir gi-function-invoke (_fun [fn : _gi-base-info]
                                      [inargs : (_list i _gi-argument)] [_int = (length inargs)]
-                                     [outargs : (_list i _gi-argument)] [_int = (length outargs)]
+                                     [by-refs : _?]
+                                     [outargs : (_list i _gi-argument) = by-refs] [_int = (length outargs)]
                                      [r : (_ptr o _gi-argument)]
                                      (err : (_ptr io _gerror-pointer/null) = #f)
                                      -> (invoked : _bool)
-                                     -> (if invoked r (error (gerror-message err))))
+                                     -> (if invoked
+                                            (apply values ((gi-callable-returns fn) r)
+                                                   by-refs ; todo: convert these to appropriate arg types
+                                                   )
+                                            (error (gerror-message err))))
   #:c-id g_function_info_invoke)
 
 (struct gi-function gi-callable ()
@@ -440,7 +445,7 @@
         (if method?
             (cons (ctype->_gi-argument _pointer (car arguments)) in-args-without-self)
             in-args-without-self))
-      (returns (gi-function-invoke fn in-args out-args)))))
+      (gi-function-invoke fn in-args out-args))))
 
 (define (describe-gi-function fn)
   (let ([name (gi-base-name fn)]
@@ -697,17 +702,20 @@
 (struct gi-object gi-registered-type ()
   #:property prop:procedure
   (lambda (object method-name . arguments)
-    (let* ([method (gi-object-lookup-method object method-name)]
-           [invocation (if method
-                           (apply method arguments)
-                           (error "o no method not found"))])
-      (if (and (gobject? invocation)
-               (memq 'constructor? (gi-function-flags method)))
-          (let ([base (gtype-instance-type invocation)])
-            ;; If a method is a constructor and the return type is a
-            ;; gobject, cast the return value to this class.
-            (cast invocation (gi-object->ctype base) (gi-object->ctype object)))
-          invocation))))
+    (define method (gi-object-lookup-method object method-name))
+    (if method
+        (call-with-values (thunk (apply method arguments))
+                          (case-lambda
+                            [(invocation)
+                             (if (and (gobject? invocation)
+                                      (memq 'constructor? (gi-function-flags method)))
+                                 (let ([base (gtype-instance-type invocation)])
+                                   (cast invocation
+                                         (gi-object->ctype base)
+                                         (gi-object->ctype object)))
+                                 invocation)]
+                            [rest rest]))
+        (error "o no method not found"))))
 
 (struct gobject gtype-instance ())
 
@@ -945,7 +953,7 @@
                  (gi-type->ctype returns))))
 
 (define (make-signal-worker signal-name)
-  (thread (lambda ()
+  (thread (thunk
             (let loop ()
               (let ([callback (thread-receive)])
                 (callback)
