@@ -42,6 +42,8 @@
                         (->> symbol? (or/c gobject? gstruct?) any/c void?)]
                        [method-names
                         (->> (or/c gobject? gstruct?) (listof symbol?))]
+                       [describe-method
+                        (->> gobject? symbol? string?)]
                        [connect
                         (->* (gobject? symbol? procedure?)
                              (#:data cpointer?
@@ -719,6 +721,12 @@
 (define (method-names object)
   (let ([base (gtype-instance-type object)])
     (map gi-base-sym (gi-registered-type-methods base))))
+
+(define (describe-method instance method-name)
+  (let* ([base (gtype-instance-type instance)]
+         [method (gi-object-lookup-method base method-name)])
+    (and method
+         (describe-gi-function method))))
 
 (define (gobject-has-field? obj field-name)
   (let* ([base (gtype-instance-type obj)]
