@@ -692,13 +692,15 @@
 (define (gi-enum-methods enum)
   (gi-build-list enum gi-enum-n-methods gi-enum-value))
 
-;;; TODO: Create a CType converter for bitmasks (aka flags)
 (define (gi-enum->ctype enum)
   (let ([symbols (apply append
                         (for/list ([(key val) (in-hash (gi-enum->hash enum))])
                           (list key '= val)))])
-    (_bitmask symbols
-              (gi-enum-storage-type enum))))
+    (case (gi-base-type enum)
+      ['GI_INFO_TYPE_FLAGS (_bitmask symbols
+                                     (gi-enum-storage-type enum))]
+      [else (_enum symbols
+                   (gi-enum-storage-type enum))])))
 
 
 ;;; Objects
