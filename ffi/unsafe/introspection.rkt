@@ -471,14 +471,12 @@
                                    -> _gi-base-info)
   #:c-id g_constant_info_get_type)
 
-(define-gir g_constant_info_get_value (_fun _gi-base-info
-                                            [r : (_ptr o _gi-argument)]
-                                            -> (size : _int)
-                                            -> r))
-
-(define (gi-constant-value constant)
-  (let ([type (gi-constant-type constant)])
-    (type (g_constant_info_get_value constant))))
+(define-gir gi-constant-value (_fun [const : _gi-base-info]
+                                    [r : (_ptr o _gi-argument)]
+                                    -> (size : _int)
+                                    -> (let ([type (gi-constant-type const)])
+                                         (type r)))
+  #:c-id g_constant_info_get_value)
 
 (define (describe-gi-constant constant)
   (gi-base-name constant))
