@@ -1,21 +1,23 @@
 #lang racket/base
 
 (require ffi/unsafe
-         ffi/unsafe/introspection)
+         ffi/unsafe/introspection
+         racket/place)
 
 (provide gst)
 
 (define gst (introspection 'Gst))
 
-(if ((gst 'init_check) 0 #f)
-    (displayln ((gst 'version_string)))
-    (error "Could not load Gstreamer"))
+(let-values ([(initialized? argc argv) ((gst 'init_check) 0 #f)])
+  (if initialized?
+      (displayln ((gst 'version_string)))
+      (error "Could not load Gstreamer")))
 
 (define element-factory (gst 'ElementFactory))
 
-(define system-clock ((gst 'SystemClock) 'obtain))
-
 (define clock-time-none ((gst 'CLOCK_TIME_NONE)))
+
+(define millisecond ((gst 'MSECOND)))
 
 (define (bin-add-many bin . elements)
   (for/and ([element elements])
@@ -32,21 +34,22 @@
 
 ;;;;;
 
+(define playbin (element-factory 'make "playbin" "playbin"))
 
-(define cam1 (element-factory 'make "avfvideosrc" "camera1"))
-(define cam2 (element-factory 'make "avfvideosrc" "camera2"))
-(define selector (element-factory 'make "input-selector" "switch"))
-(define sink (element-factory 'make "osxvideosink" "sink"))
+(gobject-set! playbin "uri" "http://movietrailers.apple.com/movies/marvel/thor-ragnarok/thor-ragnarok-trailer-1_h480p.mov" _string)
 
-(gobject-set! cam2 "device-index" 1 _int)
-
-(define pipeline ((gst 'Pipeline) 'new "test-pipeline"))
-
-(bin-add-many pipeline cam1 cam2 selector sink)
-
-(send cam1 link selector)
-(send cam2 link selector)
-(send selector link sink)
-
-(define cam1src (send selector get-static-pad "sink_0"))
-(define cam2src (send selector get-static-pad "sink_1"))
+(define (main)
+  (send playbin set-state 'playing)
+  (define pipe
+    (place chan
+           (define bus (gobject-cast (place-channel-get chan) (gst 'Bus)))
+           (let loop ()
+             (define msg
+               (send bus timed-pop-filtered (* 100 millisecond) '(eos error state-changed duration-changed)))
+             (and msg
+                  (place-channel-put chan (get-field type msg)))
+             (loop))))
+  (place-channel-put pipe (gtype-instance-pointer (send playbin get-bus)))
+  (thread (lambda () (let loop ()
+                  (println (place-channel-get pipe))
+                  (loop)))))
