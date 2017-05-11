@@ -471,14 +471,10 @@
                                    -> _gi-base-info)
   #:c-id g_constant_info_get_type)
 
-(define-gir g_constant_info_free_value (_fun _gi-base-info (_ptr i _gi-argument) -> _void)
-  #:wrap (deallocator cadr))
-
 (define-gir g_constant_info_get_value (_fun _gi-base-info
                                             [r : (_ptr o _gi-argument)]
                                             -> (size : _int)
-                                            -> r)
-  #:wrap (allocator g_constant_info_free_value))
+                                            -> r))
 
 (define (gi-constant-value constant)
   (let ([type (gi-constant-type constant)])
