@@ -407,15 +407,17 @@
 
 (define-gir gi-function-invoke (_fun [fn : _gi-base-info]
                                      [inargs : (_list i _gi-argument)] [_int = (length inargs)]
-                                     [by-refs : _?]
-                                     [outargs : (_list i _gi-argument) = by-refs] [_int = (length outargs)]
+                                     [outargs : (_list i _gi-argument)] [n-out : _int = (length outargs)]
                                      [r : (_ptr o _gi-argument)]
                                      (err : (_ptr io _gerror-pointer/null) = #f)
                                      -> (invoked : _bool)
                                      -> (if invoked
                                             (apply values ((gi-callable-returns fn) r)
-                                                   by-refs ; todo: convert these to appropriate arg types
-                                                   )
+                                                   (if outargs
+                                                       (for/list ([ptr (in-array (ptr-ref outargs (_array _gi-argument n-out)))]
+                                                                  [outarg (gi-function-outbound-args fn)])
+                                                         ((gi-arg-type outarg) ptr))
+                                                       null))
                                             (error (gerror-message err))))
   #:c-id g_function_info_invoke)
 
@@ -446,6 +448,11 @@
             (cons (ctype->_gi-argument _pointer (car arguments)) in-args-without-self)
             in-args-without-self))
       (gi-function-invoke fn in-args out-args))))
+
+(define (gi-function-outbound-args fn)
+  (filter (lambda (arg)
+            (memq (gi-arg-direction arg) '(out inout)))
+          (gi-callable-args fn)))
 
 (define (describe-gi-function fn)
   (let ([name (gi-base-name fn)]
