@@ -6,7 +6,7 @@
          "gst.rkt")
 
 (provide (contract-out [make-bus-channel
-                        (->* (gobject?)
+                        (->* ((is-a?/c bus%))
                              ((listof symbol?)
                               #:timeout exact-nonnegative-integer?)
                              evt?)]))

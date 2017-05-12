@@ -18,6 +18,8 @@
                          #:omit-constructor]
                        [gi-base-name
                         (->> gi-base? symbol?)]
+                       [gi-base=?
+                        (->> gi-base? gi-base? boolean?)]
                        [gi-enum->list
                         (->> gi-enum? list?)]
                        [gi-enum->hash
@@ -29,6 +31,10 @@
                         (->> gtype-instance? symbol?)]
                        [gtype-instance-name
                         (->> gtype-instance? symbol?)]
+                       [is-a?
+                        (->> gtype-instance? gi-registered-type? boolean?)]
+                       [is-a?/c
+                        (->> gi-registered-type? flat-contract?)]
                        [struct (gstruct gtype-instance)
                          ((type gi-object?) (pointer cpointer?))]
                        [struct (gobject gtype-instance)
@@ -167,6 +173,9 @@
 
 (define-gir gi-base-name (_fun _gi-base-info -> _symbol)
   #:c-id g_base_info_get_name)
+
+(define-gir gi-base=? (_fun _gi-base-info _gi-base-info -> _bool)
+  #:c-id g_base_info_equal)
 
 (define (gi-base-sym info)
   (let* ([name (gi-base-name info)]
@@ -529,6 +538,15 @@
 
 (define (gtype-instance-name gtype)
   (gi-base-name (gtype-instance-type gtype)))
+
+(define (is-a? instance type)
+  (and (gi-registered-type? type)
+       (gtype-instance? instance)
+       (gi-base=? (gtype-instance-type instance) type)))
+
+(define (is-a?/c type)
+  (flat-named-contract `(is-a? ,(gi-registered-type-name type))
+                       (curryr is-a? type)))
 
 (define (gi-registered-type->ctype registered)
   (let* ([name (gi-base-sym registered)])
