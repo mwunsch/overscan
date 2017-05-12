@@ -2,11 +2,11 @@
 
 (require ffi/unsafe
          ffi/unsafe/introspection
-         racket/place)
+         racket/place
+         "gst.rkt"
+         "bus.rkt")
 
-(provide gst)
-
-(define gst (introspection 'Gst))
+(provide main)
 
 (let-values ([(initialized? argc argv) ((gst 'init_check) 0 #f)])
   (if initialized?
@@ -41,15 +41,9 @@
 (define (main)
   (send playbin set-state 'playing)
   (define pipe
-    (place chan
-           (define bus (gobject-cast (place-channel-get chan) (gst 'Bus)))
-           (let loop ()
-             (define msg
-               (send bus timed-pop-filtered (* 100 millisecond) '(eos error state-changed duration-changed)))
-             (and msg
-                  (place-channel-put chan (get-field type msg)))
-             (loop))))
-  (place-channel-put pipe (gtype-instance-pointer (send playbin get-bus)))
+    (make-bus-channel (send playbin get-bus)))
   (thread (lambda () (let loop ()
-                  (println (place-channel-get pipe))
-                  (loop)))))
+                  (define msg (sync pipe))
+                  (println (get-field type msg))
+                  (unless (memf (lambda (x) (memq x '(eos error))) (get-field type msg))
+                    (loop))))))
