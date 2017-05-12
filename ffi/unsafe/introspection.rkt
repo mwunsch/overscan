@@ -51,6 +51,8 @@
                              exact-integer?)]
                        [gobject-cast
                         (->> cpointer? gi-object? gobject?)]
+                       [gstruct-cast
+                        (->> cpointer? gi-struct? gstruct?)]
                        [gobject-get
                         (->> gobject? string? ctype? any)]
                        [gobject-set!
@@ -558,6 +560,9 @@
                     (lambda (ptr)
                       (and ptr
                            (gstruct structure ptr))))))
+
+(define (gstruct-cast pointer structure)
+  (cast pointer _pointer (gi-struct->ctype structure)))
 
 (define-gir gi-struct-alignment (_fun _gi-base-info -> _size)
   #:c-id g_struct_info_get_alignment)
