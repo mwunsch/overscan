@@ -842,11 +842,9 @@
                     values
                     (lambda (ptr)
                       (and ptr
-                           (((allocator gobject-unref!) gobject) obj ptr))))))
+                           (gobject obj ptr))))))
 
-(define-gobject gobject-unref! (_fun [instance : _?]
-                                     (_pointer = (gtype-instance-pointer instance))
-                                     -> _void)
+(define-gobject gobject-unref! (_fun _pointer -> _void)
   #:wrap (deallocator)
   #:c-id g_object_unref)
 
