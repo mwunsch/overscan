@@ -860,9 +860,9 @@
                       (and ptr
                            (((allocator gobject-unref!) gobject) obj ptr))))))
 
-(define-gobject gobject-unref! (_fun [base-type : _?] _pointer
+(define-gobject gobject-unref! (_fun _pointer
                                      -> _void)
-  #:wrap (deallocator cadr)
+  #:wrap (deallocator)
   #:c-id g_object_unref)
 
 (define-gobject gobject-ref-sink (_fun _pointer -> _pointer)
