@@ -12,6 +12,7 @@
          caps%
          bin-add-many
          element-link-many)
+
 (define element-factory% (gst 'ElementFactory))
 
 (define pipeline% (gst 'Pipeline))
