@@ -2,24 +2,23 @@
 
 (require ffi/unsafe
          ffi/unsafe/introspection
-         racket/place
          "gst.rkt"
          "bus.rkt")
 
 (provide (all-from-out "gst.rkt"
                        "bus.rkt")
-         main)
+         element-factory%
+         pipeline%
+         caps%
+         bin-add-many
+         element-link-many)
+(define element-factory% (gst 'ElementFactory))
 
-(let-values ([(initialized? argc argv) ((gst 'init_check) 0 #f)])
-  (if initialized?
-      (displayln ((gst 'version_string)))
-      (error "Could not load Gstreamer")))
+(define pipeline% (gst 'Pipeline))
 
-(define element-factory (gst 'ElementFactory))
+(define caps% (gst 'Caps))
 
-(define clock-time-none ((gst 'CLOCK_TIME_NONE)))
-
-(define millisecond ((gst 'MSECOND)))
+(define element% (gst 'Element))
 
 (define (bin-add-many bin . elements)
   (for/and ([element elements])
@@ -32,20 +31,3 @@
         (and (send head link (car tail))
              (link (car tail) (cdr tail)))
         #t)))
-
-
-;;;;;
-
-(define playbin (element-factory 'make "playbin" "playbin"))
-
-(gobject-set! playbin "uri" "http://movietrailers.apple.com/movies/marvel/thor-ragnarok/thor-ragnarok-trailer-1_h480p.mov" _string)
-
-(define (main)
-  (send playbin set-state 'playing)
-  (define pipe
-    (make-bus-channel (send playbin get-bus)))
-  (thread (lambda () (let loop ()
-                  (define msg (sync pipe))
-                  (println (get-field type msg))
-                  (unless (memf (lambda (x) (memq x '(eos error))) (get-field type msg))
-                    (loop))))))
