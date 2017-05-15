@@ -25,20 +25,46 @@
 ;; http://docs.racket-lang.org/style/index.html
 
 ;; Code here
-(require gir
-         ffi/unsafe)
+(require gstreamer
+         ffi/unsafe
+         ffi/unsafe/introspection)
 
-(define gst (gi-ffi "Gst"))
+(let-values ([(initialized? argc argv) ((gst 'init_check) 0 #f)])
+  (if initialized?
+      (displayln ((gst 'version_string)))
+      (error "Could not load Gstreamer")))
 
-(define (initialize)
-  (define-values (initialized? junk err) (gst 'init_check 0 #f))
-  initialized?)
+(define camera1 (element-factory% 'make "avfvideosrc" "camera1"))
+(define tee (element-factory% 'make "tee" "tee"))
+(define vidqueue (element-factory% 'make "queue" "vidqueue"))
+(define preview (element-factory% 'make "osxvideosink" "osxvideosink"))
+(define encoder (element-factory% 'make "vtenc_h264" "h264"))
+(define parser (element-factory% 'make "h264parse" "h264parse"))
+(define muxer (element-factory% 'make "mp4mux" "mp4mux"))
+(define filesink (element-factory% 'make "filesink" "filesink"))
+
+(define pipeline (pipeline% 'new "stream"))
+
+(gobject-set! filesink "location" "test.mp4" _string)
+
+(bin-add-many pipeline camera1 tee vidqueue preview encoder parser muxer filesink)
+
+(send camera1 link tee)
+(send tee link vidqueue)
+(send vidqueue link preview)
+(send tee link encoder)
+(send encoder link parser)
+(send parser link muxer)
+(send muxer link filesink)
+
+; (send pipeline set-state 'playing)
+; (send pipeline send-event eos)
+; (send pipeline set-state 'null)
 
 (module+ test
   ;; Tests to be run with raco test
   )
 
 (module+ main
-  (when (initialize)
-    (displayln (format "This program is linked against ~a" (gst 'version_string))))
+
   )
