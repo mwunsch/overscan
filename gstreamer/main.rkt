@@ -6,7 +6,9 @@
          "gst.rkt"
          "bus.rkt")
 
-(provide main)
+(provide (all-from-out "gst.rkt"
+                       "bus.rkt")
+         main)
 
 (let-values ([(initialized? argc argv) ((gst 'init_check) 0 #f)])
   (if initialized?

@@ -55,3 +55,23 @@ devlogs at <http://www.markwunsch.com/tinyletter/>.
 [gobject-introspection]: https://wiki.gnome.org/Projects/GObjectIntrospection
 
 [racket/class]: https://docs.racket-lang.org/reference/mzlib_class.html
+
+## Installation
+
+Overscan has only been tested on macOS Sierra with Racket v6.8 and
+GStreamer v1.10.4.
+
+Using homebrew:
+
+    brew install gstreamer
+
+This will install `gstreamer` along with dependencies `glib` and
+`gobject-introspection`, all of which are required.
+
+You also need to install GStreamer plugins:
+
+    brew install gst-plugins-base --with-libogg --with-libvorbis --with-theora --with-pango
+
+    brew install gst-plugins-good
+
+    brew install gst-plugins-bad --with-rtmpdump
