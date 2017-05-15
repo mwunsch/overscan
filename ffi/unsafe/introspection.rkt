@@ -24,6 +24,8 @@
                         (->> gi-enum? list?)]
                        [gi-enum->hash
                         (->> gi-enum? hash?)]
+                       [_gi-object
+                        (->> gi-object? ctype?)]
                        [struct gtype-instance
                          ((type gi-registered-type?) (pointer cpointer?))
                          #:omit-constructor]
@@ -269,7 +271,7 @@
                                   [(gi-enum? type-interface)
                                    (gi-enum->ctype type-interface)]
                                   [(gi-object? type-interface)
-                                   (gi-object->ctype type-interface)]
+                                   (_gi-object type-interface)]
                                   [(gi-registered-type? type-interface)
                                    (gi-registered-type->ctype type-interface)]
                                   [else (_cpointer/null info-type)]))]
@@ -737,8 +739,8 @@
                                       (memq 'constructor? (gi-function-flags method)))
                                  (let ([base (gtype-instance-type invocation)])
                                    (cast invocation
-                                         (gi-object->ctype base)
-                                         (gi-object->ctype object)))
+                                         (_gi-object base)
+                                         (_gi-object object)))
                                  invocation)]
                             [rest rest]))
         (error "o no method not found"))))
@@ -834,25 +836,7 @@
                            #:name "instance")
      #'(gobject-has-field? obj.c 'field-id)]))
 
-
-(define (gi-object-quasiclass obj)
-  ;; (define parent% (gi-object-parent obj))
-  `(class object%   ;,(if parent% (gi-object->class parent%) `object%)
-     (super-new)
-
-     ,(unless (zero? (gi-object-n-fields obj))
-        `(field
-          ,@(for/list ([field (gi-object-fields obj)])
-              `[,(gi-base-sym field) (gi-field-ref ,field pointer)])))
-
-     ,@(for/list ([method (gi-object-methods obj)]
-                  #:when (gi-callable-method? method))
-         (let ([args (map gi-base-sym (gi-callable-args method))])
-           `(define/public (,(gi-base-sym method)
-                            ,@args)
-              (,method pointer ,@args))))))
-
-(define (gi-object->ctype obj)
+(define (_gi-object obj)
   (let ([name (gi-base-sym obj)])
     (_cpointer/null name _pointer
                     values
@@ -860,7 +844,8 @@
                       (and ptr
                            (((allocator gobject-unref!) gobject) obj ptr))))))
 
-(define-gobject gobject-unref! (_fun _pointer
+(define-gobject gobject-unref! (_fun [instance : _?]
+                                     (_pointer = (gtype-instance-pointer instance))
                                      -> _void)
   #:wrap (deallocator)
   #:c-id g_object_unref)
@@ -870,7 +855,7 @@
   #:c-id g_object_ref_sink)
 
 (define (gobject-cast pointer obj)
-  (cast pointer _pointer (gi-object->ctype obj)))
+  (cast pointer _pointer (_gi-object obj)))
 
 (define-gobject gobject-get (_fun _pointer _string (ctype : _?)
                                   [ret : (_ptr o ctype)] (_pointer = #f)
@@ -973,7 +958,7 @@
         [worker (make-signal-worker (gi-base-name signal))])
     (_cprocedure #:async-apply (lambda (thunk)
                                  (thread-send worker thunk))
-                 (append (list (gi-object->ctype obj))
+                 (append (list (_gi-object obj))
                          (map (compose1 gi-type->ctype gi-arg-type) args)
                          (list _user-data))
                  (gi-type->ctype returns))))
@@ -1025,9 +1010,9 @@
                                     (cond
                                       [(ctype? _user-data) _user-data]
                                       [(gi-object? _user-data)
-                                       (gi-object->ctype _user-data)]
+                                       (_gi-object _user-data)]
                                       [(gobject? data)
-                                       (gi-object->ctype (gtype-instance-type data))]
+                                       (_gi-object (gtype-instance-type data))]
                                       [else _pointer]))])
     (define signal-connect-data
       (get-ffi-obj "g_signal_connect_data" libgobject
