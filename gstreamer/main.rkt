@@ -9,7 +9,9 @@
                        "bus.rkt")
          element-factory%
          pipeline%
+         bin%
          caps%
+         event%
          bin-add-many
          element-link-many)
 
@@ -17,9 +19,13 @@
 
 (define pipeline% (gst 'Pipeline))
 
+(define bin% (gst 'Bin))
+
 (define caps% (gst 'Caps))
 
 (define element% (gst 'Element))
+
+(define event% (gst 'Event))
 
 (define (bin-add-many bin . elements)
   (for/and ([element elements])
