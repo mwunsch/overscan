@@ -853,7 +853,10 @@
                     values
                     (lambda (ptr)
                       (and ptr
-                           (gobject obj ptr))))))
+                           (begin
+                             (for ([ancestor (gi-object-ancestors obj)])
+                               (cpointer-push-tag! ptr (gi-base-sym ancestor)))
+                             (gobject obj ptr)))))))
 
 (define-gobject gobject-unref! (_fun _pointer -> _void)
   #:wrap (deallocator)
@@ -881,6 +884,12 @@
 
 (define-gir gi-object-parent (_fun _gi-base-info -> _gi-base-info)
   #:c-id g_object_info_get_parent)
+
+(define (gi-object-ancestors obj)
+  (let ([parent (gi-object-parent obj)])
+    (if parent
+        (cons parent (gi-object-ancestors parent))
+        null)))
 
 (define-gir gi-object-class (_fun _gi-base-info -> _gi-base-info)
   #:c-id g_object_info_get_class_struct)
