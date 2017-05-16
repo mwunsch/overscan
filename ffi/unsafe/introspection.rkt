@@ -239,6 +239,10 @@
                                                                byte-array)))
   #:c-id g_type_info_get_array_type)
 
+(define (gi-type-gobject? type)
+  (and (eq? 'GI_TYPE_TAG_INTERFACE (gi-type-tag type))
+       (gi-object? (gi-type-interface type))))
+
 (define (describe-gi-type type)
   (let ([typetag (gi-type-tag type)])
     (define typestring (if (eq? 'GI_TYPE_TAG_INTERFACE typetag)
@@ -425,7 +429,14 @@
                                      (err : (_ptr io _gerror-pointer/null) = #f)
                                      -> (invoked : _bool)
                                      -> (if invoked
-                                            (apply values ((gi-callable-returns fn) r)
+                                            (apply values
+                                                   (let ([returns (gi-callable-returns fn)]
+                                                         [ownership (gi-callable-caller-owns fn)])
+                                                     (cond
+                                                       [(and (eq? ownership 'everything)
+                                                             (gi-type-gobject? returns))
+                                                        (((allocator gobject-unref!) returns) r)]
+                                                       [else (returns r)]))
                                                    (if outargs
                                                        (for/list ([ptr (in-array (ptr-ref outargs (_array _gi-argument n-out)))]
                                                                   [outarg (gi-function-outbound-args fn)])
@@ -742,7 +753,7 @@
                                          (_gi-object base)
                                          (_gi-object object)))
                                  invocation)]
-                            [rest rest]))
+                            [rest (apply values rest)]))
         (error "o no method not found"))))
 
 (struct gobject gtype-instance ())
