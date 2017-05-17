@@ -15,11 +15,16 @@
 
 (define false-preview (element-factory% 'make "fakesink" "sink:fakepreview"))
 
-(define filter-video (caps% 'from_string "video/x-raw"))
+(define filter-video (caps% 'from_string "video/x-raw,width=1280,height=720"))
 
-(define h264-encoder (element-factory% 'make "vtenc_h264" "encode:h264"))
+(define h264-encoder
+  (let ([encoder  (element-factory% 'make "vtenc_h264" "encode:h264")])
+    (gobject-set! encoder "bitrate" 3500 _uint)
+    (gobject-set! encoder "max-keyframe-interval-duration" (seconds 2) _int64) ; 2 second keyframe interval
+    encoder))
 
-(define aac-encoder (element-factory% 'make "faac" "encode:aac"))
+(define aac-encoder
+  (element-factory% 'make "faac" "encode:aac"))
 
 (define flvmuxer
   (let ([muxer (element-factory% 'make "flvmux" "mux:flv")])
@@ -28,8 +33,13 @@
 
 (define false-recording (element-factory% 'make "fakesink" "sink:fakerecording"))
 
+(define debug:fps
+  (let ([debug (element-factory% 'make "fpsdisplaysink" "debug:fps")])
+    (gobject-set! debug "video-sink" video-preview (_gi-object element%))
+    debug))
+
 (define (broadcast scene
-                   #:preview [preview video-preview]
+                   #:preview [preview debug:fps]
                    #:record [record #f])
   (let ([pipeline (pipeline% 'new "broadcast")]
         [tee (element-factory% 'make "tee" #f)]
@@ -41,7 +51,7 @@
                      false-preview)])
     (or (and (bin-add-many pipeline scene tee queue preview h264-encoder aac-encoder flvmuxer record-sink)
              (send scene link-filtered tee filter-video)
-             (element-link-many tee queue:preview preview)
+             (element-link-many tee queue preview)
              (element-link-many tee h264-encoder flvmuxer)
              (element-link-many scene aac-encoder flvmuxer)
              (send flvmuxer link record-sink)
@@ -60,15 +70,14 @@
   (let ([bin (bin% 'new "scene")]
         [camera (element-factory% 'make "avfvideosrc" "camera")]
         [audio (element-factory% 'make "osxaudiosrc" "microphone")])
-    (if (bin-add-many bin camera audio)
-        (let* ([camera-pad (send camera get-static-pad "src")]
-               [audio-pad (send audio get-static-pad "src")])
-          (or (and camera-pad
-                   (send bin add-pad ((gst 'GhostPad) 'new "video" camera-pad))
-                   audio-pad
-                   (send bin add-pad ((gst 'GhostPad) 'new "audio" audio-pad))
-                   bin)
-              (error "could not create scene")))
+    (or (and (bin-add-many bin camera audio)
+             (let* ([camera-pad (send camera get-static-pad "src")]
+                    [ghost ((gst 'GhostPad) 'new "video" camera-pad)])
+               (send bin add-pad ghost))
+             (let* ([audio-pad (send audio get-static-pad "src")]
+                    [ghost ((gst 'GhostPad) 'new "audio" audio-pad)])
+               (send bin add-pad ghost))
+             bin)
         (error "could not create scene"))))
 
 (define (recording location)

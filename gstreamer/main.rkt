@@ -8,11 +8,13 @@
 (provide (all-from-out "gst.rkt"
                        "bus.rkt")
          element-factory%
+         element%
          pipeline%
          bin%
          caps%
          event%
          bin-add-many
+         seconds
          element-link-many)
 
 (define element-factory% (gst 'ElementFactory))
@@ -26,6 +28,11 @@
 (define element% (gst 'Element))
 
 (define event% (gst 'Event))
+
+(define second ((gst 'SECOND)))
+
+(define (seconds num)
+  (* num second))
 
 (define (bin-add-many bin . elements)
   (for/and ([element elements])
