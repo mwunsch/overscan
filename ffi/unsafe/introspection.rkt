@@ -282,7 +282,7 @@
       ['GI_TYPE_TAG_ERROR _gerror-pointer]
       ['GI_TYPE_TAG_GTYPE _gtype]
       ['GI_TYPE_TAG_ARRAY (_garray type)]
-      ;; ['GI_TYPE_TAG_GLIST]
+      ['GI_TYPE_TAG_GLIST (_glist type)]
       ;; ['GI_TYPE_TAG_GSLIST]
       ;; ['GI_TYPE_TAG_GHASH]
       ;; ['GI_TYPE_TAG_UNICHAR]
@@ -336,6 +336,27 @@
                                                                                            offset))])
                                                                        (deref 0))]
                                                          [else 0])))))))))
+
+(define (_glist type)
+  (let ([_paramtype (gi-type->ctype (gi-type-param-type type 0))])
+    (_cpointer/null 'GList _pointer
+                    (lambda (vals)
+                      (let loop ([element #f]
+                                 [data vals])
+                        (if (null? (cdr data))
+                            element
+                            (loop (g_list_prepend element (car data))
+                                  (cdr data)))))
+                    (lambda (ptr)
+                      (let loop ([index 0])
+                        (let ([data (g_list_nth_data ptr index)])
+                          (if data
+                              (cons (cast data _pointer _paramtype) (loop (add1 index)))
+                              null)))))))
+
+(define-gobject g_list_nth_data (_fun _pointer _int -> _pointer))
+
+(define-gobject g_list_prepend (_fun _pointer _pointer -> _pointer))
 
 (define (_gi-argument-index-of ctype)
   (define _gi-argument-type (_gi-argument-type-of ctype))
