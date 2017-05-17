@@ -70,8 +70,8 @@ This will install `gstreamer` along with dependencies `glib` and
 
 You also need to install GStreamer plugins:
 
-    brew install gst-plugins-base --with-libogg --with-libvorbis --with-theora --with-pango
+    brew install gst-plugins-base --with-pango
 
     brew install gst-plugins-good
 
-    brew install gst-plugins-bad --with-rtmpdump
+    brew install gst-plugins-bad --with-rtmpdump --with-faac
