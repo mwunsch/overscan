@@ -72,17 +72,17 @@
 
 (define current-broadcast (box #f))
 
-(define video-720p (caps% 'from_string "video/x-raw,width=1280,height=720"))
+(define video-720p (caps% 'from_string "video/x-raw,width=1280,height=720,framerate=30/1"))
 
 (define video-480p (caps% 'from_string "video/x-raw,width=854,height=480"))
 
-(define (debug:preview)
+(define (debug:preview [scale video-480p])
   (let* ([bin (bin% 'new "sink:preview")]
          [scaler (element-factory% 'make "videoscale" "scale:video")]
          [preview (element-factory% 'make "osxvideosink" "sink:preview")]
          [sink-pad (send scaler get-static-pad "sink")])
     (and (bin-add-many bin scaler preview)
-         (send scaler link-filtered preview video-480p)
+         (send scaler link-filtered preview scale)
          (send bin add-pad (ghost-pad% 'new "sink" sink-pad))
          bin)
     ))
@@ -96,6 +96,8 @@
 (define (broadcast scenes
                    #:preview [preview (debug:fps)]
                    #:record [record #f])
+  (when (unbox current-broadcast)
+    (error "already a broadcast in progress"))
   (let ([pipeline (pipeline% 'new "broadcast")]
         [video-selector (element-factory% 'make "input-selector" "selector:video")]
         [audio-selector (element-factory% 'make "input-selector" "selector:audio")]
@@ -114,8 +116,6 @@
                          (element-factory% 'make "fakesink" "sink:fake-recording"))]
         [preview (or preview
                      (element-factory% 'make "fakesink" "sink:fake-preview"))])
-    (gobject-set! video-selector "sync-mode" 'clock _input-selector-sync-mode)
-    (gobject-set! audio-selector "sync-mode" 'clock _input-selector-sync-mode)
     (or (and (bin-add-many pipeline video-selector tee queue preview h264-encoder audio-selector aac-encoder flvmuxer record-sink)
              (for/and ([scene scenes])
                (and (send pipeline add scene)
@@ -141,7 +141,11 @@
   ((gst 'debug_bin_to_dot_data) broadcast 'all))
 
 (define (scene videosrc audiosrc [broadcast (unbox current-broadcast)])
-  (let ([bin (bin% 'new #f)])
+  (let* ([bin (bin% 'new #f)]
+         [videosrc (gst-compose (format "~a:video" (send bin get-name))
+                                videosrc
+                                (element-factory% 'make "videorate" #f)
+                                (element-factory% 'make "videoscale" #f))])
     (or (and (bin-add-many bin videosrc audiosrc)
              (let* ([video-pad (send videosrc get-static-pad "src")]
                     [ghost (ghost-pad% 'new "video" video-pad)])
