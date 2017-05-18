@@ -84,8 +84,7 @@
     (and (bin-add-many bin scaler preview)
          (send scaler link-filtered preview scale)
          (send bin add-pad (ghost-pad% 'new "sink" sink-pad))
-         bin)
-    ))
+         bin)))
 
 (define (debug:fps)
   (let ([debug (element-factory% 'make "fpsdisplaysink" "debug:fps")]
@@ -99,8 +98,14 @@
   (when (unbox current-broadcast)
     (error "already a broadcast in progress"))
   (let ([pipeline (pipeline% 'new "broadcast")]
-        [video-selector (element-factory% 'make "input-selector" "selector:video")]
-        [audio-selector (element-factory% 'make "input-selector" "selector:audio")]
+        [video-selector (let ([selector (element-factory% 'make "input-selector" "selector:video")])
+                          (gobject-set! selector "sync-mode" 'clock _input-selector-sync-mode)
+                          (gobject-set! selector "cache-buffers" #t _bool)
+                          selector)]
+        [audio-selector (let ([selector (element-factory% 'make "input-selector" "selector:audio")])
+                          (gobject-set! selector "sync-mode" 'clock _input-selector-sync-mode)
+                          (gobject-set! selector "cache-buffers" #t _bool)
+                          selector)]
         [tee (element-factory% 'make "tee" #f)]
         [queue (element-factory% 'make "queue" #f)]
         [h264-encoder (let ([encoder  (element-factory% 'make "vtenc_h264" "encode:h264")])
@@ -116,8 +121,6 @@
                          (element-factory% 'make "fakesink" "sink:fake-recording"))]
         [preview (or preview
                      (element-factory% 'make "fakesink" "sink:fake-preview"))])
-    (gobject-set! video-selector "sync-mode" 'clock _input-selector-sync-mode)
-    (gobject-set! audio-selector "sync-mode" 'clock _input-selector-sync-mode)
     (or (and (bin-add-many pipeline video-selector tee queue preview h264-encoder audio-selector aac-encoder flvmuxer record-sink)
              (for/and ([scene scenes])
                (and (send pipeline add scene)
