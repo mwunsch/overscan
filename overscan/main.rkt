@@ -4,10 +4,71 @@
          ffi/unsafe
          ffi/unsafe/introspection)
 
+(provide camera
+         screen
+         audio)
+
 (let-values ([(initialized? argc argv) ((gst 'init_check) 0 #f)])
   (if initialized?
       (displayln ((gst 'version_string)))
       (error "Could not load Gstreamer")))
+
+(define audio-devices
+  (let ([monitor ((gst 'DeviceMonitor) 'new)])
+    (if (< (send monitor add-filter "Audio/Source" #f) 0)
+        (displayln "No Audio Devices detected.")
+        (for/vector ([device (send monitor get-devices)]
+                     [i (in-naturals)])
+          (displayln (format "Audio Device ~a: ~a" i (send device get-display-name)))
+          device))))
+
+(define (audio ref)
+  (let ([device (vector-ref audio-devices ref)])
+    (send device create-element (format "osxaudiosrc:~a" ref))))
+
+(define cameras
+  (let ([avfvideosrc (element-factory% 'find "avfvideosrc")])
+    (list->vector
+     (let loop ([ref 0])
+       (let* ([name (format "avfvideosrc:camera:~v" ref)]
+              [el (send avfvideosrc create #f)])
+         (gobject-set! el "device-index" ref _int)
+         (if (eq? 'failure (send el set-state 'ready))
+             null
+             (and (send el set-state 'null)
+                  (displayln (format "Camera ~a: ~a" ref name))
+                  (cons (lambda (name)
+                          (let ([el (send avfvideosrc create name)])
+                            (gobject-set! el "device-index" ref _int)
+                            el))
+                        (loop (add1 ref))))))))))
+
+(define (camera ref)
+  (let ([device (vector-ref cameras ref)])
+    (device (format "avfvideosrc:camera:~v" ref))))
+
+(define screens
+  (let ([avfvideosrc (element-factory% 'find "avfvideosrc")])
+    (list->vector
+     (let loop ([ref 0])
+       (let* ([name (format "avfvideosrc:screen:~v" ref)]
+              [el (send avfvideosrc create #f)])
+         (gobject-set! el "capture-screen" #t _bool)
+         (gobject-set! el "device-index" ref _int)
+         (if (eq? 'failure (send el set-state 'ready))
+             null
+             (and (send el set-state 'null)
+                  (displayln (format "Screen Capture ~a: ~a" ref name))
+                  (cons (lambda (name)
+                          (let ([el (send avfvideosrc create name)])
+                            (gobject-set! el "capture-screen" #t _bool)
+                            (gobject-set! el "device-index" ref _int)
+                            el))
+                        (loop (add1 ref))))))))))
+
+(define (screen ref)
+  (let ([device (vector-ref screens ref)])
+    (device (format "avfvideosrc:screen:~v" ref))))
 
 (define current-broadcast (box #f))
 
@@ -15,7 +76,7 @@
 
 (define false-preview (element-factory% 'make "fakesink" "sink:fakepreview"))
 
-(define filter-video (caps% 'from_string "video/x-raw,width=1280,height=720"))
+(define filter-video (caps% 'from_string "video/x-raw,width=1280,height=720")) ; 720p
 
 (define h264-encoder
   (let ([encoder  (element-factory% 'make "vtenc_h264" "encode:h264")])
