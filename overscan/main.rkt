@@ -120,7 +120,7 @@
              (set-box! current-broadcast pipeline))
         (error "Couldn't start broadcast"))))
 
-(define (end-broadcast [broadcast (unbox current-broadcast)])
+(define (stop [broadcast (unbox current-broadcast)])
   (and (or broadcast
            (error "there is no current broadcast"))
        (send broadcast send-event (event% 'new_eos))
