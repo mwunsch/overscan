@@ -2,6 +2,7 @@
 
 (require ffi/unsafe
          ffi/unsafe/introspection
+         (only-in racket/list first last)
          "gst.rkt"
          "bus.rkt")
 
@@ -18,7 +19,8 @@
          ghost-pad%
          seconds
          element-link-many
-         _input-selector-sync-mode)
+         _input-selector-sync-mode
+         gst-compose)
 
 (define element-factory% (gst 'ElementFactory))
 
@@ -55,3 +57,19 @@
 
 (define _input-selector-sync-mode (_enum '(active-segment clock)))
 
+(define (gst-compose name . elements)
+  (let* ([bin (bin% 'new name)]
+         [sink (first elements)]
+         [source (last elements)])
+    (and (> (length elements) 0)
+         (apply bin-add-many bin elements)
+         (apply element-link-many elements)
+         (let ([sink-pad (send sink get-static-pad "sink")])
+           (if sink-pad
+               (send bin add-pad (ghost-pad% 'new "sink" sink-pad))
+               #t))
+         (let ([source-pad (send source get-static-pad "src")])
+           (if source-pad
+               (send bin add-pad (ghost-pad% 'new "src" source-pad))
+               #t))
+         bin)))
