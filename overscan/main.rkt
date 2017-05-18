@@ -93,7 +93,7 @@
     (gobject-set! debug "video-sink" video-preview (_gi-object element%))
     debug))
 
-(define (broadcast scenes
+(define (broadcast [scenes (list (scene:bars+tone))]
                    #:preview [preview (debug:fps)]
                    #:record [record #f])
   (when (unbox current-broadcast)
@@ -116,6 +116,8 @@
                          (element-factory% 'make "fakesink" "sink:fake-recording"))]
         [preview (or preview
                      (element-factory% 'make "fakesink" "sink:fake-preview"))])
+    (gobject-set! video-selector "sync-mode" 'clock _input-selector-sync-mode)
+    (gobject-set! audio-selector "sync-mode" 'clock _input-selector-sync-mode)
     (or (and (bin-add-many pipeline video-selector tee queue preview h264-encoder audio-selector aac-encoder flvmuxer record-sink)
              (for/and ([scene scenes])
                (and (send pipeline add scene)
@@ -142,10 +144,16 @@
 
 (define (scene videosrc audiosrc [broadcast (unbox current-broadcast)])
   (let* ([bin (bin% 'new #f)]
-         [videosrc (gst-compose (format "~a:video" (send bin get-name))
+         [bin-name (send bin get-name)]
+         [videosrc (gst-compose (format "~a:video" bin-name)
                                 videosrc
+                                (element-factory% 'make "queue" #f)
                                 (element-factory% 'make "videorate" #f)
-                                (element-factory% 'make "videoscale" #f))])
+                                (element-factory% 'make "videoscale" #f))]
+         [audiosrc (gst-compose (format "~a:audio" bin-name)
+                                audiosrc
+                                (element-factory% 'make "queue" #f)
+                                (element-factory% 'make "audiorate" #f))])
     (or (and (bin-add-many bin videosrc audiosrc)
              (let* ([video-pad (send videosrc get-static-pad "src")]
                     [ghost (ghost-pad% 'new "video" video-pad)])
@@ -154,16 +162,33 @@
                     [ghost (ghost-pad% 'new "audio" audio-pad)])
                (send bin add-pad ghost))
              (if broadcast
-                 (let ([video-selector (send broadcast get-by-name "selector:video")]
-                       [audio-selector (send broadcast get-by-name "selector:audio")])
-                   (and (send broadcast add bin)
-                        video-selector
-                        (send bin link-pads "video" video-selector #f)
-                        audio-selector
-                        (send bin link-pads "audio" audio-selector #f)))
+                 (add-scene bin broadcast)
                  #t)
              bin)
         (error "could not create scene"))))
+
+(define (add-scene bin [broadcast (unbox current-broadcast)])
+  (unless broadcast
+    (error "there is no current broadcast!"))
+  (let ([video-selector (send broadcast get-by-name "selector:video")]
+        [audio-selector (send broadcast get-by-name "selector:audio")])
+    (and (not (send broadcast get-by-name (send bin get-name)))
+         (send broadcast add bin)
+         video-selector
+         (send bin link-pads "video" video-selector #f)
+         audio-selector
+         (send bin link-pads "audio" audio-selector #f)
+         bin)))
+
+(define (scene:bars+tone)
+  (scene (element-factory% 'make "videotestsrc" #f)
+         (element-factory% 'make "audiotestsrc" #f)))
+
+(define (scene:camera+mic)
+  (scene (camera 0) (audio 0)))
+
+(define (scene:screen+mic)
+  (scene (screen 0) (audio 0)))
 
 (define (switch scene-or-id [broadcast (unbox current-broadcast)])
   (unless broadcast
