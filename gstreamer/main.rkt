@@ -10,16 +10,21 @@
          element-factory%
          element%
          pipeline%
+         pad%
          bin%
          caps%
          event%
          bin-add-many
+         ghost-pad%
          seconds
-         element-link-many)
+         element-link-many
+         _input-selector-sync-mode)
 
 (define element-factory% (gst 'ElementFactory))
 
 (define pipeline% (gst 'Pipeline))
+
+(define pad% (gst 'Pad))
 
 (define bin% (gst 'Bin))
 
@@ -30,6 +35,8 @@
 (define event% (gst 'Event))
 
 (define second ((gst 'SECOND)))
+
+(define ghost-pad% (gst 'GhostPad))
 
 (define (seconds num)
   (* num second))
@@ -45,3 +52,6 @@
         (and (send head link (car tail))
              (link (car tail) (cdr tail)))
         #t)))
+
+(define _input-selector-sync-mode (_enum '(active-segment clock)))
+
