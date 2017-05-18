@@ -127,15 +127,16 @@
        (send broadcast set-state 'null)
        (set-box! current-broadcast #f)))
 
-(define (scene . sources)
-  (let ([bin (bin% 'new "scene")]
-        [camera (element-factory% 'make "avfvideosrc" "camera")]
-        [audio (element-factory% 'make "osxaudiosrc" "microphone")])
-    (or (and (bin-add-many bin camera audio)
-             (let* ([camera-pad (send camera get-static-pad "src")]
-                    [ghost ((gst 'GhostPad) 'new "video" camera-pad)])
+(define (graphviz [broadcast (unbox current-broadcast)])
+  ((gst 'debug_bin_to_dot_data) broadcast 'all))
+
+(define (scene videosrc audiosrc)
+  (let ([bin (bin% 'new #f)])
+    (or (and (bin-add-many bin videosrc audiosrc)
+             (let* ([video-pad (send videosrc get-static-pad "src")]
+                    [ghost ((gst 'GhostPad) 'new "video" video-pad)])
                (send bin add-pad ghost))
-             (let* ([audio-pad (send audio get-static-pad "src")]
+             (let* ([audio-pad (send audiosrc get-static-pad "src")]
                     [ghost ((gst 'GhostPad) 'new "audio" audio-pad)])
                (send bin add-pad ghost))
              bin)
