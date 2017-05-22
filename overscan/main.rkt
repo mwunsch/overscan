@@ -30,7 +30,11 @@
 
 (define (audio ref)
   (let ([device (vector-ref audio-devices ref)])
-    (send device create-element (format "osxaudiosrc:~a" ref))))
+    (element-factory% 'make "osxaudiosrc" (format "osxaudiosrc:~a" ref))
+    ;; (send device create-element (format "osxaudiosrc:~a" ref))
+    ;; When we use the above method, the returned elements aren't properly
+    ;; deallocated
+    ))
 
 (define cameras
   (let ([avfvideosrc (element-factory% 'find "avfvideosrc")])
@@ -78,7 +82,7 @@
 
 (define current-broadcast (box #f))
 
-(define video-720p (caps% 'from_string "video/x-raw,width=1280,height=720"))
+(define video-720p (caps% 'from_string "video/x-raw,width=1280,height=720,framerate=30/1"))
 
 (define video-480p (caps% 'from_string "video/x-raw,width=854,height=480"))
 
@@ -113,10 +117,8 @@
                           selector)]
         [tee (element-factory% 'make "tee" #f)]
         [preview-queue (element-factory% 'make "queue" "buffer:preview")]
-        [video-buffer (gst-compose "buffer:video"
-                                   (element-factory% 'make "queue" #f))]
-        [audio-buffer (gst-compose "buffer:audio"
-                                   (element-factory% 'make "queue" #f))]
+        [video-buffer (element-factory% 'make "queue" "buffer:video")]
+        [audio-buffer (element-factory% 'make "queue" "buffer:audio")]
         [h264-encoder (let ([encoder  (element-factory% 'make "vtenc_h264" "encode:h264")])
                         (gobject-set! encoder "bitrate" 3500 _uint)
                         (gobject-set! encoder "max-keyframe-interval-duration" (seconds 2) _int64) ; 2 second keyframe interval
@@ -138,8 +140,8 @@
                (and (send pipeline add scene)
                     (send scene link-pads "video" video-selector #f)
                     (send scene link-pads "audio" audio-selector #f)))
-             (send video-selector link video-buffer)
-             (send video-buffer link-filtered tee video-720p)
+             (send video-selector link-filtered video-buffer video-720p)
+             (send video-buffer link tee)
              (element-link-many tee preview-queue preview)
              (element-link-many tee h264-encoder flvmuxer)
              (send audio-selector link audio-buffer)
