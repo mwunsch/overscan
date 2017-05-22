@@ -6,7 +6,13 @@
 
 (provide camera
          screen
-         audio)
+         audio
+         broadcast
+         stop
+         scene
+         switch
+         scene:camera+mic
+         scene:bars+tone)
 
 (let-values ([(initialized? argc argv) ((gst 'init_check) 0 #f)])
   (if initialized?
@@ -72,7 +78,7 @@
 
 (define current-broadcast (box #f))
 
-(define video-720p (caps% 'from_string "video/x-raw,width=1280,height=720,framerate=30/1"))
+(define video-720p (caps% 'from_string "video/x-raw,width=1280,height=720"))
 
 (define video-480p (caps% 'from_string "video/x-raw,width=854,height=480"))
 
@@ -86,9 +92,8 @@
          (send bin add-pad (ghost-pad% 'new "sink" sink-pad))
          bin)))
 
-(define (debug:fps)
-  (let ([debug (element-factory% 'make "fpsdisplaysink" "debug:fps")]
-        [video-preview (debug:preview)])
+(define (debug:fps [video-preview (debug:preview)])
+  (let ([debug (element-factory% 'make "fpsdisplaysink" "debug:fps")])
     (gobject-set! debug "video-sink" video-preview (_gi-object element%))
     debug))
 
@@ -107,7 +112,11 @@
                           (gobject-set! selector "cache-buffers" #t _bool)
                           selector)]
         [tee (element-factory% 'make "tee" #f)]
-        [queue (element-factory% 'make "queue" #f)]
+        [preview-queue (element-factory% 'make "queue" "buffer:preview")]
+        [video-buffer (gst-compose "buffer:video"
+                                   (element-factory% 'make "queue" #f))]
+        [audio-buffer (gst-compose "buffer:audio"
+                                   (element-factory% 'make "queue" #f))]
         [h264-encoder (let ([encoder  (element-factory% 'make "vtenc_h264" "encode:h264")])
                         (gobject-set! encoder "bitrate" 3500 _uint)
                         (gobject-set! encoder "max-keyframe-interval-duration" (seconds 2) _int64) ; 2 second keyframe interval
@@ -121,15 +130,20 @@
                          (element-factory% 'make "fakesink" "sink:fake-recording"))]
         [preview (or preview
                      (element-factory% 'make "fakesink" "sink:fake-preview"))])
-    (or (and (bin-add-many pipeline video-selector tee queue preview h264-encoder audio-selector aac-encoder flvmuxer record-sink)
+    (or (and (bin-add-many pipeline
+                           video-selector video-buffer tee preview-queue preview h264-encoder
+                           audio-selector audio-buffer aac-encoder
+                           flvmuxer record-sink)
              (for/and ([scene scenes])
                (and (send pipeline add scene)
                     (send scene link-pads "video" video-selector #f)
                     (send scene link-pads "audio" audio-selector #f)))
-             (send video-selector link-filtered tee video-720p)
-             (element-link-many tee queue preview)
+             (send video-selector link video-buffer)
+             (send video-buffer link-filtered tee video-720p)
+             (element-link-many tee preview-queue preview)
              (element-link-many tee h264-encoder flvmuxer)
-             (element-link-many audio-selector aac-encoder flvmuxer)
+             (send audio-selector link audio-buffer)
+             (element-link-many audio-buffer aac-encoder flvmuxer)
              (send flvmuxer link record-sink)
              (send pipeline set-state 'playing)
              (set-box! current-broadcast pipeline))
@@ -150,12 +164,10 @@
          [bin-name (send bin get-name)]
          [videosrc (gst-compose (format "~a:video" bin-name)
                                 videosrc
-                                (element-factory% 'make "queue" #f)
                                 (element-factory% 'make "videorate" #f)
                                 (element-factory% 'make "videoscale" #f))]
          [audiosrc (gst-compose (format "~a:audio" bin-name)
                                 audiosrc
-                                (element-factory% 'make "queue" #f)
                                 (element-factory% 'make "audiorate" #f))])
     (or (and (bin-add-many bin videosrc audiosrc)
              (let* ([video-pad (send videosrc get-static-pad "src")]
@@ -181,7 +193,7 @@
          (send bin link-pads "video" video-selector #f)
          audio-selector
          (send bin link-pads "audio" audio-selector #f)
-         bin)))
+         (send bin set-state 'playing))))
 
 (define (scene:bars+tone)
   (scene (element-factory% 'make "videotestsrc" #f)
@@ -211,11 +223,10 @@
               [active-audio (gobject-get audio-selector "active-pad" (_gi-object pad%))]
               [old-audio (send active-audio get-parent-element)]
               [video-peer-pad (send video-pad get-peer)]
-              [audio-peer-pad (send audio-pad get-peer)]
-              [state-status (send scene set-state 'playing)])
+              [audio-peer-pad (send audio-pad get-peer)])
          (and (gobject-set! video-selector "active-pad" video-peer-pad (_gi-object pad%))
               (gobject-set! audio-selector "active-pad" audio-peer-pad (_gi-object pad%))
-              state-status)))]
+              scene)))]
     [else (error (format "scene ~a is not part of the broadcast" scene-name))]))
 
 (define (recording location)
@@ -229,3 +240,7 @@
                         bin)
                    (error "could not get sink-pad for recording"))))
         (error "could not make a recording"))))
+
+(module+ main
+  (define scene0 (scene:camera+mic))
+  (define scene1 (scene:bars+tone)))
