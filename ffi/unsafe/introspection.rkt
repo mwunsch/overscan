@@ -451,13 +451,7 @@
                                      -> (invoked : _bool)
                                      -> (if invoked
                                             (apply values
-                                                   (let ([returns (gi-callable-returns fn)]
-                                                         [ownership (gi-callable-caller-owns fn)])
-                                                     (cond
-                                                       [(and (eq? ownership 'everything)
-                                                             (gi-type-gobject? returns))
-                                                        (((allocator gobject-unref!) returns) r)]
-                                                       [else (returns r)]))
+                                                   ((gi-callable-returns fn) r)
                                                    (if outargs
                                                        (for/list ([ptr (in-array (ptr-ref outargs (_array _gi-argument n-out)))]
                                                                   [outarg (gi-function-outbound-args fn)])
