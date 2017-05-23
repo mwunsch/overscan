@@ -80,20 +80,20 @@
   (let ([device (vector-ref screens ref)])
     (device (format "avfvideosrc:screen:~v" ref))))
 
-(define (twitch-stream)
-  (let ([stream-key (getenv "TWITCH_STREAM_KEY")]
-        [rtmp (element-factory% 'make "rtmpsink" "sink:rtmp:twitch")])
+(define (twitch-stream #:test [bandwidth-test #t])
+  (let* ([stream-key (getenv "TWITCH_STREAM_KEY")]
+         [rtmp (element-factory% 'make "rtmpsink" "sink:rtmp:twitch")]
+         [location (format "rtmp://live-jfk.twitch.tv/app/~a~a live=1"
+                           stream-key
+                           (if bandwidth-test "?bandwidthtest=true" ""))])
     (unless stream-key
       (error "no TWITCH_STREAM_KEY in env"))
-    (gobject-set! rtmp
-                  "location"
-                  (format "rtmp://live-jfk.twitch.tv/app/~a?bandwidthtest=true live=1" stream-key)
-                  _string)
+    (gobject-set! rtmp "location" location _string)
     rtmp))
 
 (define current-broadcast (box #f))
 
-(define video-720p (caps% 'from_string "video/x-raw,width=1280,height=720,framerate=30/1"))
+(define video-720p (caps% 'from_string "video/x-raw,width=1280,height=720"))
 
 (define video-480p (caps% 'from_string "video/x-raw,width=854,height=480"))
 
@@ -114,7 +114,8 @@
 
 (define (broadcast [scenes (list (scene:bars+tone))]
                    #:preview [preview (debug:fps)]
-                   #:record [record #f])
+                   #:record [record #f]
+                   #:monitor [monitor #f])
   (when (unbox current-broadcast)
     (error "already a broadcast in progress"))
   (let ([pipeline (pipeline% 'new "broadcast")]
@@ -126,46 +127,48 @@
                           (gobject-set! selector "sync-mode" 'clock _input-selector-sync-mode)
                           (gobject-set! selector "cache-buffers" #t _bool)
                           selector)]
-        [tee (element-factory% 'make "tee" #f)]
-        [preview-queue (element-factory% 'make "queue" "buffer:preview")]
-        [preview (or preview
-                     (element-factory% 'make "fakesink" "sink:fake-preview"))]
-        [video-buffer (element-factory% 'make "queue" "buffer:video")]
-        [audio-buffer (element-factory% 'make "queue" "buffer:audio")]
-        [h264-encoder (let ([encoder  (element-factory% 'make "vtenc_h264" "encode:h264")])
+        [video-tee (element-factory% 'make "tee" "tee:video")]
+        [audio-tee (element-factory% 'make "tee" "tee:audio")]
+        [h264-encoder (let ([encoder (element-factory% 'make "x264enc" "encode:h264")])
                         (gobject-set! encoder "bitrate" 1500 _uint)
-                        (gobject-set! encoder "max-keyframe-interval-duration" (seconds 2) _int64) ; 2 second keyframe interval
+                        (gobject-set! encoder "key-int-max" 2 _int)
+                        (gobject-set! encoder "speed-preset" 4 _int)
+                        (gobject-set! encoder "rc-lookahead" 5 _int)
                         encoder)]
         [aac-encoder (element-factory% 'make "faac" "encode:aac")]
         [flvmuxer (let ([muxer (element-factory% 'make "flvmux" "mux:flv")])
                     (gobject-set! muxer "streamable" #t _bool)
                     muxer)]
-        [flvtee (element-factory% 'make "tee" #f)]
-        [rtmpsink (gst-compose "twitch"
-                               (element-factory% 'make "queue" #f)
-                               (twitch-stream))]
-        [record-buffer (element-factory% 'make "queue" "buffer:recording")]
+        [rtmpsink (twitch-stream)]
+        ;; not implemented yet
+        [preview (or preview
+                     (element-factory% 'make "fakesink" "sink:fake-preview"))]
         [record-sink (if record
                          (recording record)
-                         (element-factory% 'make "fakesink" "sink:fake-recording"))])
+                         (element-factory% 'make "fakesink" "sink:fake-recording"))]
+        [audio-monitor (or monitor
+                           (element-factory% 'make "osxaudiosink" "audio:monitor"))])
     (or (and (bin-add-many pipeline
-                           video-selector video-buffer tee preview-queue preview h264-encoder
-                           audio-selector audio-buffer aac-encoder
-                           flvmuxer flvtee rtmpsink record-buffer record-sink)
+                           video-selector video-tee
+                           audio-selector audio-tee
+                           h264-encoder aac-encoder
+                           flvmuxer rtmpsink)
              (for/and ([scene scenes])
                (and (send pipeline add scene)
-                    (send scene link-pads "video" video-selector #f)
+                    (send scene link-pads-filtered "video" video-selector #f video-720p)
                     (send scene link-pads "audio" audio-selector #f)))
-             (send video-selector link-filtered video-buffer video-720p)
-             (send video-buffer link tee)
-             (element-link-many tee preview-queue preview)
-             (element-link-many tee h264-encoder flvmuxer)
-             (send audio-selector link audio-buffer)
-             (element-link-many audio-buffer aac-encoder flvmuxer)
-             (send flvmuxer link flvtee)
-             (send flvtee link rtmpsink)
-             (send flvtee link record-buffer)
-             (send record-buffer link record-sink)
+
+             (send video-selector link video-tee)
+             (send audio-selector link audio-tee)
+
+             (send video-tee link h264-encoder)
+             (send audio-tee link aac-encoder)
+
+             (send h264-encoder link flvmuxer)
+             (send aac-encoder link flvmuxer)
+
+             (send flvmuxer link rtmpsink)
+
              (send pipeline set-state 'playing)
              (set-box! current-broadcast pipeline))
         (error "Couldn't start broadcast"))))
@@ -177,19 +180,14 @@
        (send broadcast set-state 'null)
        (set-box! current-broadcast #f)))
 
-(define (graphviz [broadcast (unbox current-broadcast)])
-  ((gst 'debug_bin_to_dot_data) broadcast 'all))
+(define (graphviz filepath [broadcast (unbox current-broadcast)])
+  (call-with-output-file filepath
+    (lambda (out)
+      (display ((gst 'debug_bin_to_dot_data) broadcast 'all) out))))
 
 (define (scene videosrc audiosrc [broadcast (unbox current-broadcast)])
   (let* ([bin (bin% 'new #f)]
-         [bin-name (send bin get-name)]
-         [videosrc (gst-compose (format "~a:video" bin-name)
-                                videosrc
-                                (element-factory% 'make "videorate" #f)
-                                (element-factory% 'make "videoscale" #f))]
-         [audiosrc (gst-compose (format "~a:audio" bin-name)
-                                audiosrc
-                                (element-factory% 'make "audiorate" #f))])
+         [bin-name (send bin get-name)])
     (or (and (bin-add-many bin videosrc audiosrc)
              (let* ([video-pad (send videosrc get-static-pad "src")]
                     [ghost (ghost-pad% 'new "video" video-pad)])
@@ -217,8 +215,10 @@
          (send bin set-state 'playing))))
 
 (define (scene:bars+tone)
-  (scene (element-factory% 'make "videotestsrc" #f)
-         (element-factory% 'make "audiotestsrc" #f)))
+  (let ([elements (list (element-factory% 'make "videotestsrc" #f)
+                        (element-factory% 'make "audiotestsrc" #f))])
+    (apply scene
+           (map (lambda (el) (and (gobject-set! el "is-live" #t _bool) el)) elements))))
 
 (define (scene:camera+mic)
   (scene (camera 0) (audio 0)))
