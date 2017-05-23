@@ -128,25 +128,30 @@
                           selector)]
         [tee (element-factory% 'make "tee" #f)]
         [preview-queue (element-factory% 'make "queue" "buffer:preview")]
+        [preview (or preview
+                     (element-factory% 'make "fakesink" "sink:fake-preview"))]
         [video-buffer (element-factory% 'make "queue" "buffer:video")]
         [audio-buffer (element-factory% 'make "queue" "buffer:audio")]
         [h264-encoder (let ([encoder  (element-factory% 'make "vtenc_h264" "encode:h264")])
-                        (gobject-set! encoder "bitrate" 3500 _uint)
+                        (gobject-set! encoder "bitrate" 1500 _uint)
                         (gobject-set! encoder "max-keyframe-interval-duration" (seconds 2) _int64) ; 2 second keyframe interval
                         encoder)]
+        [aac-encoder (element-factory% 'make "faac" "encode:aac")]
         [flvmuxer (let ([muxer (element-factory% 'make "flvmux" "mux:flv")])
                     (gobject-set! muxer "streamable" #t _bool)
                     muxer)]
-        [aac-encoder (element-factory% 'make "faac" "encode:aac")]
+        [flvtee (element-factory% 'make "tee" #f)]
+        [rtmpsink (gst-compose "twitch"
+                               (element-factory% 'make "queue" #f)
+                               (twitch-stream))]
+        [record-buffer (element-factory% 'make "queue" "buffer:recording")]
         [record-sink (if record
                          (recording record)
-                         (element-factory% 'make "fakesink" "sink:fake-recording"))]
-        [preview (or preview
-                     (element-factory% 'make "fakesink" "sink:fake-preview"))])
+                         (element-factory% 'make "fakesink" "sink:fake-recording"))])
     (or (and (bin-add-many pipeline
                            video-selector video-buffer tee preview-queue preview h264-encoder
                            audio-selector audio-buffer aac-encoder
-                           flvmuxer record-sink)
+                           flvmuxer flvtee rtmpsink record-buffer record-sink)
              (for/and ([scene scenes])
                (and (send pipeline add scene)
                     (send scene link-pads "video" video-selector #f)
@@ -157,7 +162,10 @@
              (element-link-many tee h264-encoder flvmuxer)
              (send audio-selector link audio-buffer)
              (element-link-many audio-buffer aac-encoder flvmuxer)
-             (send flvmuxer link record-sink)
+             (send flvmuxer link flvtee)
+             (send flvtee link rtmpsink)
+             (send flvtee link record-buffer)
+             (send record-buffer link record-sink)
              (send pipeline set-state 'playing)
              (set-box! current-broadcast pipeline))
         (error "Couldn't start broadcast"))))
