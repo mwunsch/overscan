@@ -80,6 +80,17 @@
   (let ([device (vector-ref screens ref)])
     (device (format "avfvideosrc:screen:~v" ref))))
 
+(define (twitch-stream)
+  (let ([stream-key (getenv "TWITCH_STREAM_KEY")]
+        [rtmp (element-factory% 'make "rtmpsink" "sink:rtmp:twitch")])
+    (unless stream-key
+      (error "no TWITCH_STREAM_KEY in env"))
+    (gobject-set! rtmp
+                  "location"
+                  (format "rtmp://live-jfk.twitch.tv/app/~a?bandwidthtest=true live=1" stream-key)
+                  _string)
+    rtmp))
+
 (define current-broadcast (box #f))
 
 (define video-720p (caps% 'from_string "video/x-raw,width=1280,height=720,framerate=30/1"))
