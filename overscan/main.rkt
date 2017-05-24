@@ -98,9 +98,9 @@
 (define video-480p (caps% 'from_string "video/x-raw,width=854,height=480"))
 
 (define (debug:preview [scale video-480p])
-  (let* ([bin (bin% 'new "sink:preview")]
-         [scaler (element-factory% 'make "videoscale" "scale:video")]
-         [preview (element-factory% 'make "osxvideosink" "sink:preview")]
+  (let* ([bin (bin% 'new "debug:preview")]
+         [scaler (element-factory% 'make "videoscale" "debug:preview:scale")]
+         [preview (element-factory% 'make "osxvideosink" "debug:preview:sink")]
          [sink-pad (send scaler get-static-pad "sink")])
     (and (bin-add-many bin scaler preview)
          (send scaler link-filtered preview scale)
@@ -129,6 +129,7 @@
                           selector)]
         [video-tee (element-factory% 'make "tee" "tee:video")]
         [audio-tee (element-factory% 'make "tee" "tee:audio")]
+        [encoding-queue (element-factory% 'make "multiqueue" "buffer:encoding")]
         [h264-encoder (let ([encoder (element-factory% 'make "x264enc" "encode:h264")])
                         (gobject-set! encoder "bitrate" 1500 _uint)
                         (gobject-set! encoder "key-int-max" 2 _int)
@@ -139,20 +140,26 @@
         [flvmuxer (let ([muxer (element-factory% 'make "flvmux" "mux:flv")])
                     (gobject-set! muxer "streamable" #t _bool)
                     muxer)]
-        [rtmpsink (twitch-stream)]
-        ;; not implemented yet
-        [preview (or preview
-                     (element-factory% 'make "fakesink" "sink:fake-preview"))]
+        [rtmpsink (twitch-stream #:test #t)]
+        [flvtee (element-factory% 'make "tee" "tee:flv")]
+        [preview (gst-compose "sink:preview"
+                              (let ([buffer (element-factory% 'make "queue" #f)])
+                                (gobject-set! buffer "leaky" 'upstream (_enum '(no upstream downstream)))
+                                buffer)
+                              (element-factory% 'make "videoconvert" #f)
+                              (or preview
+                                  (element-factory% 'make "fakesink" "sink:preview:fake")))]
+        [recording-queue (element-factory% 'make "queue" "buffer:recording")]
         [record-sink (if record
                          (recording record)
-                         (element-factory% 'make "fakesink" "sink:fake-recording"))]
+                         (element-factory% 'make "fakesink" "sink:recording:fake"))]
         [audio-monitor (or monitor
                            (element-factory% 'make "osxaudiosink" "audio:monitor"))])
     (or (and (bin-add-many pipeline
-                           video-selector video-tee
+                           video-selector video-tee preview
                            audio-selector audio-tee
-                           h264-encoder aac-encoder
-                           flvmuxer rtmpsink)
+                           encoding-queue h264-encoder aac-encoder
+                           flvmuxer flvtee rtmpsink)
              (for/and ([scene scenes])
                (and (send pipeline add scene)
                     (send scene link-pads-filtered "video" video-selector #f video-720p)
@@ -161,13 +168,19 @@
              (send video-selector link video-tee)
              (send audio-selector link audio-tee)
 
-             (send video-tee link h264-encoder)
-             (send audio-tee link aac-encoder)
+             (send video-tee link encoding-queue)
+             (send audio-tee link encoding-queue)
+
+             (send video-tee link preview)
+
+             (send encoding-queue link h264-encoder)
+             (send encoding-queue link aac-encoder)
 
              (send h264-encoder link flvmuxer)
              (send aac-encoder link flvmuxer)
 
-             (send flvmuxer link rtmpsink)
+             (send flvmuxer link flvtee)
+             (send flvtee link rtmpsink)
 
              (send pipeline set-state 'playing)
              (set-box! current-broadcast pipeline))
@@ -251,7 +264,7 @@
     [else (error (format "scene ~a is not part of the broadcast" scene-name))]))
 
 (define (recording location)
-  (let ([bin (bin% 'new "recording")]
+  (let ([bin (bin% 'new "sink:recording")]
         [filesink (element-factory% 'make "filesink" #f)])
     (gobject-set! filesink "location" location _path)
     (or (and (send bin add filesink)
