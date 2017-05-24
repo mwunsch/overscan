@@ -100,6 +100,8 @@
 
 (define video-480p (caps% 'from_string "video/x-raw,width=854,height=480"))
 
+(define video-360p (caps% 'from_string "video/x-raw,width=480,height=360"))
+
 (define (debug:preview [scale video-480p])
   (let* ([bin (bin% 'new "debug:preview")]
          [scaler (element-factory% 'make "videoscale" "debug:preview:scale")]
@@ -284,7 +286,7 @@
          [videobox (element-factory% 'make "videobox" #f)])
     (or (and (bin-add-many bin video1 videobox video2 mixer audio)
              (send video2 link-filtered mixer video-720p)
-             (send video1 link-filtered videobox (caps% 'from_string "video/x-raw,width=480,height=360"))
+             (send video1 link-filtered videobox video-360p)
              (send videobox link mixer)
              (let ([pad (send mixer get-static-pad "sink_1")])
                (gobject-set! pad "ypos" 320 _int)
