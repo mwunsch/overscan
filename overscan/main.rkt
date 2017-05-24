@@ -115,6 +115,9 @@
     (gobject-set! debug "video-sink" video-preview (_gi-object element%))
     debug))
 
+(define (debug:audio-monitor)
+  (element-factory% 'make "osxaudiosink" "debug:monitor"))
+
 (define (broadcast [scenes (list (scene:bars+tone))]
                    [rtmpsink (stream:fake)]
                    #:preview [preview (debug:fps)]
@@ -147,7 +150,7 @@
                     muxer)]
         [flvtee (element-factory% 'make "tee" "tee:flv")]
         [rtmpqueue (element-factory% 'make "queue" "buffer:rtmp")]
-        [previewqueue (let ([buffer (element-factory% 'make "queue" "buffer:preview")])
+        [preview-queue (let ([buffer (element-factory% 'make "queue" "buffer:preview")])
                         (gobject-set! buffer "leaky" 'upstream (_enum '(no upstream downstream)))
                         buffer)]
         [preview (gst-compose "sink:preview"
@@ -157,11 +160,14 @@
         [recording-queue (element-factory% 'make "queue" "buffer:recording")]
         [record-sink (or (recording record)
                          (element-factory% 'make "fakesink" "sink:recording:fake"))]
+        [monitor-queue (let ([buffer (element-factory% 'make "queue" "buffer:monitor")])
+                        (gobject-set! buffer "leaky" 'upstream (_enum '(no upstream downstream)))
+                        buffer)]
         [audio-monitor (or monitor
-                           (element-factory% 'make "osxaudiosink" "audio:monitor"))])
+                           (element-factory% 'make "fakesink" "sink:monitor:fake"))])
     (or (and (bin-add-many pipeline
-                           video-selector video-tee previewqueue preview
-                           audio-selector audio-tee
+                           video-selector video-tee preview-queue preview
+                           audio-selector audio-tee monitor-queue audio-monitor
                            video-queue h264-encoder audio-queue aac-encoder
                            flvmuxer flvtee rtmpqueue rtmpsink)
              (for/and ([scene scenes])
@@ -175,8 +181,11 @@
              (send video-tee link-filtered video-queue video-720p)
              (send audio-tee link audio-queue)
 
-             (send video-tee link previewqueue)
-             (send previewqueue link preview)
+             (send video-tee link preview-queue)
+             (send preview-queue link preview)
+
+             (send audio-tee link monitor-queue)
+             (send monitor-queue link audio-monitor)
 
              (send video-queue link h264-encoder)
              (send audio-queue link aac-encoder)
@@ -244,6 +253,16 @@
                         (element-factory% 'make "audiotestsrc" #f))])
     (apply scene
            (map (lambda (el) (and (gobject-set! el "is-live" #t _bool) el)) elements))))
+
+(define (scene:snow)
+  (scene (let ([video (element-factory% 'make "videotestsrc" #f)])
+           (gobject-set! video "is-live" #t _bool)
+           (gobject-set! video "pattern" 'snow _video-test-src-pattern)
+           video)
+         (let ([audio (element-factory% 'make "audiotestsrc" #f)])
+           (gobject-set! audio "is-live" #t _bool)
+           (gobject-set! audio "wave" 'white-noise _audio-test-src-wave)
+           audio)))
 
 (define (scene:camera+mic)
   (scene (camera 0) (audio 0)))

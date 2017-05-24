@@ -20,6 +20,8 @@
          seconds
          element-link-many
          _input-selector-sync-mode
+         _video-test-src-pattern
+         _audio-test-src-wave
          gst-compose)
 
 (define element-factory% (gst 'ElementFactory))
@@ -73,3 +75,15 @@
                (send bin add-pad (ghost-pad% 'new "src" source-pad))
                #t))
          bin)))
+
+(define _video-test-src-pattern (_enum '(smpte
+                                         snow black white red green blue
+                                         checkers1 checkers2 checkers4 checkers8
+                                         circular blink smpte75 zone-plate gamut
+                                         chroma-zone-plate solid ball pinwhell spokes
+                                         gradient colors)))
+
+(define _audio-test-src-wave (_enum '(sine
+                                      square saw triangle silence
+                                      white-noise pink-noise sine-tab
+                                      ticks gaussian-noise red-noise blue-noise violet-noise)))
