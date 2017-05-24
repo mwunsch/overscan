@@ -128,8 +128,9 @@
                           (gobject-set! selector "cache-buffers" #t _bool)
                           selector)]
         [video-tee (element-factory% 'make "tee" "tee:video")]
+        [video-queue (element-factory% 'make "queue" "buffer:video")]
         [audio-tee (element-factory% 'make "tee" "tee:audio")]
-        [encoding-queue (element-factory% 'make "multiqueue" "buffer:encoding")]
+        [audio-queue (element-factory% 'make "queue" "buffer:audio")]
         [h264-encoder (let ([encoder (element-factory% 'make "x264enc" "encode:h264")])
                         (gobject-set! encoder "bitrate" 1500 _uint)
                         (gobject-set! encoder "key-int-max" 2 _int)
@@ -140,12 +141,12 @@
         [flvmuxer (let ([muxer (element-factory% 'make "flvmux" "mux:flv")])
                     (gobject-set! muxer "streamable" #t _bool)
                     muxer)]
-        [rtmpsink (twitch-stream #:test #t)]
         [flvtee (element-factory% 'make "tee" "tee:flv")]
+        [rtmpsink (twitch-stream #:test #t)]
+        [previewqueue (let ([buffer (element-factory% 'make "queue" #f)])
+                        (gobject-set! buffer "leaky" 'upstream (_enum '(no upstream downstream)))
+                        buffer)]
         [preview (gst-compose "sink:preview"
-                              (let ([buffer (element-factory% 'make "queue" #f)])
-                                (gobject-set! buffer "leaky" 'upstream (_enum '(no upstream downstream)))
-                                buffer)
                               (element-factory% 'make "videoconvert" #f)
                               (or preview
                                   (element-factory% 'make "fakesink" "sink:preview:fake")))]
@@ -156,9 +157,9 @@
         [audio-monitor (or monitor
                            (element-factory% 'make "osxaudiosink" "audio:monitor"))])
     (or (and (bin-add-many pipeline
-                           video-selector video-tee preview
+                           video-selector video-tee previewqueue preview
                            audio-selector audio-tee
-                           encoding-queue h264-encoder aac-encoder
+                           video-queue h264-encoder audio-queue aac-encoder
                            flvmuxer flvtee rtmpsink)
              (for/and ([scene scenes])
                (and (send pipeline add scene)
@@ -168,13 +169,14 @@
              (send video-selector link video-tee)
              (send audio-selector link audio-tee)
 
-             (send video-tee link encoding-queue)
-             (send audio-tee link encoding-queue)
+             (send video-tee link video-queue)
+             (send audio-tee link audio-queue)
 
-             (send video-tee link preview)
+             (send video-tee link previewqueue)
+             (send previewqueue link preview)
 
-             (send encoding-queue link h264-encoder)
-             (send encoding-queue link aac-encoder)
+             (send video-queue link h264-encoder)
+             (send audio-queue link aac-encoder)
 
              (send h264-encoder link flvmuxer)
              (send aac-encoder link flvmuxer)
