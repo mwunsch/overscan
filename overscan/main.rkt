@@ -141,7 +141,7 @@
         [h264-encoder (let ([encoder (element-factory% 'make "x264enc" "encode:h264")])
                         (gobject-set! encoder "bitrate" 1500 _uint)
                         (gobject-set! encoder "key-int-max" 2 _int)
-                        (gobject-set! encoder "speed-preset" 4 _int)
+                        (gobject-set! encoder "speed-preset" 3 _int) ;veryfast
                         (gobject-set! encoder "rc-lookahead" 5 _int)
                         encoder)]
         [aac-encoder (element-factory% 'make "faac" "encode:aac")]
@@ -151,24 +151,23 @@
         [flvtee (element-factory% 'make "tee" "tee:flv")]
         [rtmpqueue (element-factory% 'make "queue" "buffer:rtmp")]
         [preview-queue (let ([buffer (element-factory% 'make "queue" "buffer:preview")])
-                        (gobject-set! buffer "leaky" 'upstream (_enum '(no upstream downstream)))
-                        buffer)]
-        [preview (gst-compose "sink:preview"
-                              (element-factory% 'make "videoconvert" #f)
-                              (or preview
-                                  (element-factory% 'make "fakesink" "sink:preview:fake")))]
+                         (gobject-set! buffer "leaky" 'upstream (_enum '(no upstream downstream)))
+                         buffer)]
+        [preview (and preview
+                      (gst-compose "sink:preview"
+                                   (element-factory% 'make "videoconvert" #f)
+                                   preview))]
         [recording-queue (element-factory% 'make "queue" "buffer:recording")]
         [record-sink (or (recording record)
                          (element-factory% 'make "fakesink" "sink:recording:fake"))]
         [monitor-queue (let ([buffer (element-factory% 'make "queue" "buffer:monitor")])
-                        (gobject-set! buffer "leaky" 'upstream (_enum '(no upstream downstream)))
-                        buffer)]
+                         (gobject-set! buffer "leaky" 'upstream (_enum '(no upstream downstream)))
+                         buffer)]
         [audio-monitor (or monitor
                            (element-factory% 'make "fakesink" "sink:monitor:fake"))])
     (or (and (bin-add-many pipeline
-                           video-selector video-tee preview-queue preview
-                           audio-selector audio-tee monitor-queue audio-monitor
-                           video-queue h264-encoder audio-queue aac-encoder
+                           video-selector video-tee video-queue h264-encoder
+                           audio-selector audio-tee audio-queue aac-encoder
                            flvmuxer flvtee rtmpqueue rtmpsink)
              (for/and ([scene scenes])
                (and (send pipeline add scene)
@@ -181,11 +180,17 @@
              (send video-tee link-filtered video-queue video-720p)
              (send audio-tee link audio-queue)
 
-             (send video-tee link preview-queue)
-             (send preview-queue link preview)
+             (if preview
+                 (and (bin-add-many pipeline preview-queue preview)
+                      (send video-tee link preview-queue)
+                      (send preview-queue link preview))
+                 #t)
 
-             (send audio-tee link monitor-queue)
-             (send monitor-queue link audio-monitor)
+             (if monitor
+                 (and (bin-add-many pipeline monitor-queue audio-monitor)
+                      (send audio-tee link monitor-queue)
+                      (send monitor-queue link audio-monitor))
+                 #t)
 
              (send video-queue link h264-encoder)
              (send audio-queue link aac-encoder)
@@ -221,9 +226,11 @@
 
 (define (scene videosrc audiosrc [broadcast (unbox current-broadcast)])
   (let* ([bin (bin% 'new #f)]
-         [bin-name (send bin get-name)])
-    (or (and (bin-add-many bin videosrc audiosrc)
-             (let* ([video-pad (send videosrc get-static-pad "src")]
+         [bin-name (send bin get-name)]
+         [scaler (element-factory% 'make "videoscale" #f)])
+    (or (and (bin-add-many bin videosrc scaler audiosrc)
+             (send videosrc link scaler)
+             (let* ([video-pad (send scaler get-static-pad "src")]
                     [ghost (ghost-pad% 'new "video" video-pad)])
                (send bin add-pad ghost))
              (let* ([audio-pad (send audiosrc get-static-pad "src")]
