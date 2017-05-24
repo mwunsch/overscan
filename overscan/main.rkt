@@ -117,8 +117,10 @@
     (gobject-set! debug "video-sink" video-preview (_gi-object element%))
     debug))
 
-(define (debug:audio-monitor)
-  (element-factory% 'make "osxaudiosink" "debug:monitor"))
+(define (debug:audio-monitor [volume 0.5])
+  (let ([sink (element-factory% 'make "osxaudiosink" "debug:monitor")])
+    (gobject-set! sink "volume" volume _double)
+    sink))
 
 (define (broadcast [scenes (list (scene:bars+tone))]
                    [rtmpsink (stream:fake)]
