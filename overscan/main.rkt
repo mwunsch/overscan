@@ -277,6 +277,34 @@
 (define (scene:screen+mic)
   (scene (screen 0) (audio 0)))
 
+(define (scene:picture-in-picture video1 video2 audio)
+  (let* ([bin (bin% 'new #f)]
+         [bin-name (send bin get-name)]
+         [mixer (element-factory% 'make "videomixer" (format "~a:mixer" bin-name))]
+         [videobox (element-factory% 'make "videobox" #f)])
+    (or (and (bin-add-many bin video1 videobox video2 mixer audio)
+             (send video2 link-filtered mixer video-720p)
+             (send video1 link-filtered videobox (caps% 'from_string "video/x-raw,width=480,height=360"))
+             (send videobox link mixer)
+             (let ([pad (send mixer get-static-pad "sink_1")])
+               (gobject-set! pad "ypos" 320 _int)
+               (gobject-set! pad "xpos" 20 _int))
+             (let* ([video-pad (send mixer get-static-pad "src")]
+                    [ghost (ghost-pad% 'new "video" video-pad)])
+               (send bin add-pad ghost))
+             (let* ([audio-pad (send audio get-static-pad "src")]
+                    [ghost (ghost-pad% 'new "audio" audio-pad)])
+               (send bin add-pad ghost))
+             bin)
+        (error "could not create mix"))))
+
+(define (scene:camera+screen)
+  (scene:picture-in-picture (gst-compose "pip:cam"
+                                         (camera 0)
+                                         (element-factory% 'make "videoscale" #f))
+                            (element-factory% 'make "videotestsrc" #f)
+                            (audio 0)))
+
 (define (switch scene-or-id [broadcast (unbox current-broadcast)])
   (unless broadcast
     (error "there is no current broadcast"))
@@ -315,4 +343,6 @@
 
 (module+ main
   (define scene0 (scene:camera+mic))
-  (define scene1 (scene:bars+tone)))
+  (define scene1 (scene:bars+tone))
+  (define scene2 (scene:screen+mic))
+  (define pip (scene:camera+screen)))
