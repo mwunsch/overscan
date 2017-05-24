@@ -80,7 +80,7 @@
   (let ([device (vector-ref screens ref)])
     (device (format "avfvideosrc:screen:~v" ref))))
 
-(define (twitch-stream #:test [bandwidth-test #t])
+(define (stream:twitch #:test [bandwidth-test #t])
   (let* ([stream-key (getenv "TWITCH_STREAM_KEY")]
          [rtmp (element-factory% 'make "rtmpsink" "sink:rtmp:twitch")]
          [location (format "rtmp://live-jfk.twitch.tv/app/~a~a live=1"
@@ -90,6 +90,9 @@
       (error "no TWITCH_STREAM_KEY in env"))
     (gobject-set! rtmp "location" location _string)
     rtmp))
+
+(define (stream:fake)
+  (element-factory% 'make "fakesink" "sink:rtmp:fake"))
 
 (define current-broadcast (box #f))
 
@@ -113,6 +116,7 @@
     debug))
 
 (define (broadcast [scenes (list (scene:bars+tone))]
+                   [rtmpsink (stream:fake)]
                    #:preview [preview (debug:fps)]
                    #:record [record #f]
                    #:monitor [monitor #f])
@@ -142,8 +146,8 @@
                     (gobject-set! muxer "streamable" #t _bool)
                     muxer)]
         [flvtee (element-factory% 'make "tee" "tee:flv")]
-        [rtmpsink (twitch-stream #:test #t)]
-        [previewqueue (let ([buffer (element-factory% 'make "queue" #f)])
+        [rtmpqueue (element-factory% 'make "queue" "buffer:rtmp")]
+        [previewqueue (let ([buffer (element-factory% 'make "queue" "buffer:preview")])
                         (gobject-set! buffer "leaky" 'upstream (_enum '(no upstream downstream)))
                         buffer)]
         [preview (gst-compose "sink:preview"
@@ -151,8 +155,7 @@
                               (or preview
                                   (element-factory% 'make "fakesink" "sink:preview:fake")))]
         [recording-queue (element-factory% 'make "queue" "buffer:recording")]
-        [record-sink (if record
-                         (recording record)
+        [record-sink (or (recording record)
                          (element-factory% 'make "fakesink" "sink:recording:fake"))]
         [audio-monitor (or monitor
                            (element-factory% 'make "osxaudiosink" "audio:monitor"))])
@@ -160,16 +163,16 @@
                            video-selector video-tee previewqueue preview
                            audio-selector audio-tee
                            video-queue h264-encoder audio-queue aac-encoder
-                           flvmuxer flvtee rtmpsink)
+                           flvmuxer flvtee rtmpqueue rtmpsink)
              (for/and ([scene scenes])
                (and (send pipeline add scene)
-                    (send scene link-pads-filtered "video" video-selector #f video-720p)
+                    (send scene link-pads "video" video-selector #f)
                     (send scene link-pads "audio" audio-selector #f)))
 
              (send video-selector link video-tee)
              (send audio-selector link audio-tee)
 
-             (send video-tee link video-queue)
+             (send video-tee link-filtered video-queue video-720p)
              (send audio-tee link audio-queue)
 
              (send video-tee link previewqueue)
@@ -180,9 +183,16 @@
 
              (send h264-encoder link flvmuxer)
              (send aac-encoder link flvmuxer)
-
              (send flvmuxer link flvtee)
-             (send flvtee link rtmpsink)
+
+             (send flvtee link rtmpqueue)
+             (send rtmpqueue link rtmpsink)
+
+             (if record
+                 (and (bin-add-many pipeline recording-queue record-sink)
+                      (send flvtee link recording-queue)
+                      (send recording-queue link record-sink))
+                 #t)
 
              (send pipeline set-state 'playing)
              (set-box! current-broadcast pipeline))
