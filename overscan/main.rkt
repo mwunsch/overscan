@@ -96,7 +96,7 @@
 
 (define current-broadcast (box #f))
 
-(define video-720p (caps% 'from_string "video/x-raw,width=1280,height=720"))
+(define video-720p (caps% 'from_string "video/x-raw,width=1280,height=720,framerate=30/1"))
 
 (define video-480p (caps% 'from_string "video/x-raw,width=854,height=480"))
 
@@ -283,10 +283,15 @@
   (let* ([bin (bin% 'new #f)]
          [bin-name (send bin get-name)]
          [mixer (element-factory% 'make "videomixer" (format "~a:mixer" bin-name))]
-         [videobox (element-factory% 'make "videobox" #f)])
+         [videobox (gst-compose "pip:box"
+                                (element-factory% 'make "videoscale" #f)
+                                (let ([caps (element-factory% 'make "capsfilter" #f)])
+                                  (gobject-set! caps "caps" video-360p _pointer)
+                                  caps)
+                                (element-factory% 'make "videobox" #f))])
     (or (and (bin-add-many bin video1 videobox video2 mixer audio)
              (send video2 link-filtered mixer video-720p)
-             (send video1 link-filtered videobox video-360p)
+             (send video1 link videobox)
              (send videobox link mixer)
              (let ([pad (send mixer get-static-pad "sink_1")])
                (gobject-set! pad "ypos" 320 _int)
@@ -300,11 +305,11 @@
              bin)
         (error "could not create mix"))))
 
-(define (scene:camera+screen)
-  (scene:picture-in-picture (gst-compose "pip:cam"
-                                         (camera 0)
+(define (scene:camera+screen [camref 0] [scrnref 0])
+  (scene:picture-in-picture (camera camref)
+                            (gst-compose "pip:screen"
+                                         (screen scrnref)
                                          (element-factory% 'make "videoscale" #f))
-                            (element-factory% 'make "videotestsrc" #f)
                             (audio 0)))
 
 (define (switch scene-or-id [broadcast (unbox current-broadcast)])
@@ -347,4 +352,4 @@
   (define scene0 (scene:camera+mic))
   (define scene1 (scene:bars+tone))
   (define scene2 (scene:screen+mic))
-  (define pip (scene:camera+screen)))
+  (define pip (scene:camera+screen 0 0)))
