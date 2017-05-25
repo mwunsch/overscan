@@ -241,13 +241,17 @@
 (define (scene videosrc audiosrc [broadcast (unbox current-broadcast)])
   (let* ([bin (bin% 'new #f)]
          [bin-name (send bin get-name)]
-         [scaler (element-factory% 'make "videoscale" #f)])
-    (or (and (bin-add-many bin videosrc scaler audiosrc)
+         [scaler (element-factory% 'make "videoscale" #f)]
+         [multiqueue (element-factory% 'make "multiqueue" #f)])
+    (or (and (bin-add-many bin videosrc scaler audiosrc multiqueue)
+             (gobject-set! multiqueue "max-size-time" (seconds 2) _uint64)
              (send videosrc link scaler)
-             (let* ([video-pad (send scaler get-static-pad "src")]
+             (send scaler link multiqueue)
+             (send audiosrc link multiqueue)
+             (let* ([video-pad (send multiqueue get-static-pad "src_0")]
                     [ghost (ghost-pad% 'new "video" video-pad)])
                (send bin add-pad ghost))
-             (let* ([audio-pad (send audiosrc get-static-pad "src")]
+             (let* ([audio-pad (send multiqueue get-static-pad "src_1")]
                     [ghost (ghost-pad% 'new "audio" audio-pad)])
                (send bin add-pad ghost))
              (if broadcast
