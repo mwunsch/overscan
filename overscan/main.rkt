@@ -143,9 +143,9 @@
         [audio-tee (element-factory% 'make "tee" "tee:audio")]
         [audio-queue (element-factory% 'make "queue" "buffer:audio")]
         [h264-encoder (let ([encoder (element-factory% 'make "x264enc" "encode:h264")])
-                        (gobject-set! encoder "bitrate" 1500 _uint)
-                        (gobject-set! encoder "key-int-max" 2 _int)
-                        (gobject-set! encoder "speed-preset" 3 _int) ;veryfast
+                        (gobject-set! encoder "bitrate" 3000 _uint)
+                        (gobject-set! encoder "key-int-max" 40 _int)
+                        (gobject-set! encoder "speed-preset" 5 _int)
                         (gobject-set! encoder "rc-lookahead" 5 _int)
                         encoder)]
         [aac-encoder (element-factory% 'make "faac" "encode:aac")]
