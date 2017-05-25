@@ -10,9 +10,19 @@
          broadcast
          stop
          scene
+         add-scene
          switch
          scene:camera+mic
-         scene:bars+tone)
+         scene:screen+mic
+         scene:bars+tone
+         scene:snow
+         scene:picture-in-picture
+         scene:camera+screen
+         stream:twitch
+         debug:preview
+         debug:fps
+         debug:audio-monitor
+         graphviz)
 
 (let-values ([(initialized? argc argv) ((gst 'init_check) 0 #f)])
   (if initialized?
@@ -80,7 +90,7 @@
   (let ([device (vector-ref screens ref)])
     (device (format "avfvideosrc:screen:~v" ref))))
 
-(define (stream:twitch #:test [bandwidth-test #t])
+(define (stream:twitch #:test [bandwidth-test #f])
   (let* ([stream-key (getenv "TWITCH_STREAM_KEY")]
          [rtmp (element-factory% 'make "rtmpsink" "sink:rtmp:twitch")]
          [location (format "rtmp://live-jfk.twitch.tv/app/~a~a live=1"
