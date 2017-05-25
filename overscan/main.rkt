@@ -106,7 +106,7 @@
 
 (define current-broadcast (box #f))
 
-(define video-720p (caps% 'from_string "video/x-raw,width=1280,height=720,framerate=30/1"))
+(define video-720p (caps% 'from_string "video/x-raw,width=1280,height=720"))
 
 (define video-480p (caps% 'from_string "video/x-raw,width=854,height=480"))
 
@@ -153,9 +153,9 @@
         [audio-tee (element-factory% 'make "tee" "tee:audio")]
         [audio-queue (element-factory% 'make "queue" "buffer:audio")]
         [h264-encoder (let ([encoder (element-factory% 'make "x264enc" "encode:h264")])
-                        (gobject-set! encoder "bitrate" 3000 _uint)
+                        (gobject-set! encoder "bitrate" 2500 _uint)
                         (gobject-set! encoder "key-int-max" 40 _int)
-                        (gobject-set! encoder "speed-preset" 5 _int)
+                        (gobject-set! encoder "speed-preset" 4 _int)
                         (gobject-set! encoder "rc-lookahead" 5 _int)
                         encoder)]
         [aac-encoder (element-factory% 'make "faac" "encode:aac")]
@@ -302,7 +302,7 @@
                                   caps)
                                 (element-factory% 'make "videobox" #f))])
     (or (and (bin-add-many bin video1 videobox video2 mixer audio)
-             (send video2 link-filtered mixer video-720p)
+             (send video2 link-filtered mixer (caps% 'from_string "video/x-raw,width=1280,height=720,framerate=30/1"))
              (send video1 link videobox)
              (send videobox link mixer)
              (let ([pad (send mixer get-static-pad "sink_1")])
@@ -360,8 +360,28 @@
                    (error "could not get sink-pad for recording"))))
         (error "could not make a recording"))))
 
+
 (module+ main
-  (define scene0 (scene:camera+mic))
-  (define scene1 (scene:bars+tone))
-  (define scene2 (scene:screen+mic))
-  (define pip (scene:camera+screen 0 0)))
+  ;; Let's make a stream!
+
+  ;; First, I define the "scenes", which are video/audio pairs
+  (define cam+mic (scene:camera+mic))
+  (define screen+mic (scene:screen+mic))
+  (define bars+tone (scene:bars+tone))
+  (define pip (scene:camera+screen 0 0))
+
+
+  ;; Then, I create the broadcast with the scenes:
+  ;; (broadcast (list cam+mic screen+mic bars+tone) (stream:twitch #:test #t)
+  ;;            #:record "testing-05-25-2017.flv")
+
+  ;; Danger: Picture-in-Picture is really volatile and flaky
+  ; (add-scene pip)
+  ; (switch pip)
+
+  ;; Switch scenes with switch:
+  ; (switch bars+tone)
+
+  ;; End the stream with stop:
+  ; (stop)
+  )
