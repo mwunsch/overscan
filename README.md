@@ -75,3 +75,5 @@ You also need to install GStreamer plugins:
     brew install gst-plugins-good
 
     brew install gst-plugins-bad --with-rtmpdump --with-faac
+
+    brew install gst-plugins-ugly --with-x264
