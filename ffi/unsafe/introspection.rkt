@@ -64,7 +64,9 @@
                        [gobject-get
                         (->> gobject? string? ctype? any)]
                        [gobject-set!
-                        (->> gobject? string? any/c ctype? void?)]
+                        (->* (gobject? string? any/c)
+                             ((or/c ctype? (listof symbol?)))
+                             void?)]
                        [introspection
                         (->* (symbol?) (string?) gi-repository?)]
                        [gi-repository-find-name
@@ -271,7 +273,7 @@
                                      [info-type (gi-base-type type-interface)])
                                 (cond
                                   [(gi-struct? type-interface)
-                                   (gi-struct->ctype type-interface)]
+                                   (_gi-struct type-interface)]
                                   [(gi-enum? type-interface)
                                    (gi-enum->ctype type-interface)]
                                   [(gi-object? type-interface)
@@ -605,7 +607,7 @@
     (let ([base (gtype-instance-type instance)])
       (apply base method-name (cons instance arguments)))))
 
-(define (gi-struct->ctype structure)
+(define (_gi-struct structure)
   (let ([name (gi-base-sym structure)])
     (_cpointer/null name _pointer
                     values
@@ -614,7 +616,7 @@
                            (gstruct structure ptr))))))
 
 (define (gstruct-cast pointer structure)
-  (cast pointer _pointer (gi-struct->ctype structure)))
+  (cast pointer _pointer (_gi-struct structure)))
 
 (define-gir gi-struct-alignment (_fun _gi-base-info -> _size)
   #:c-id g_struct_info_get_alignment)
@@ -896,10 +898,19 @@
                                   -> ret)
   #:c-id g_object_get)
 
-(define (gobject-set! gobject propname value ctype)
+(define (gobject-set! gobject propname value [ctype #f])
   (let ([setter (get-ffi-obj "g_object_set"
                              libgobject
-                             (_fun _pointer _string ctype (_pointer = #f)
+                             (_fun _pointer _string (cond
+                                                      [(ctype? ctype) ctype]
+                                                      [((listof symbol?) ctype) (_enum ctype)]
+                                                      [(gobject? value) (_gi-object (gtype-instance-type value))]
+                                                      [(gstruct? value) (_gi-struct (gtype-instance-type value))]
+                                                      [(boolean? value) _bool]
+                                                      [(string? value) _string]
+                                                      [(exact-integer? value) _int]
+                                                      [(flonum? value) _double]
+                                                      [else _pointer]) (_pointer = #f)
                                    -> _void))])
     (setter gobject propname value)))
 
