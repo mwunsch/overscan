@@ -899,19 +899,20 @@
   #:c-id g_object_get)
 
 (define (gobject-set! gobject propname value [ctype #f])
-  (let ([setter (get-ffi-obj "g_object_set"
-                             libgobject
-                             (_fun _pointer _string (cond
-                                                      [(ctype? ctype) ctype]
-                                                      [((listof symbol?) ctype) (_enum ctype)]
-                                                      [(gobject? value) (_gi-object (gtype-instance-type value))]
-                                                      [(gstruct? value) (_gi-struct (gtype-instance-type value))]
-                                                      [(boolean? value) _bool]
-                                                      [(string? value) _string]
-                                                      [(exact-integer? value) _int]
-                                                      [(flonum? value) _double]
-                                                      [else _pointer]) (_pointer = #f)
-                                   -> _void))])
+  (let* ([_value (cond
+                   [(ctype? ctype) ctype]
+                   [((listof symbol?) ctype) (_enum ctype)]
+                   [(gobject? value) (_gi-object (gtype-instance-type value))]
+                   [(gstruct? value) (_gi-struct (gtype-instance-type value))]
+                   [(boolean? value) _bool]
+                   [(string? value) _string]
+                   [(exact-integer? value) _int]
+                   [(flonum? value) _double]
+                   [else _pointer])]
+         [setter (get-ffi-obj "g_object_set"
+                              libgobject
+                              (_fun _pointer _string _value (_pointer = #f)
+                                    -> _void))])
     (setter gobject propname value)))
 
 (define-gir gi-object-parent (_fun _gi-base-info -> _gi-base-info)
