@@ -67,6 +67,8 @@
                         (->* (gobject? string? any/c)
                              ((or/c ctype? (listof symbol?)))
                              void?)]
+                       [gobject-with-properties
+                        (->> gobject? (hash/c symbol? any/c) gobject?)]
                        [introspection
                         (->* (symbol?) (string?) gi-repository?)]
                        [gi-repository-find-name
@@ -914,6 +916,11 @@
                               (_fun _pointer _string _value (_pointer = #f)
                                     -> _void))])
     (setter gobject propname value)))
+
+(define (gobject-with-properties instance properties)
+  (hash-for-each properties
+                 (lambda (key val) (gobject-set! instance (symbol->string key) val)))
+  instance)
 
 (define-gir gi-object-parent (_fun _gi-base-info -> _gi-base-info)
   #:c-id g_object_info_get_parent)
