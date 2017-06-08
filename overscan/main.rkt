@@ -152,11 +152,10 @@
         [video-queue (element-factory% 'make "queue" "buffer:video")]
         [audio-tee (element-factory% 'make "tee" "tee:audio")]
         [audio-queue (element-factory% 'make "queue" "buffer:audio")]
-        [h264-encoder (let ([encoder (element-factory% 'make "x264enc" "encode:h264")])
-                        (gobject-set! encoder "bitrate" 2500 _uint)
-                        (gobject-set! encoder "key-int-max" 40 _int)
-                        (gobject-set! encoder "speed-preset" 4 _int)
-                        (gobject-set! encoder "rc-lookahead" 5 _int)
+        [h264-encoder (let ([encoder (element-factory% 'make "vtenc_h264_hw" "encode:h264")])
+                        (gobject-set! encoder "bitrate" 2500)
+                        (gobject-set! encoder "realtime" #t)
+                        (gobject-set! encoder "max-keyframe-interval-duration" (seconds 2) _uint64)
                         encoder)]
         [aac-encoder (element-factory% 'make "faac" "encode:aac")]
         [flvmuxer (let ([muxer (element-factory% 'make "flvmux" "mux:flv")])
