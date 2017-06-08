@@ -873,15 +873,13 @@
      #'(gobject-has-field? obj.c 'field-id)]))
 
 (define (_gi-object obj)
-  (let ([name (gi-base-sym obj)])
-    (_cpointer/null name _pointer
+  (let ([name (gi-base-sym obj)]
+        [parent (gi-object-parent obj)])
+    (_cpointer/null name (if parent (_gi-object parent) _pointer)
                     values
                     (lambda (ptr)
                       (and ptr
-                           (begin
-                             (for ([ancestor (gi-object-ancestors obj)])
-                               (cpointer-push-tag! ptr (gi-base-sym ancestor)))
-                             (gobject obj ptr)))))))
+                           (gobject obj ptr))))))
 
 (define-gobject gobject-unref! (_fun _pointer -> _void)
   #:wrap (deallocator)
