@@ -58,9 +58,8 @@
              (and (send el set-state 'null)
                   (displayln (format "Camera ~a: ~a" ref name))
                   (cons (lambda (name)
-                          (let ([el (send avfvideosrc create name)])
-                            (gobject-set! el "device-index" ref _int)
-                            el))
+                          (gobject-with-properties (send avfvideosrc create name)
+                                                   (hash 'device-index ref)))
                         (loop (add1 ref))))))))))
 
 (define (camera ref)
@@ -80,10 +79,9 @@
              (and (send el set-state 'null)
                   (displayln (format "Screen Capture ~a: ~a" ref name))
                   (cons (lambda (name)
-                          (let ([el (send avfvideosrc create name)])
-                            (gobject-set! el "capture-screen" #t _bool)
-                            (gobject-set! el "device-index" ref _int)
-                            el))
+                          (gobject-with-properties (send avfvideosrc create name)
+                                                   (hash 'capture-screen #t
+                                                         'device-index ref)))
                         (loop (add1 ref))))))))))
 
 (define (screen ref)
