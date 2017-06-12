@@ -241,10 +241,12 @@
   (let* ([bin (bin% 'new #f)]
          [bin-name (send bin get-name)]
          [scaler (element-factory% 'make "videoscale" #f)]
+         [text (element-factory% 'make "textoverlay" (format "~a:text" bin-name))]
          [multiqueue (element-factory% 'make "multiqueue" #f)])
-    (or (and (bin-add-many bin videosrc scaler audiosrc multiqueue)
+    (or (and (bin-add-many bin videosrc text scaler audiosrc multiqueue)
              (gobject-set! multiqueue "max-size-time" (seconds 2) _uint64)
-             (send videosrc link scaler)
+             (send videosrc link text)
+             (send text link scaler)
              (send scaler link multiqueue)
              (send audiosrc link multiqueue)
              (let* ([video-pad (send multiqueue get-static-pad "src_0")]
@@ -258,6 +260,13 @@
                  #t)
              bin)
         (error "could not create scene"))))
+
+(define (write-text text scene)
+  (let* ([scene-name (send scene get-name)]
+         [text-el (send scene get-by-name (format "~a:text" scene-name))])
+    (if text-el
+        (gobject-set! text-el "text" text)
+        (error "no text overlay present in scene"))))
 
 (define (add-scene bin [broadcast (unbox current-broadcast)])
   (unless broadcast
