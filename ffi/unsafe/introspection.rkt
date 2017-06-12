@@ -879,7 +879,9 @@
                     values
                     (lambda (ptr)
                       (and ptr
-                           (gobject obj ptr))))))
+                           (gobject obj (if (gtype-instance? ptr)
+                                            (gtype-instance-pointer ptr)
+                                            ptr)))))))
 
 (define-gobject gobject-unref! (_fun _pointer -> _void)
   #:wrap (deallocator)
