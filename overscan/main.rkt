@@ -237,7 +237,7 @@
     (lambda (out)
       (display ((gst 'debug_bin_to_dot_data) broadcast 'all) out))))
 
-(define (scene videosrc audiosrc [broadcast (unbox current-broadcast)])
+(define (scene videosrc audiosrc)
   (let* ([bin (bin% 'new #f)]
          [bin-name (send bin get-name)]
          [scaler (element-factory% 'make "videoscale" #f)]
@@ -255,9 +255,6 @@
              (let* ([audio-pad (send multiqueue get-static-pad "src_1")]
                     [ghost (ghost-pad% 'new "audio" audio-pad)])
                (send bin add-pad ghost))
-             (if broadcast
-                 (add-scene bin broadcast)
-                 #t)
              bin)
         (error "could not create scene"))))
 
