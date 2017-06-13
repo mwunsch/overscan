@@ -104,7 +104,7 @@
 
 (define current-broadcast (box #f))
 
-(define video-720p (caps% 'from_string "video/x-raw,width=1280,height=720"))
+(define video-720p (caps% 'from_string "video/x-raw,width=1280,height=720,pixel-aspect-ratio=1/1"))
 
 (define video-480p (caps% 'from_string "video/x-raw,width=854,height=480"))
 
@@ -245,7 +245,7 @@
          [multiqueue (element-factory% 'make "multiqueue" #f)])
     (or (and (bin-add-many bin videosrc text scaler audiosrc multiqueue)
              (gobject-set! multiqueue "max-size-time" (seconds 2) _uint64)
-             (send videosrc link text)
+             (send videosrc link-filtered text (caps% 'from_string "video/x-raw,pixel-aspect-ratio=1/1"))
              (send text link scaler)
              (send scaler link multiqueue)
              (send audiosrc link multiqueue)
@@ -314,7 +314,7 @@
                                   caps)
                                 (element-factory% 'make "videobox" #f))])
     (or (and (bin-add-many bin video1 videobox video2 mixer audio)
-             (send video2 link-filtered mixer (caps% 'from_string "video/x-raw,width=1280,height=720,framerate=30/1"))
+             (send video2 link-filtered mixer (caps% 'from_string "video/x-raw,width=1280,height=720,framerate=30/1,pixel-aspect-ratio=1/1"))
              (send video1 link videobox)
              (send videobox link mixer)
              (let ([pad (send mixer get-static-pad "sink_1")])
