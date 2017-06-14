@@ -2,7 +2,8 @@
 
 (require gstreamer
          ffi/unsafe
-         ffi/unsafe/introspection)
+         ffi/unsafe/introspection
+         (only-in racket/function thunk))
 
 (provide camera
          screen
@@ -180,7 +181,7 @@
                            video-selector video-tee video-queue h264-encoder
                            audio-selector audio-tee audio-queue aac-encoder
                            flvmuxer flvtee rtmpqueue rtmpsink)
-             (for/and ([scene scenes])
+             (for/and ([scene (map scene-bin scenes)])
                (and (send pipeline add scene)
                     (send scene link-pads "video" video-selector #f)
                     (send scene link-pads "audio" audio-selector #f)))
@@ -237,12 +238,32 @@
     (lambda (out)
       (display ((gst 'debug_bin_to_dot_data) broadcast 'all) out))))
 
-(define (scene videosrc audiosrc)
-  (let* ([bin (bin% 'new #f)]
-         [bin-name (send bin get-name)]
+(struct scene (bin output)
+  #:name SCENE
+  #:constructor-name make-scene
+  #:property prop:output-port 1
+  #:property prop:object-name
+  (lambda (scene) (scene-name scene)))
+
+(define (scene-name scene)
+  (let ([bin (scene-bin scene)])
+    (string->symbol (send bin get-name))))
+
+(define (scene videosrc audiosrc [name #f])
+  (define bin (bin% 'new name))
+  (define bin-name (send bin get-name))
+  (define bin-sym (string->symbol bin-name))
+  (define-values (input-port output-port) (make-pipe #f bin-sym bin-sym))
+  (let* ([instance (make-scene bin output-port)]
          [scaler (element-factory% 'make "videoscale" #f)]
          [text (element-factory% 'make "textoverlay" (format "~a:text" bin-name))]
-         [multiqueue (element-factory% 'make "multiqueue" #f)])
+         [multiqueue (element-factory% 'make "multiqueue" #f)]
+         [text-worker (thread (thunk
+                               (let loop ()
+                                 (or (port-closed? input-port)
+                                     (let ([line (read-line input-port)])
+                                       (gobject-set! text "text" line)
+                                       (loop))))))])
     (or (and (bin-add-many bin videosrc text scaler audiosrc multiqueue)
              (gobject-set! multiqueue "max-size-time" (seconds 2) _uint64)
              (send videosrc link-filtered text (caps% 'from_string "video/x-raw,pixel-aspect-ratio=1/1"))
@@ -255,17 +276,11 @@
              (let* ([audio-pad (send multiqueue get-static-pad "src_1")]
                     [ghost (ghost-pad% 'new "audio" audio-pad)])
                (send bin add-pad ghost))
-             bin)
+             instance)
         (error "could not create scene"))))
 
-(define (write-text text scene)
-  (let* ([scene-name (send scene get-name)]
-         [text-el (send scene get-by-name (format "~a:text" scene-name))])
-    (if text-el
-        (gobject-set! text-el "text" text)
-        (error "no text overlay present in scene"))))
-
-(define (add-scene bin [broadcast (unbox current-broadcast)])
+(define (add-scene scene [broadcast (unbox current-broadcast)])
+  (define bin (scene-bin scene))
   (unless broadcast
     (error "there is no current broadcast!"))
   (let ([video-selector (send broadcast get-by-name "selector:video")]
