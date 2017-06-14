@@ -238,7 +238,7 @@
     (lambda (out)
       (display ((gst 'debug_bin_to_dot_data) broadcast 'all) out))))
 
-(struct scene (bin output)
+(struct scene (bin port)
   #:name SCENE
   #:constructor-name make-scene
   #:property prop:output-port 1
@@ -351,11 +351,11 @@
 (define (switch scene-or-id [broadcast (unbox current-broadcast)])
   (unless broadcast
     (error "there is no current broadcast"))
-  (define scene-name (if (string? scene-or-id)
+  (define bin-name (if (string? scene-or-id)
                          scene-or-id
-                         (send scene-or-id get-name)))
+                         (symbol->string (scene-name scene-or-id))))
   (cond
-    [(send broadcast get-by-name scene-name) =>
+    [(send broadcast get-by-name bin-name) =>
      (lambda (scene)
        (let* ([video-pad (send scene get-static-pad "video")]
               [audio-pad (send scene get-static-pad "audio")]
@@ -370,7 +370,7 @@
          (and (gobject-set! video-selector "active-pad" video-peer-pad (_gi-object pad%))
               (gobject-set! audio-selector "active-pad" audio-peer-pad (_gi-object pad%))
               scene)))]
-    [else (error (format "scene ~a is not part of the broadcast" scene-name))]))
+    [else (error (format "scene ~a is not part of the broadcast" bin-name))]))
 
 (define (recording location)
   (let ([bin (bin% 'new "sink:recording")]
