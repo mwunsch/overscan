@@ -247,21 +247,25 @@
   (let ([bin (scene-bin scene)])
     (string->symbol (send bin get-name))))
 
+(define (text-port name)
+  (define-values (input-port output-port) (make-pipe #f name name))
+  (let ([text (element-factory% 'make "textoverlay" (symbol->string name))])
+    (values text
+            output-port
+            (thread (thunk
+                     (let loop ()
+                       (let ([line (read-line input-port)])
+                         (gobject-set! text "text" line)
+                         (loop))))))))
+
 (define (scene videosrc audiosrc [name #f])
   (define bin (bin% 'new name))
   (define bin-name (send bin get-name))
   (define bin-sym (string->symbol bin-name))
-  (define-values (input-port output-port) (make-pipe #f bin-sym bin-sym))
+  (define-values (text output-port text-worker) (text-port (string->symbol (format "~a:text" bin-name))))
   (let* ([instance (make-scene bin output-port)]
          [scaler (element-factory% 'make "videoscale" #f)]
-         [text (element-factory% 'make "textoverlay" (format "~a:text" bin-name))]
-         [multiqueue (element-factory% 'make "multiqueue" #f)]
-         [text-worker (thread (thunk
-                               (let loop ()
-                                 (or (port-closed? input-port)
-                                     (let ([line (read-line input-port)])
-                                       (gobject-set! text "text" line)
-                                       (loop))))))])
+         [multiqueue (element-factory% 'make "multiqueue" #f)])
     (or (and (bin-add-many bin videosrc text scaler audiosrc multiqueue)
              (gobject-set! multiqueue "max-size-time" (seconds 2) _uint64)
              (send videosrc link-filtered text (caps% 'from_string "video/x-raw,pixel-aspect-ratio=1/1"))
@@ -323,20 +327,22 @@
                                   (gobject-set! caps "caps" video-360p _pointer)
                                   caps)
                                 (element-factory% 'make "videobox" #f))])
-    (or (and (bin-add-many bin video1 videobox video2 mixer audio)
+    (define-values (text output-port text-worker) (text-port (string->symbol (format "~a:text" bin-name))))
+    (or (and (bin-add-many bin video1 videobox video2 mixer text audio)
              (send video2 link-filtered mixer (caps% 'from_string "video/x-raw,width=1280,height=720,framerate=30/1,pixel-aspect-ratio=1/1"))
              (send video1 link videobox)
              (send videobox link mixer)
              (let ([pad (send mixer get-static-pad "sink_1")])
-               (gobject-set! pad "ypos" 320 _int)
+               (gobject-set! pad "ypos" 20 _int)
                (gobject-set! pad "xpos" 20 _int))
-             (let* ([video-pad (send mixer get-static-pad "src")]
+             (send mixer link text)
+             (let* ([video-pad (send text get-static-pad "src")]
                     [ghost (ghost-pad% 'new "video" video-pad)])
                (send bin add-pad ghost))
              (let* ([audio-pad (send audio get-static-pad "src")]
                     [ghost (ghost-pad% 'new "audio" audio-pad)])
                (send bin add-pad ghost))
-             bin)
+             (make-scene bin output-port))
         (error "could not create mix"))))
 
 (define (scene:camera+screen [camref 0] [scrnref 0])
