@@ -107,9 +107,9 @@
 
 (define video-720p (caps% 'from_string "video/x-raw,width=1280,height=720,pixel-aspect-ratio=1/1"))
 
-(define video-480p (caps% 'from_string "video/x-raw,width=854,height=480"))
+(define video-480p (caps% 'from_string "video/x-raw,width=854,height=480,pixel-aspect-ratio=1/1"))
 
-(define video-360p (caps% 'from_string "video/x-raw,width=480,height=360"))
+(define video-360p (caps% 'from_string "video/x-raw,width=480,height=360,pixel-aspect-ratio=1/1"))
 
 (define (debug:preview [scale video-480p])
   (let* ([bin (bin% 'new "debug:preview")]
