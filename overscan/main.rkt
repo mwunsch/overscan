@@ -139,27 +139,21 @@
   (when (unbox current-broadcast)
     (error "already a broadcast in progress"))
   (let ([pipeline (pipeline% 'new "broadcast")]
-        [video-selector (let ([selector (element-factory% 'make "input-selector" "selector:video")])
-                          (gobject-set! selector "sync-mode" 'clock _input-selector-sync-mode)
-                          (gobject-set! selector "cache-buffers" #t _bool)
-                          selector)]
-        [audio-selector (let ([selector (element-factory% 'make "input-selector" "selector:audio")])
-                          (gobject-set! selector "sync-mode" 'clock _input-selector-sync-mode)
-                          (gobject-set! selector "cache-buffers" #t _bool)
-                          selector)]
+        [video-selector (element-factory% 'make "input-selector" "selector:video")]
+        [audio-selector (element-factory% 'make "input-selector" "selector:audio")]
         [video-tee (element-factory% 'make "tee" "tee:video")]
         [video-queue (element-factory% 'make "queue" "buffer:video")]
         [audio-tee (element-factory% 'make "tee" "tee:audio")]
         [audio-queue (element-factory% 'make "queue" "buffer:audio")]
-        [h264-encoder (let ([encoder (element-factory% 'make "vtenc_h264_hw" "encode:h264")])
-                        (gobject-set! encoder "bitrate" 2500)
-                        (gobject-set! encoder "realtime" #t)
-                        (gobject-set! encoder "max-keyframe-interval-duration" (seconds 2) _uint64)
+        [h264-encoder (let ([encoder (element-factory% 'make "x264enc" "encode:h264")])
+                        (gobject-set! encoder "tune" 'zerolatency (_bitmask '(stillimage fastdecode zerolatency)))
+                        (gobject-set! encoder "speed-preset" 'faster '(none ultrafast superfast veryfast
+                                                                            faster fast medium
+                                                                            slow slower veryslow placebo))
                         encoder)]
         [aac-encoder (element-factory% 'make "faac" "encode:aac")]
-        [flvmuxer (let ([muxer (element-factory% 'make "flvmux" "mux:flv")])
-                    (gobject-set! muxer "streamable" #t _bool)
-                    muxer)]
+        [flvmuxer (gobject-with-properties (element-factory% 'make "flvmux" "mux:flv")
+                                           (hash 'streamable #t))]
         [flvtee (element-factory% 'make "tee" "tee:flv")]
         [rtmpqueue (element-factory% 'make "queue" "buffer:rtmp")]
         [preview-queue (let ([buffer (element-factory% 'make "queue" "buffer:preview")])
@@ -178,19 +172,19 @@
         [audio-monitor (or monitor
                            (element-factory% 'make "fakesink" "sink:monitor:fake"))])
     (or (and (bin-add-many pipeline
-                           video-selector video-tee video-queue h264-encoder
-                           audio-selector audio-tee audio-queue aac-encoder
+                           video-selector video-queue video-tee h264-encoder
+                           audio-selector audio-queue audio-tee aac-encoder
                            flvmuxer flvtee rtmpqueue rtmpsink)
              (for/and ([scene (map scene-bin scenes)])
                (and (send pipeline add scene)
                     (send scene link-pads "video" video-selector #f)
                     (send scene link-pads "audio" audio-selector #f)))
 
-             (send video-selector link video-tee)
-             (send audio-selector link audio-tee)
+             (send video-selector link-filtered video-queue video-720p)
+             (send audio-selector link audio-queue)
 
-             (send video-tee link-filtered video-queue video-720p)
-             (send audio-tee link audio-queue)
+             (send video-queue link video-tee)
+             (send audio-queue link audio-tee)
 
              (if preview
                  (and (bin-add-many pipeline preview-queue preview)
@@ -204,8 +198,8 @@
                       (send monitor-queue link audio-monitor))
                  #t)
 
-             (send video-queue link h264-encoder)
-             (send audio-queue link aac-encoder)
+             (send video-tee link h264-encoder)
+             (send audio-tee link aac-encoder)
 
              (send h264-encoder link flvmuxer)
              (send aac-encoder link flvmuxer)
@@ -270,9 +264,9 @@
          [multiqueue (element-factory% 'make "multiqueue" #f)])
     (or (and (bin-add-many bin videosrc text scaler audiosrc multiqueue)
              (gobject-set! multiqueue "max-size-time" (seconds 2) _uint64)
-             (send videosrc link-filtered text (caps% 'from_string "video/x-raw,pixel-aspect-ratio=1/1"))
-             (send text link scaler)
-             (send scaler link multiqueue)
+             (send videosrc link scaler)
+             (send scaler link text)
+             (send text link multiqueue)
              (send audiosrc link multiqueue)
              (let* ([video-pad (send multiqueue get-static-pad "src_0")]
                     [ghost (ghost-pad% 'new "video" video-pad)])
