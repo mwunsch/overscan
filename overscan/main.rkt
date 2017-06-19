@@ -142,9 +142,8 @@
         [video-selector (element-factory% 'make "input-selector" "selector:video")]
         [audio-selector (element-factory% 'make "input-selector" "selector:audio")]
         [video-tee (element-factory% 'make "tee" "tee:video")]
-        [video-queue (element-factory% 'make "queue" "buffer:video")]
         [audio-tee (element-factory% 'make "tee" "tee:audio")]
-        [audio-queue (element-factory% 'make "queue" "buffer:audio")]
+        [multiqueue (element-factory% 'make "multiqueue" #f)]
         [h264-encoder (let ([encoder (element-factory% 'make "x264enc" "encode:h264")])
                         (gobject-set! encoder "tune" 'zerolatency (_bitmask '(stillimage fastdecode zerolatency)))
                         (gobject-set! encoder "speed-preset" 'faster '(none ultrafast superfast veryfast
@@ -155,7 +154,6 @@
         [flvmuxer (gobject-with-properties (element-factory% 'make "flvmux" "mux:flv")
                                            (hash 'streamable #t))]
         [flvtee (element-factory% 'make "tee" "tee:flv")]
-        [rtmpqueue (element-factory% 'make "queue" "buffer:rtmp")]
         [preview-queue (let ([buffer (element-factory% 'make "queue" "buffer:preview")])
                          (gobject-set! buffer "leaky" 'upstream (_enum '(no upstream downstream)))
                          buffer)]
@@ -172,19 +170,18 @@
         [audio-monitor (or monitor
                            (element-factory% 'make "fakesink" "sink:monitor:fake"))])
     (or (and (bin-add-many pipeline
-                           video-selector video-queue video-tee h264-encoder
-                           audio-selector audio-queue audio-tee aac-encoder
-                           flvmuxer flvtee rtmpqueue rtmpsink)
+                           video-selector video-tee multiqueue h264-encoder
+                           audio-selector audio-tee aac-encoder
+                           flvmuxer flvtee rtmpsink)
              (for/and ([scene (map scene-bin scenes)])
                (and (send pipeline add scene)
                     (send scene link-pads "video" video-selector #f)
                     (send scene link-pads "audio" audio-selector #f)))
 
-             (send video-selector link-filtered video-queue video-720p)
-             (send audio-selector link audio-queue)
-
-             (send video-queue link video-tee)
-             (send audio-queue link audio-tee)
+             (send video-selector link-filtered multiqueue video-720p)
+             (send audio-selector link multiqueue)
+             (send multiqueue link video-tee)
+             (send multiqueue link audio-tee)
 
              (if preview
                  (and (bin-add-many pipeline preview-queue preview)
@@ -200,19 +197,17 @@
 
              (send video-tee link h264-encoder)
              (send audio-tee link aac-encoder)
-
              (send h264-encoder link flvmuxer)
              (send aac-encoder link flvmuxer)
              (send flvmuxer link flvtee)
-
-             (send flvtee link rtmpqueue)
-             (send rtmpqueue link rtmpsink)
 
              (if record
                  (and (bin-add-many pipeline recording-queue record-sink)
                       (send flvtee link recording-queue)
                       (send recording-queue link record-sink))
                  #t)
+
+             (send flvtee link rtmpsink)
 
              (send pipeline set-state 'playing)
              (set-box! current-broadcast pipeline))
