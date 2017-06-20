@@ -257,7 +257,7 @@
          [multiqueue (element-factory% 'make "multiqueue" #f)])
     (or (and (bin-add-many bin videosrc text scaler audiosrc multiqueue)
              (gobject-set! multiqueue "max-size-time" (seconds 2) _uint64)
-             (send videosrc link scaler)
+             (send videosrc link-filtered scaler (caps% 'from_string "video/x-raw,pixel-aspect-ratio=1/1"))
              (send scaler link text)
              (send text link multiqueue)
              (send audiosrc link multiqueue)
@@ -310,17 +310,17 @@
   (let* ([bin (bin% 'new #f)]
          [bin-name (send bin get-name)]
          [mixer (element-factory% 'make "videomixer" (format "~a:mixer" bin-name))]
+         [scale (element-factory% 'make "videoscale" #f)]
          [videobox (gst-compose "pip:box"
                                 (element-factory% 'make "videoscale" #f)
-                                (let ([caps (element-factory% 'make "capsfilter" #f)])
-                                  (gobject-set! caps "caps" video-360p _pointer)
-                                  caps)
                                 (element-factory% 'make "videobox" #f))])
     (define-values (text output-port text-worker) (text-port (string->symbol (format "~a:text" bin-name)) text-props))
-    (or (and (bin-add-many bin video1 videobox video2 mixer text audio)
-             (send video2 link-filtered mixer (caps% 'from_string "video/x-raw,width=1280,height=720,framerate=30/1,pixel-aspect-ratio=1/1"))
-             (send video1 link videobox)
-             (send videobox link mixer)
+    (or (and (bin-add-many bin video1 videobox video2 scale mixer text audio)
+             (send video2 link-filtered scale (caps% 'from_string "video/x-raw,pixel-aspect-ratio=1/1"))
+             (send scale link-filtered mixer (caps% 'from_string "video/x-raw,width=1280,height=720,framerate=30/1,pixel-aspect-ratio=1/1"))
+
+             (send video1 link-filtered videobox (caps% 'from_string "video/x-raw,pixel-aspect-ratio=1/1"))
+             (send videobox link-filtered mixer video-360p)
              (let ([pad (send mixer get-static-pad "sink_1")])
                (gobject-set! pad "ypos" 20 _int)
                (gobject-set! pad "xpos" 20 _int))
