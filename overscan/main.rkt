@@ -40,12 +40,10 @@
           device))))
 
 (define (audio ref)
-  (let ([device (vector-ref audio-devices ref)])
-    (element-factory% 'make "osxaudiosrc" (format "osxaudiosrc:~a" ref))
-    ;; (send device create-element (format "osxaudiosrc:~a" ref))
-    ;; When we use the above method, the returned elements aren't properly
-    ;; deallocated
-    ))
+  (let* ([device (vector-ref audio-devices ref)]
+         [element (send device create-element (format "osxaudiosrc:~a" ref))])
+    (and (send element ref-sink)
+         element)))
 
 (define cameras
   (let ([avfvideosrc (element-factory% 'find "avfvideosrc")])
