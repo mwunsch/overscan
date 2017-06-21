@@ -103,11 +103,13 @@
 
 (define current-broadcast (box #f))
 
-(define video-720p (caps% 'from_string "video/x-raw,width=1280,height=720,pixel-aspect-ratio=1/1"))
+(define video-720p (caps% 'from_string "video/x-raw,width=1280,height=720,framerate=30/1,pixel-aspect-ratio=1/1"))
 
-(define video-480p (caps% 'from_string "video/x-raw,width=854,height=480,pixel-aspect-ratio=1/1"))
+(define video-480p (caps% 'from_string "video/x-raw,width=854,height=480,framerate=30/1,pixel-aspect-ratio=1/1"))
 
-(define video-360p (caps% 'from_string "video/x-raw,width=480,height=360,pixel-aspect-ratio=1/1"))
+(define video-360p (caps% 'from_string "video/x-raw,width=480,height=360,framerate=30/1,pixel-aspect-ratio=1/1"))
+
+(define video-square-par (caps% 'from_string "video/x-raw,pixel-aspect-ratio=1/1"))
 
 (define (debug:preview [scale video-480p])
   (let* ([bin (bin% 'new "debug:preview")]
@@ -256,7 +258,9 @@
   (define bin-sym (string->symbol bin-name))
   (define-values (text output-port text-worker) (text-port (string->symbol (format "~a:text" bin-name)) text-props))
   (let* ([instance (make-scene bin output-port)]
-         [scaler (element-factory% 'make "videoscale" #f)]
+         [scaler (gst-compose "scale+convert"
+                              (element-factory% 'make "videorate" #f)
+                              (element-factory% 'make "videoscale" #f))]
          [multiqueue (element-factory% 'make "multiqueue" #f)])
     (or (and (bin-add-many bin videosrc text scaler audiosrc multiqueue)
              (gobject-set! multiqueue "max-size-time" (seconds 2) _uint64)
@@ -315,14 +319,15 @@
          [mixer (element-factory% 'make "videomixer" (format "~a:mixer" bin-name))]
          [scale (element-factory% 'make "videoscale" #f)]
          [videobox (gst-compose "pip:box"
+                                (element-factory% 'make "videorate" #f)
                                 (element-factory% 'make "videoscale" #f)
                                 (element-factory% 'make "videobox" #f))])
     (define-values (text output-port text-worker) (text-port (string->symbol (format "~a:text" bin-name)) text-props))
     (or (and (bin-add-many bin video1 videobox video2 scale mixer text audio)
-             (send video2 link-filtered scale (caps% 'from_string "video/x-raw,pixel-aspect-ratio=1/1"))
-             (send scale link-filtered mixer (caps% 'from_string "video/x-raw,width=1280,height=720,framerate=30/1,pixel-aspect-ratio=1/1"))
+             (send video2 link-filtered scale video-square-par)
+             (send scale link-filtered mixer video-720p)
 
-             (send video1 link-filtered videobox (caps% 'from_string "video/x-raw,pixel-aspect-ratio=1/1"))
+             (send video1 link-filtered videobox video-square-par)
              (send videobox link-filtered mixer video-360p)
              (let ([pad (send mixer get-static-pad "sink_1")])
                (gobject-set! pad "ypos" 20 _int)
