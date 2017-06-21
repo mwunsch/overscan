@@ -214,9 +214,12 @@
 (define (stop [broadcast (unbox current-broadcast)])
   (unless broadcast
     (error "there is no current broadcast"))
+  (define bus (send broadcast get-bus))
+  (define chan (make-bus-channel bus '(eos error)))
   (send broadcast send-event (event% 'new_eos))
-  (send broadcast set-state 'null)
-  (set-box! current-broadcast #f))
+  (let ([msg (sync chan)])
+    (send broadcast set-state 'null)
+    (set-box! current-broadcast #f)))
 
 (define (graphviz filepath [broadcast (unbox current-broadcast)])
   (call-with-output-file filepath
