@@ -139,8 +139,14 @@
   (when (unbox current-broadcast)
     (error "already a broadcast in progress"))
   (let ([pipeline (pipeline% 'new "broadcast")]
-        [video-selector (element-factory% 'make "input-selector" "selector:video")]
-        [audio-selector (element-factory% 'make "input-selector" "selector:audio")]
+        [video-selector (gobject-with-properties
+                         (element-factory% 'make "input-selector" "selector:video")
+                         (hash 'sync-mode 1
+                               'cache-buffers #t))]
+        [audio-selector (gobject-with-properties
+                         (element-factory% 'make "input-selector" "selector:audio")
+                         (hash 'sync-mode 1
+                               'cache-buffers #t))]
         [video-tee (element-factory% 'make "tee" "tee:video")]
         [audio-tee (element-factory% 'make "tee" "tee:audio")]
         [multiqueue (element-factory% 'make "multiqueue" #f)]
