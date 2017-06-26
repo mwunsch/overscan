@@ -133,7 +133,7 @@
 
 (define (broadcast [scenes (list (scene:bars+tone))]
                    [rtmpsink (stream:fake)]
-                   #:preview [preview (debug:fps)]
+                   #:preview [preview (debug:preview)]
                    #:record [record #f]
                    #:monitor [monitor #f])
   (when (unbox current-broadcast)
