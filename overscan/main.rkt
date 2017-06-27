@@ -309,8 +309,13 @@
            (gobject-set! audio "wave" 'white-noise _audio-test-src-wave)
            audio)))
 
-(define (scene:camera+mic)
-  (scene (camera 0) (audio 0)))
+(define (scene:camera+mic [camref 0])
+  (scene (gst-compose "src:camera"
+                      (camera camref)
+                      (element-factory% 'make "videorate" #f)
+                      (gobject-with-properties (element-factory% 'make "capsfilter" #f)
+                                               (hash 'caps (caps% 'from_string "video/x-raw,width=1280,height=720,framerate=30/1,pixel-aspect-ratio=1/1"))))
+         (audio 0)))
 
 (define (scene:screen+mic)
   (scene (gst-compose "screen"
@@ -330,7 +335,7 @@
              (send video2 link-filtered mixer video-720p)
 
              (send video1 link videobox)
-             (send videobox link mixer)
+             (send videobox link-filtered mixer (caps% 'from_string "video/x-raw,pixel-aspect-ratio=1/1,height=360"))
              (let ([pad (send mixer get-static-pad "sink_1")])
                (gobject-set! pad "ypos" 20 _int)
                (gobject-set! pad "xpos" 20 _int))
@@ -347,8 +352,9 @@
 (define (scene:camera+screen [camref 0] [scrnref 0])
   (scene:picture-in-picture (gst-compose "pip:cam"
                                          (camera camref)
+                                         (element-factory% 'make "videorate" #f)
                                          (gobject-with-properties (element-factory% 'make "capsfilter" #f)
-                                                                  (hash 'caps (caps% 'from_string "video/x-raw,pixel-aspect-ratio=1/1")))
+                                                                  (hash 'caps (caps% 'from_string "video/x-raw,width=1280,height=720,framerate=30/1,pixel-aspect-ratio=1/1")))
                                          (element-factory% 'make "videoscale" #f))
                             (gst-compose "pip:screen"
                                          (screen scrnref)
