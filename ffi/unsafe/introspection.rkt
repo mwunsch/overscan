@@ -414,10 +414,11 @@
   #:c-id g_callable_info_get_caller_owns)
 
 (define (gi-callable-arity fn)
-  (let ([args (gi-callable-args fn)])
+  (let* ([args (gi-callable-args fn)]
+         [in-args (filter (curryr gi-arg-direction? '(in inout)) args)])
     (if (gi-callable-method? fn)
-        (add1 (length args))
-        (length args))))
+        (add1 (length in-args))
+        (length in-args))))
 
 (struct gi-arg gi-base ()
   #:property prop:procedure
@@ -473,7 +474,7 @@
 (struct gi-function gi-callable ()
   #:property prop:procedure
   (lambda (fn . arguments)
-    (let ([args (gi-callable-args fn)]
+    (let ([args (gi-function-inbound-args fn)]
           [returns (gi-callable-returns fn)]
           [method? (gi-callable-method? fn)]
           [arity (gi-callable-arity fn)])
@@ -483,6 +484,9 @@
         (if (and method? (pair? arguments))
             (cdr arguments)
             arguments))
+      ;; TODO: Pair arguments correctly.
+      ;; Use https://gstreamer.freedesktop.org/data/doc/gstreamer/head/gstreamer/html/gstreamer-GstUtils.html#gst-util-double-to-fraction
+      ;; as an example
       (define _gi-args-direction-pairs
         (map (lambda (arg value) (cons (arg value) (gi-arg-direction arg)))
              args
@@ -497,6 +501,11 @@
             (cons (ctype->_gi-argument _pointer (car arguments)) in-args-without-self)
             in-args-without-self))
       (gi-function-invoke fn in-args out-args))))
+
+(define (gi-function-inbound-args fn)
+  (filter (lambda (arg)
+            (memq (gi-arg-direction arg) '(in inout)))
+          (gi-callable-args fn)))
 
 (define (gi-function-outbound-args fn)
   (filter (lambda (arg)
