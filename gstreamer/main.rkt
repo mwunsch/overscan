@@ -4,16 +4,17 @@
          ffi/unsafe/introspection
          (only-in racket/list first last)
          "gst.rkt"
-         "bus.rkt")
+         "bus.rkt"
+         "caps.rkt")
 
 (provide (all-from-out "gst.rkt"
-                       "bus.rkt")
+                       "bus.rkt"
+                       "caps.rkt")
          element-factory%
          element%
          pipeline%
          pad%
          bin%
-         caps%
          event%
          bin-add-many
          ghost-pad%
@@ -31,8 +32,6 @@
 (define pad% (gst 'Pad))
 
 (define bin% (gst 'Bin))
-
-(define caps% (gst 'Caps))
 
 (define element% (gst 'Element))
 
