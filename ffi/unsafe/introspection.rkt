@@ -464,9 +464,10 @@
                                                         (((allocator gobject-unref!) returns) r)]
                                                        [else (returns r)]))
                                                    (if outargs
-                                                       (for/list ([ptr (in-array (ptr-ref outargs (_array _gi-argument n-out)))]
+                                                       (for/list ([union-val (in-array (ptr-ref outargs (_array _gi-argument n-out)))]
                                                                   [outarg (gi-function-outbound-args fn)])
-                                                         ((gi-arg-type outarg) ptr))
+                                                         (let ([ptr (union-ref union-val (_gi-argument-index-of _pointer))])
+                                                           (ptr-ref ptr (gi-type->ctype (gi-arg-type outarg)))))
                                                        null))
                                             (error (gerror-message err))))
   #:c-id g_function_info_invoke)
@@ -475,31 +476,28 @@
   #:property prop:procedure
   (lambda (fn . arguments)
     (let ([args (gi-function-inbound-args fn)]
+          [outputs (gi-function-outbound-args fn)]
           [returns (gi-callable-returns fn)]
           [method? (gi-callable-method? fn)]
           [arity (gi-callable-arity fn)])
       (unless (eqv? (length arguments) arity)
         (apply raise-arity-error (gi-base-name fn) arity arguments))
-      (define arguments-without-self
-        (if (and method? (pair? arguments))
-            (cdr arguments)
-            arguments))
-      ;; TODO: Pair arguments correctly.
-      ;; Use https://gstreamer.freedesktop.org/data/doc/gstreamer/head/gstreamer/html/gstreamer-GstUtils.html#gst-util-double-to-fraction
-      ;; as an example
-      (define _gi-args-direction-pairs
+      (define _gi-args+direction
         (map (lambda (arg value) (cons (arg value) (gi-arg-direction arg)))
              args
-             arguments-without-self))
-      (define-values (in-args-without-self out-args)
-        (values (filter-map (lambda (pair) (and (memq (cdr pair) '(in inout))
-                                           (car pair))) _gi-args-direction-pairs)
-                (filter-map (lambda (pair) (and (memq (cdr pair) '(out inout))
-                                           (car pair))) _gi-args-direction-pairs)))
+             (if (and method? (pair? arguments))
+                 (cdr arguments)
+                 arguments)))
       (define in-args
-        (if method?
-            (cons (ctype->_gi-argument _pointer (car arguments)) in-args-without-self)
-            in-args-without-self))
+        (let ([_gi-args (map car _gi-args+direction)])
+          (if method?
+              (cons (ctype->_gi-argument _pointer (car arguments)) _gi-args)
+              _gi-args)))
+      (define out-args
+        (map (lambda (arg)
+               (let ([argtype (gi-type->ctype (gi-arg-type arg))])
+                 (ctype->_gi-argument _pointer (malloc argtype))))
+             outputs))
       (gi-function-invoke fn in-args out-args))))
 
 (define (gi-function-inbound-args fn)
