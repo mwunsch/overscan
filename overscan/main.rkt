@@ -33,7 +33,7 @@
 (define audio-devices
   (let ([monitor ((gst 'DeviceMonitor) 'new)])
     (if (< (send monitor add-filter "Audio/Source" #f) 0)
-        (displayln "No Audio Devices detected.")
+        (and (displayln "No Audio Devices detected.") (vector))
         (for/vector ([device (send monitor get-devices)]
                      [i (in-naturals)])
           (displayln (format "Audio Device ~a: ~a" i (send device get-display-name)))
