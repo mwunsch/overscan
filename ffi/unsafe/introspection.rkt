@@ -5,7 +5,7 @@
          ffi/unsafe/alloc
          ffi/cvector
          (rename-in racket/contract [-> ->>])
-         (only-in racket/list index-of filter-map)
+         (only-in racket/list index-of filter-map make-list)
          (only-in racket/string string-join string-replace)
          (only-in racket/function curry curryr thunk)
          (for-syntax racket/base
@@ -305,6 +305,14 @@
 (define (gi-type->_gi-argument type value)
   (ctype->_gi-argument (gi-type->ctype type) value))
 
+(define (gi-type-malloc type [val #f])
+  (let* ([ctype (gi-type->ctype type)]
+         [ptr (malloc ctype)])
+    (if val
+        (and (ptr-set! ptr ctype val)
+             ptr)
+        ptr)))
+
 (define (_gi-argument->ctype gi-arg ctype)
   (let* ([index (_gi-argument-index-of ctype)]
          [_arg-type (_gi-argument-type-of ctype)]
@@ -315,7 +323,7 @@
       [else value])))
 
 (define (_garray type)
-  (let ([length (gi-type-array-length type)]
+  (let ([size (gi-type-array-length type)]
         [_paramtype (gi-type->ctype (gi-type-param-type type 0))]
         [zero-term? (gi-type-zero-terminated? type)])
     (if (eq? _paramtype _void)
@@ -330,16 +338,17 @@
                                  ptr)))
                         (lambda (ptr)
                           (and ptr
-                               (ptr-ref ptr
-                                        (_array/vector _paramtype
-                                                       (cond
-                                                         [(positive? length) length]
-                                                         [zero-term? (letrec ([deref (lambda (offset)
-                                                                                       (if (ptr-ref ptr _paramtype offset)
-                                                                                           (deref (add1 offset))
-                                                                                           offset))])
-                                                                       (deref 0))]
-                                                         [else 0])))))))))
+                               (cond
+                                 [(positive? size)
+                                  (ptr-ref ptr (_array/vector _paramtype size))]
+                                 [zero-term?
+                                  (let deref ([offset 0]
+                                              [block null])
+                                    (define val (ptr-ref ptr _paramtype offset))
+                                    (if val
+                                        (deref (add1 offset) (list* val block))
+                                        (list->vector block)))]
+                                 [else (vector)])))))))
 
 (define (_glist type)
   (let ([_paramtype (gi-type->ctype (gi-type-param-type type 0))])
@@ -466,8 +475,10 @@
                                                    (if outargs
                                                        (for/list ([union-val (in-array (ptr-ref outargs (_array _gi-argument n-out)))]
                                                                   [outarg (gi-function-outbound-args fn)])
-                                                         (let ([ptr (union-ref union-val (_gi-argument-index-of _pointer))])
-                                                           (ptr-ref ptr (gi-type->ctype (gi-arg-type outarg)))))
+                                                         (if (eq? (gi-arg-direction outarg) 'out)
+                                                             (let ([ptr (union-ref union-val (_gi-argument-index-of _pointer))])
+                                                               (ptr-ref ptr (gi-type->ctype (gi-arg-type outarg))))
+                                                             ((gi-arg-type outarg) union-val)))
                                                        null))
                                             (error (gerror-message err))))
   #:c-id g_function_info_invoke)
@@ -475,29 +486,38 @@
 (struct gi-function gi-callable ()
   #:property prop:procedure
   (lambda (fn . arguments)
-    (let ([args (gi-function-inbound-args fn)]
-          [outputs (gi-function-outbound-args fn)]
+    (let ([args (gi-callable-args fn)]
           [returns (gi-callable-returns fn)]
           [method? (gi-callable-method? fn)]
           [arity (gi-callable-arity fn)])
       (unless (eqv? (length arguments) arity)
         (apply raise-arity-error (gi-base-name fn) arity arguments))
-      (define _gi-args+direction
-        (map (lambda (arg value) (cons (arg value) (gi-arg-direction arg)))
-             args
-             (if (and method? (pair? arguments))
-                 (cdr arguments)
-                 arguments)))
-      (define in-args
-        (let ([_gi-args (map car _gi-args+direction)])
-          (if method?
-              (cons (ctype->_gi-argument _pointer (car arguments)) _gi-args)
-              _gi-args)))
-      (define out-args
-        (map (lambda (arg)
-               (let ([argtype (gi-type->ctype (gi-arg-type arg))])
-                 (ctype->_gi-argument _pointer (malloc argtype))))
-             outputs))
+
+      (define args+values
+        (let* ([arglength (length args)]
+               [arguments (if (and method? (pair? arguments))
+                              (cdr arguments)
+                              arguments)]
+               [vals (append arguments (make-list (- arglength (length arguments)) #f))])
+          (map (lambda (arg val)
+                 (cons arg
+                       (if (eq? (gi-arg-direction arg) 'out)
+                           (ctype->_gi-argument _pointer
+                                                (gi-type-malloc (gi-arg-type arg)))
+                           (arg val))))
+               args
+               vals)))
+
+      (define-values (in-args out-args)
+        (let ([inputs (filter-map (lambda (pair) (and (gi-arg-direction? (car pair) '(in inout))
+                                                 (cdr pair))) args+values)]
+              [outputs (filter-map (lambda (pair) (and (gi-arg-direction? (car pair) '(inout out))
+                                                  (cdr pair))) args+values)])
+          (values (if method?
+                      (cons (ctype->_gi-argument _pointer (car arguments)) inputs)
+                      inputs)
+                  outputs)))
+
       (gi-function-invoke fn in-args out-args))))
 
 (define (gi-function-inbound-args fn)
