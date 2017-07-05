@@ -10,7 +10,6 @@
 (provide (all-from-out "gst.rkt"
                        "bus.rkt"
                        "caps.rkt")
-         element-factory%
          element%
          pipeline%
          pad%
@@ -24,8 +23,6 @@
          _video-test-src-pattern
          _audio-test-src-wave
          gst-compose)
-
-(define element-factory% (gst 'ElementFactory))
 
 (define pipeline% (gst 'Pipeline))
 
