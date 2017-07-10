@@ -72,7 +72,9 @@
                        [introspection
                         (->* (symbol?) (string?) gi-repository?)]
                        [gi-repository-find-name
-                        (->> gi-repository? symbol? gi-base?)])
+                        (->> gi-repository? symbol? gi-base?)]
+                       [gi-repository->ffi-lib
+                        (->> gi-repository? ffi-lib?)])
          send get-field set-field! field-bound? responds-to?
          describe-gi-function
          gir-member/c gi-repository-member/c)
@@ -1142,6 +1144,9 @@
 (define-gir gir-find-by-name (_fun (_pointer = #f) _symbol _symbol -> _gi-base-info)
   #:c-id g_irepository_find_by_name)
 
+(define-gir gir-get-shared-library (_fun (_pointer = #f) _symbol -> _path)
+  #:c-id g_irepository_get_shared_library)
+
 (define (gi-repository-find-name repo name)
   (define namespace (gi-repository-namespace repo))
   (or (gir-find-by-name namespace name)
@@ -1154,6 +1159,10 @@
 
 (define (gi-repository-find-gtype repo gtype)
   (gir-find-by-gtype (gi-repository-namespace repo) gtype))
+
+(define (gi-repository->ffi-lib repo)
+  (let ([libpath (gir-get-shared-library (gi-repository-namespace repo))])
+    (ffi-lib libpath)))
 
 (define (gi-repository-member/c repo)
   (gir-member/c (gi-repository-namespace repo)))
