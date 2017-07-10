@@ -2,7 +2,8 @@
 
 (require ffi/unsafe
          ffi/unsafe/introspection
-         "gst.rkt")
+         "gst.rkt"
+         "element.rkt")
 
 (provide caps%
          caps-from-string

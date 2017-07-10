@@ -5,12 +5,13 @@
          (only-in racket/list first last)
          "gst.rkt"
          "bus.rkt"
-         "caps.rkt")
+         "caps.rkt"
+         "element.rkt")
 
 (provide (all-from-out "gst.rkt"
                        "bus.rkt"
-                       "caps.rkt")
-         element%
+                       "caps.rkt"
+                       "element.rkt")
          pipeline%
          pad%
          bin%
@@ -29,8 +30,6 @@
 (define pad% (gst 'Pad))
 
 (define bin% (gst 'Bin))
-
-(define element% (gst 'Element))
 
 (define event% (gst 'Event))
 

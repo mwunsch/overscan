@@ -2,9 +2,6 @@
 
 (require ffi/unsafe/introspection)
 
-(provide gst
-         element-factory%)
+(provide gst)
 
 (define gst (introspection 'Gst))
-
-(define element-factory% (gst 'ElementFactory))
