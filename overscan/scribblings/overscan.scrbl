@@ -1,8 +1,19 @@
 #lang scribble/manual
 @require[@for-label[overscan
-                    racket/base]]
+                    racket/base
+                    ffi/unsafe/introspection
+                    gstreamer]]
 
 @title{Overscan}
 @author[(author+email "Mark Wunsch" "mark@markwunsch.com")]
 
-Overscan is a Racket toolkit and live coding environment for live broadcasting video. The Overscan package includes three collections: `overscan`, `ffi/unsafe/introspection` and `gstreamer`.
+@defmodule[overscan]
+
+Overscan is a Racket toolkit and live coding environment for live
+broadcasting video. The Overscan package includes three collections:
+@racket[overscan], @racket[ffi/unsafe/introspection] and @racket[gstreamer].
+
+@table-of-contents[]
+
+@include-section["overscan/gstreamer.scrbl"]
+@include-section["overscan/introspection.scrbl"]
