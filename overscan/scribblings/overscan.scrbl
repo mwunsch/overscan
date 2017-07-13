@@ -11,7 +11,12 @@
 
 Overscan is a Racket toolkit and live coding environment for live
 broadcasting video. The Overscan package includes three collections:
-@racket[overscan], @racket[ffi/unsafe/introspection] and @racket[gstreamer].
+@racket[overscan], @racket[ffi/unsafe/introspection] and
+@racket[gstreamer].
+
+@margin-note{
+A live-coding environment similar to Overtone or Extempore.
+}
 
 @table-of-contents[]
 
