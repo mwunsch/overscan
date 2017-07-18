@@ -7,10 +7,12 @@
 @title{Overscan}
 @author[(author+email "Mark Wunsch" "mark@markwunsch.com")]
 
+@defmodule[overscan]
+
 Overscan is a toolkit and
 @hyperlink["https://en.wikipedia.org/wiki/Live_coding"]{live coding
-environment} for broadcasting video. @margin-note*{For other examples
-of live coding environments, see
+environment} for broadcasting video. @margin-note*{For examples of
+other live coding environments, see
 @hyperlink["http://sonic-pi.net"]{Sonic Pi} or
 @hyperlink["http://extempore.moso.com.au"]{Extempore}.} The
 @racket[overscan] DSL can be used to quickly produce a video stream
@@ -28,5 +30,6 @@ Introspection} bindings.
 
 @table-of-contents[]
 
+@include-section["overscan/getting-started.scrbl"]
 @include-section["overscan/gstreamer.scrbl"]
 @include-section["overscan/introspection.scrbl"]
