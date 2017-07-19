@@ -1,7 +1,7 @@
 #lang scribble/manual
 @require[@for-label[gstreamer]]
 
-@title{GStreamer}
+@title[#:tag "gstreamer"]{GStreamer}
 
 @defmodule[gstreamer]
 
