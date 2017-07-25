@@ -19,8 +19,7 @@ Luckily, GStreamer is written with
 @hyperlink["https://wiki.gnome.org/Projects/GObjectIntrospection"]{GObject
 Introspection} metadata. @emph{GObject Introspection} (aka @emph{GIR})
 is a middleware layer that allows for a language to read this metadata
-and dynamically create bindings for constructing an interface into the
-C library.
+and dynamically create bindings for the C library.
 
 The Overscan package provides a module designed to accompany Racket's
 FFI collection. This module brings additional functionality and
@@ -30,6 +29,16 @@ working with Introspected C libraries. This module powers the
 working with other GLib libraries.
 
 @defmodule[ffi/unsafe/introspection]
+
+@section[#:tag "girepository"]{GIRepository}
+
+GIR's
+@hyperlink["https://developer.gnome.org/gi/stable/GIRepository.html"]{@tt{GIRepository}}
+API's manage the namespaces provided by the GIR
+system and type libraries. Each namespace contains metadata entries
+that map to C functionality. In the case of @secref{gstreamer}, the
+@racket['Gst] namespace contains all of the introspection information
+used to power that interface.
 
 @defproc[(introspection [namespace symbol?] [version string? #f])
          gi-repository?]{
@@ -53,7 +62,7 @@ function as such:
             ([(repository) (hash/c symbol? gi-base?)]
              [(repository [name symbol?]) gi-base?])]{
     When called as in the first form, without an argument, the proc
-  will return a @racket[hash] of all of the known members of this
+  will return a @racket[hash] of all of the known members of the
   namespace.
 
     When called as the second form, this is the equivalent to
@@ -67,9 +76,11 @@ function as such:
 @defproc[(gi-repository-find-name [repo gi-repository?] [name symbol?]) gi-base?]{
   Find a metadata entry called @racket[name] in the
   @racket[repo]. These @emph{entries} form the basis of the foreign
-  interface. This will raise an argument error if the entry is not a
-  part of the given namespace.
+  interface. This will raise an @racket[exn:fail:contract] exception
+  if the entry is not a part of the given namespace.
 }
+
+@section[#:tag "gibaseinfo"]{GIBaseInfo}
 
 @defstruct*[gi-base ([info cpointer?])
             #:omit-constructor ]{
