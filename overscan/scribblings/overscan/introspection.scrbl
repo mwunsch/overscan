@@ -34,11 +34,11 @@ working with other GLib libraries.
 
 GIR's
 @hyperlink["https://developer.gnome.org/gi/stable/GIRepository.html"]{@tt{GIRepository}}
-API's manage the namespaces provided by the GIR
-system and type libraries. Each namespace contains metadata entries
-that map to C functionality. In the case of @secref{gstreamer}, the
-@racket['Gst] namespace contains all of the introspection information
-used to power that interface.
+API manages the namespaces provided by the GIR system and type
+libraries. Each namespace contains metadata entries that map to C
+functionality. In the case of @secref{gstreamer}, the @racket['Gst]
+namespace contains all of the introspection information used to power
+that interface.
 
 @defproc[(introspection [namespace symbol?] [version string? #f])
          gi-repository?]{
@@ -49,13 +49,12 @@ Search for the @racket[namespace] typelib in the GObject Introspection
 
 An example for loading the @secref{gstreamer} namespace:
 
-@racketblock[
+@racketinput[
   (define gst (introspection 'Gst))
 ]
 
 This function returns the repository as a private struct. This struct
-has the @racket[prop:procedure] property and can be called as a
-function as such:
+has the @racket[prop:procedure] property and can be called as a procedure:
 
 @nested[#:style 'inset]{
   @defproc*[#:kind "gi-repository" #:link-target? #f
@@ -67,7 +66,11 @@ function as such:
 
     When called as the second form, this is the equivalent to
   @racket[gi-repository-find-name] with the first argument already
-  set.
+  set. e.g. @racketinput[(gst 'version)]
+
+    This will return an introspected foreign binding to the
+  @hyperlink["https://gstreamer.freedesktop.org/data/doc/gstreamer/head/gstreamer/html/gstreamer-Gst.html#gst-version"]{@tt{gst_version()}}
+  C function.
   }
 }
 
@@ -80,6 +83,23 @@ function as such:
   if the entry is not a part of the given namespace.
 }
 
+@defproc[(gi-repository->ffi-lib [repo gi-repository?]) ffi-lib?]{
+  Lookup the library path of a repository and return a @tech[#:doc
+  '(lib "scribblings/foreign/foreign.scrbl")]{foreign-library value}
+}
+
+@defproc[(gir-member/c [namespace symbol?]) flat-contract?]{
+  Accepts a GIR @racket[namespace] and returns a @tech[#:doc '(lib
+  "scribblings/reference/reference.scrbl")]{flat contract} that
+  recognizes a symbol within that namespace. Use this to check for
+  whether or not an entry is a member of a namespace.
+}
+
+@defproc[(gi-repository-member/c [repo gi-repository?]) flat-contract?]{
+  Equivalent to @racket[gir-member/c] except with a repository struct
+  (as returned by @racket[introspection]) instead of a namespace.
+}
+
 @section[#:tag "gibaseinfo"]{GIBaseInfo}
 
 @defstruct*[gi-base ([info cpointer?])
@@ -87,4 +107,10 @@ function as such:
   The common base struct of all GIR metadata entries. Instances of
   this struct have the @racket[prop:cpointer] property, and can be
   used transparently as cpointers to their respective entries.
+}
+
+@defproc[(gi-base-name [info gi-base?]) symbol?]{
+}
+
+@defproc[(gi-base=? [a gi-base?] [b gi-base?]) boolean?]{
 }
