@@ -110,7 +110,9 @@ has the @racket[prop:procedure] property and can be called as a procedure:
 }
 
 @defproc[(gi-base-name [info gi-base?]) symbol?]{
+  Obtain the name of the @racket[info].
 }
 
 @defproc[(gi-base=? [a gi-base?] [b gi-base?]) boolean?]{
+  Compare two @racket[gi-base]s. Doing pointer comparison or other equality comparisons does not work. This function compares two entries of the typelib.
 }
