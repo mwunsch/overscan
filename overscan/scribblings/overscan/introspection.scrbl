@@ -116,3 +116,22 @@ has the @racket[prop:procedure] property and can be called as a procedure:
 @defproc[(gi-base=? [a gi-base?] [b gi-base?]) boolean?]{
   Compare two @racket[gi-base]s. Doing pointer comparison or other equality comparisons does not work. This function compares two entries of the typelib.
 }
+
+@defproc[(gi-enum->list [enum gi-enum?]) list?]{
+}
+
+@defproc[(gi-enum->hash [enum gi-enum?]) hash?]{
+}
+
+@defproc[(_gi-object [obj gi-object?]) ctype?]{
+}
+
+@defstruct*[gtype-instance ([type gi-registered-type?] [pointer cpointer?])
+            #:omit-constructor ]{
+}
+
+@defproc[(gtype-instance-type-name [gtype gtype-instance?]) symbol?]{
+}
+
+@defproc[(gtype-instance-name [gtype gtype-instance?]) symbol?]{
+}
