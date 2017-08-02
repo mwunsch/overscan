@@ -102,6 +102,10 @@ has the @racket[prop:procedure] property and can be called as a procedure:
 
 @section[#:tag "gibaseinfo"]{GIBaseInfo}
 
+The GIBaseInfo C Struct is the base struct for all GIR metadata
+entries. Whenever you do some lookup within GIR, what's returned is
+an instance of a descendant from this struct.
+
 @defstruct*[gi-base ([info cpointer?])
             #:omit-constructor ]{
   The common base struct of all GIR metadata entries. Instances of
@@ -135,3 +139,5 @@ has the @racket[prop:procedure] property and can be called as a procedure:
 
 @defproc[(gtype-instance-name [gtype gtype-instance?]) symbol?]{
 }
+
+@section[#:tag "gobject"]{GObjects}
