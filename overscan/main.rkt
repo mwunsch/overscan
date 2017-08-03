@@ -23,7 +23,8 @@
          debug:preview
          debug:fps
          debug:audio-monitor
-         graphviz)
+         graphviz
+         (all-from-out racket/base))
 
 (let-values ([(initialized? argc argv) ((gst 'init_check) 0 #f)])
   (if initialized?
@@ -395,6 +396,10 @@
                         bin)
                    (error "could not get sink-pad for recording"))))
         (error "could not make a recording"))))
+
+
+(module reader syntax/module-reader
+  overscan)
 
 
 (module+ main
