@@ -3,7 +3,8 @@
 (require gstreamer
          ffi/unsafe
          ffi/unsafe/introspection
-         (only-in racket/function thunk))
+         (only-in racket/function thunk)
+         "twitch.rkt")
 
 (provide camera
          screen
@@ -19,7 +20,6 @@
          scene:snow
          scene:picture-in-picture
          scene:camera+screen
-         stream:twitch
          debug:preview
          debug:fps
          debug:audio-monitor
@@ -87,17 +87,6 @@
 (define (screen ref)
   (let ([device (vector-ref screens ref)])
     (device (format "avfvideosrc:screen:~v" ref))))
-
-(define (stream:twitch #:test [bandwidth-test #f])
-  (let* ([stream-key (getenv "TWITCH_STREAM_KEY")]
-         [rtmp (element-factory% 'make "rtmpsink" "sink:rtmp:twitch")]
-         [location (format "rtmp://live-jfk.twitch.tv/app/~a~a live=1"
-                           stream-key
-                           (if bandwidth-test "?bandwidthtest=true" ""))])
-    (unless stream-key
-      (error "no TWITCH_STREAM_KEY in env"))
-    (gobject-set! rtmp "location" location _string)
-    rtmp))
 
 (define (stream:fake)
   (element-factory% 'make "fakesink" "sink:rtmp:fake"))
@@ -347,6 +336,10 @@
                (send bin add-pad ghost))
              (make-scene bin output-port))
         (error "could not create mix"))))
+
+(define (videobox videosrc)
+  (let ([vidbox (element-factory% 'make "videobox" #f)])
+    vidbox))
 
 (define (scene:camera+screen [camref 0] [scrnref 0])
   (scene:picture-in-picture (gst-compose "pip:cam"
