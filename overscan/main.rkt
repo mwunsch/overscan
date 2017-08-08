@@ -337,9 +337,11 @@
              (make-scene bin output-port))
         (error "could not create mix"))))
 
-(define (videobox videosrc)
+(define (videobox videosrc [width 360] [height 240])
   (let ([vidbox (element-factory% 'make "videobox" #f)])
-    vidbox))
+    (gst-compose #f
+                 vidbox
+                 (video/x-raw (format "pixel-aspect-ratio=1/1,width=~a,height=~a" width height)))))
 
 (define (scene:camera+screen [camref 0] [scrnref 0])
   (scene:picture-in-picture (gst-compose "pip:cam"
