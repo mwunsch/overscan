@@ -71,6 +71,9 @@
                         (->> gobject? (hash/c symbol? any/c) gobject?)]
                        [introspection
                         (->* (symbol?) (string?) gi-repository?)]
+                       [struct gi-repository
+                         ([namespace symbol?] [version string?] [info-hash hash?])
+                         #:omit-constructor]
                        [gi-repository-find-name
                         (->> gi-repository? symbol? gi-base?)]
                        [gi-repository->ffi-lib
