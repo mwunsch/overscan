@@ -53,8 +53,15 @@ An example for loading the @secref{gstreamer} namespace:
   (define gst (introspection 'Gst))
 ]
 
-This function returns the repository as a private struct. This struct
-has the @racket[prop:procedure] property and can be called as a procedure:
+This is the only provided mechanism to construct a
+@racket[gi-repository].
+}
+
+@defstruct*[gi-repository ([namespace symbol?]
+                           [version string?]
+                           [info-hash (hash/c symbol? gi-base?)])
+            #:omit-constructor ]{
+  A struct representing a namespace of an introspected typelib. The constructor is not provided. Call @racket[introspection] for this to be returned. This struct has the @racket[prop:procedure] property and is intended to be called as a procedure:
 
 @nested[#:style 'inset]{
   @defproc*[#:kind "gi-repository" #:link-target? #f

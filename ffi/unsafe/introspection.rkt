@@ -72,7 +72,7 @@
                        [introspection
                         (->* (symbol?) (string?) gi-repository?)]
                        [struct gi-repository
-                         ([namespace symbol?] [version string?] [info-hash hash?])
+                         ([namespace symbol?] [version string?] [info-hash (hash/c symbol? gi-base?)])
                          #:omit-constructor]
                        [gi-repository-find-name
                         (->> gi-repository? symbol? gi-base?)]
