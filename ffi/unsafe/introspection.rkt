@@ -20,6 +20,8 @@
                         (->> gi-base? symbol?)]
                        [gi-base=?
                         (->> gi-base? gi-base? boolean?)]
+                       [gi-registered-type?
+                        (->> any/c boolean?)]
                        [gi-enum->list
                         (->> gi-enum? list?)]
                        [gi-enum->hash
