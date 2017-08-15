@@ -22,10 +22,14 @@
                         (->> gi-base? gi-base? boolean?)]
                        [gi-registered-type?
                         (->> any/c boolean?)]
+                       [gi-enum?
+                        (->> any/c boolean?)]
                        [gi-enum->list
                         (->> gi-enum? list?)]
                        [gi-enum->hash
                         (->> gi-enum? hash?)]
+                       [gi-object?
+                        (->> any/c boolean?)]
                        [_gi-object
                         (->> gi-object? ctype?)]
                        [struct gtype-instance

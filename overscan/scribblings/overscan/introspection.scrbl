@@ -68,7 +68,7 @@ GIR's @hyperlink["https://developer.gnome.org/gi/stable/GIRepository.html"]{@tt{
 
 @section[#:tag "gibaseinfo"]{GIBaseInfo}
 
-The GIBaseInfo C Struct is the base struct for all GIR metadata entries. Whenever you do some lookup within GIR, what's returned is an instance of a descendant from this struct.
+The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{GIBaseInfo}} C Struct is the base struct for all GIR metadata entries. Whenever you do some lookup within GIR, what's returned is an instance of a descendant from this struct. The @racket[gi-base] struct is the Racket equivalent, and @racket[introspection] will return entities that inherit from this base struct.
 
 @defstruct*[gi-base ([info cpointer?])
             #:omit-constructor ]{
@@ -84,20 +84,32 @@ The GIBaseInfo C Struct is the base struct for all GIR metadata entries. Wheneve
 }
 
 @defproc[(gi-registered-type? [v any/c]) boolean?]{
-  A GIRegisteredTypeInfo struct inherits from GIBaseInfo. An entry of this type represents some C entity with an associated GType. Returns @racket[#t] if @racket[v] is a Registered Type, @racket[#f] otherwise.
+  A @hyperlink["https://developer.gnome.org/gi/stable/gi-GIRegisteredTypeInfo.html"]{@tt{GIRegisteredTypeInfo}} struct inherits from GIBaseInfo. An entry of this type represents some C entity with an associated @hyperlink["https://developer.gnome.org/gobject/stable/gobject-Type-Information.html"]{GType}. Returns @racket[#t] if @racket[v] is a Registered Type, @racket[#f] otherwise.
+}
+
+@defproc[(gi-enum? [v any/c]) boolean?]{
+  A @hyperlink["https://developer.gnome.org/gi/stable/gi-GIEnumInfo.html"]{@tt{GIEnumInfo}} is an introspected entity representing an enumeration. Returns @racket[#t] if @racket[v] is an Enumeration, @racket[#f] otherwise.
 }
 
 @defproc[(gi-enum->list [enum gi-enum?]) list?]{
+  Convert @racket[enum] to a list of symbols, representing the values of the enumeration.
 }
 
 @defproc[(gi-enum->hash [enum gi-enum?]) hash?]{
+  Convert @racket[enum] to a hash mapping symbols to their numeric value.
+}
+
+@defproc[(gi-object? [v any/c]) boolean?]{
+  A @hyperlink["https://developer.gnome.org/gi/stable/gi-GIObjectInfo.html"]{@tt{GIObjectInfo}} is an introspected entity representing a GObject. This does not represent an instance of a GObject, but instead represents a GObject's type information (roughly analogous to a "class"). Returns @racket[#t] if @racket[v] is a GObject, @racket[#f] otherwise.
 }
 
 @defproc[(_gi-object [obj gi-object?]) ctype?]{
+  Constructs a @racket[ctype] for the given @racket[obj], which is effectively a @racket[cpointer] that will dereference into an instance of the @racket[obj].
 }
 
 @defstruct*[gtype-instance ([type gi-registered-type?] [pointer cpointer?])
             #:omit-constructor ]{
+  Represents an instance of a GType @racket[type].
 }
 
 @defproc[(gtype-instance-type-name [gtype gtype-instance?]) symbol?]{
