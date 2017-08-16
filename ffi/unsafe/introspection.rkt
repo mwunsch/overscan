@@ -30,6 +30,8 @@
                         (->> gi-enum? hash?)]
                        [gi-object?
                         (->> any/c boolean?)]
+                       [gi-struct?
+                        (->> any/c boolean?)]
                        [_gi-object
                         (->> gi-object? ctype?)]
                        [struct gtype-instance
@@ -44,7 +46,8 @@
                        [is-a?/c
                         (->> gi-registered-type? flat-contract?)]
                        [struct (gstruct gtype-instance)
-                         ((type gi-object?) (pointer cpointer?))]
+                         ((type gi-struct?) (pointer cpointer?))
+                         #:omit-constructor]
                        [struct (gobject gtype-instance)
                          ((type gi-object?) (pointer cpointer?))
                          #:omit-constructor]

@@ -100,22 +100,31 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
 }
 
 @defproc[(gi-object? [v any/c]) boolean?]{
-  A @hyperlink["https://developer.gnome.org/gi/stable/gi-GIObjectInfo.html"]{@tt{GIObjectInfo}} is an introspected entity representing a GObject. This does not represent an instance of a GObject, but instead represents a GObject's type information (roughly analogous to a "class"). Returns @racket[#t] if @racket[v] is a GObject, @racket[#f] otherwise.
+  A @hyperlink["https://developer.gnome.org/gi/stable/gi-GIObjectInfo.html"]{@tt{GIObjectInfo}} is an introspected entity representing a GObject. This does not represent an instance of a GObject, but instead represents a GObject's type information (roughly analogous to a "class"). Returns @racket[#t] if @racket[v] is a GIObjectInfo, @racket[#f] otherwise.
+
+  See @secref{gobject} for more information about using GObjects from within Racket.
+}
+
+@defproc[(gi-struct? [v any/c]) boolean?]{
+  A @tt{GIStructInfo} is an introspected entity representing a C Struct. Returns @racket[#t] if @racket[v] is a GIStructInfo, @racket[#f] otherwise.
 }
 
 @defproc[(_gi-object [obj gi-object?]) ctype?]{
-  Constructs a @racket[ctype] for the given @racket[obj], which is effectively a @racket[cpointer] that will dereference into an instance of the @racket[obj].
+  Constructs a @racket[ctype] for the given @racket[obj], which is effectively a @racket[_cpointer] that will dereference into an instance of the @racket[obj].
 }
 
 @defstruct*[gtype-instance ([type gi-registered-type?] [pointer cpointer?])
             #:omit-constructor ]{
-  Represents an instance of a GType @racket[type].
+  Represents an instance of a GType @racket[type]. This struct and its descendants have the @racket[prop:cpointer] property, and can be used as a pointer in FFI calls.
 }
 
-@defproc[(gtype-instance-type-name [gtype gtype-instance?]) symbol?]{
+@defproc[(gtype-instance-type-name [instance gtype-instance?]) symbol?]{
+  Returns the name of the registered GType of @racket[instance].
 }
 
-@defproc[(gtype-instance-name [gtype gtype-instance?]) symbol?]{
+@defproc[(gtype-instance-name [instance gtype-instance?]) symbol?]{
+  Returns the name of the instance of @racket[instance]. The difference between this function and @racket[gtype-instance-type-name] is that the GType name typically has the C prefix for an instance of a GType, where within GObject Introspection that prefix is elided. @racket[gtype-instance-type-name] derives its name from the GType, and @racket[gtype-instance-name] derives its name from GObject Introspection.
 }
+
 
 @section[#:tag "gobject"]{GObjects}
