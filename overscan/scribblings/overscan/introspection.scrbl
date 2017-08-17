@@ -115,7 +115,7 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
 
 @defstruct*[gtype-instance ([type gi-registered-type?] [pointer cpointer?])
             #:omit-constructor ]{
-  Represents an instance of a GType @racket[type]. This struct and its descendants have the @racket[prop:cpointer] property, and can be used as a pointer in FFI calls.
+  Represents an instance of a GType @racket[type]. This struct and its descendants have the @racket[prop:cpointer] property, and can be used as a pointer in FFI calls. GType Instances can have methods and fields associated with them.
 }
 
 @defproc[(gtype-instance-type-name [instance gtype-instance?]) symbol?]{
@@ -126,5 +126,16 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
   Returns the name of the instance of @racket[instance]. The difference between this function and @racket[gtype-instance-type-name] is that the GType name typically has the C prefix for an instance of a GType, where within GObject Introspection that prefix is elided. @racket[gtype-instance-type-name] derives its name from the GType, and @racket[gtype-instance-name] derives its name from GObject Introspection.
 }
 
+@defstruct*[(gstruct gtype-instance)
+            ([type gi-struct?] [pointer cpointer?])
+            #:omit-constructor ]{
+  Represents an instance of a C Struct. That Struct can have methods and fields. Similar in most behaviors to a @racket[gobject].
+}
 
 @section[#:tag "gobject"]{GObjects}
+
+@defstruct*[(gobject gtype-instance)
+            ([type gi-object?] [pointer cpointer?])
+            #:omit-constructor ]{
+  An instance of @racket[type]. You can call methods, get or set fields, get/set properties, or connect to signals on a GObject.
+}
