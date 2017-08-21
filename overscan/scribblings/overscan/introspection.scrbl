@@ -139,3 +139,9 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
             #:omit-constructor ]{
   An instance of @racket[type]. You can call methods, get or set fields, get/set properties, or connect to signals on a GObject.
 }
+
+@defproc[(is-a? [instance gtype-instance?] [type gi-registered-type?]) boolean?]{
+}
+
+@defproc[(is-a?/c [type gi-registered-type?]) flat-contract?]{
+}
