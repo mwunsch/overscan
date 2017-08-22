@@ -93,6 +93,8 @@
 
 (define current-broadcast (box #f))
 
+(define current-bus (box #f))
+
 (define video-720p (caps-from-string "video/x-raw,width=1280,height=720,framerate=30/1,pixel-aspect-ratio=1/1"))
 
 (define video-480p (caps-from-string "video/x-raw,width=854,height=480,framerate=30/1,pixel-aspect-ratio=1/1"))
@@ -128,51 +130,52 @@
                    #:monitor [monitor #f])
   (when (unbox current-broadcast)
     (error "already a broadcast in progress"))
-  (let ([pipeline (pipeline% 'new "broadcast")]
-        [video-selector (gobject-with-properties
-                         (element-factory% 'make "input-selector" "selector:video")
-                         (hash 'sync-mode 1
-                               'cache-buffers #t))]
-        [audio-selector (gobject-with-properties
-                         (element-factory% 'make "input-selector" "selector:audio")
-                         (hash 'sync-mode 1
-                               'cache-buffers #t))]
-        [video-tee (element-factory% 'make "tee" "tee:video")]
-        [audio-tee (element-factory% 'make "tee" "tee:audio")]
-        [multiqueue (element-factory% 'make "multiqueue" #f)]
-        [h264-encoder (let ([encoder (element-factory% 'make "x264enc" "encode:h264")])
-                        (gobject-set! encoder "tune" 'zerolatency (_bitmask '(stillimage fastdecode zerolatency)))
-                        (gobject-set! encoder "speed-preset" 'faster '(none ultrafast superfast veryfast
-                                                                            faster fast medium
-                                                                            slow slower veryslow placebo))
-                        encoder)]
-        [aac-encoder (element-factory% 'make "faac" "encode:aac")]
-        [flvmuxer (gobject-with-properties (element-factory% 'make "flvmux" "mux:flv")
-                                           (hash 'streamable #t))]
-        [flvtee (element-factory% 'make "tee" "tee:flv")]
-        [preview-queue (let ([buffer (element-factory% 'make "queue" "buffer:preview")])
-                         (gobject-set! buffer "leaky" 'upstream (_enum '(no upstream downstream)))
-                         buffer)]
-        [preview (and preview
-                      (gst-compose "sink:preview"
-                                   (element-factory% 'make "videoconvert" #f)
-                                   preview))]
-        [recording-queue (element-factory% 'make "queue" "buffer:recording")]
-        [record-sink (or (recording record)
-                         (element-factory% 'make "fakesink" "sink:recording:fake"))]
-        [monitor-queue (let ([buffer (element-factory% 'make "queue" "buffer:monitor")])
-                         (gobject-set! buffer "leaky" 'upstream (_enum '(no upstream downstream)))
-                         buffer)]
-        [audio-monitor (or monitor
-                           (element-factory% 'make "fakesink" "sink:monitor:fake"))])
+  (let* ([pipeline (pipeline% 'new "broadcast")]
+         [video-selector (gobject-with-properties
+                          (element-factory% 'make "input-selector" "selector:video")
+                          (hash 'sync-mode 1
+                                'cache-buffers #t))]
+         [audio-selector (gobject-with-properties
+                          (element-factory% 'make "input-selector" "selector:audio")
+                          (hash 'sync-mode 1
+                                'cache-buffers #t))]
+         [video-tee (element-factory% 'make "tee" "tee:video")]
+         [audio-tee (element-factory% 'make "tee" "tee:audio")]
+         [multiqueue (element-factory% 'make "multiqueue" #f)]
+         [h264-encoder (let ([encoder (element-factory% 'make "x264enc" "encode:h264")])
+                         (gobject-set! encoder "tune" 'zerolatency (_bitmask '(stillimage fastdecode zerolatency)))
+                         (gobject-set! encoder "speed-preset" 'faster '(none ultrafast superfast veryfast
+                                                                             faster fast medium
+                                                                             slow slower veryslow placebo))
+                         encoder)]
+         [aac-encoder (element-factory% 'make "faac" "encode:aac")]
+         [flvmuxer (gobject-with-properties (element-factory% 'make "flvmux" "mux:flv")
+                                            (hash 'streamable #t))]
+         [flvtee (element-factory% 'make "tee" "tee:flv")]
+         [preview-queue (let ([buffer (element-factory% 'make "queue" "buffer:preview")])
+                          (gobject-set! buffer "leaky" 'upstream (_enum '(no upstream downstream)))
+                          buffer)]
+         [preview (and preview
+                       (gst-compose "sink:preview"
+                                    (element-factory% 'make "videoconvert" #f)
+                                    preview))]
+         [recording-queue (element-factory% 'make "queue" "buffer:recording")]
+         [record-sink (or (recording record)
+                          (element-factory% 'make "fakesink" "sink:recording:fake"))]
+         [monitor-queue (let ([buffer (element-factory% 'make "queue" "buffer:monitor")])
+                          (gobject-set! buffer "leaky" 'upstream (_enum '(no upstream downstream)))
+                          buffer)]
+         [audio-monitor (or monitor
+                            (element-factory% 'make "fakesink" "sink:monitor:fake"))]
+         [chan (make-bus-channel (send pipeline get-bus) '(eos error))])
     (or (and (bin-add-many pipeline
                            video-selector video-tee multiqueue h264-encoder
                            audio-selector audio-tee aac-encoder
                            flvmuxer flvtee rtmpsink)
              (for/and ([scene (map scene-bin scenes)])
-               (and (send pipeline add scene)
-                    (send scene link-pads "video" video-selector #f)
-                    (send scene link-pads "audio" audio-selector #f)))
+                      (and (send pipeline add scene)
+                           (send scene link-pads "video" video-selector #f)
+                           (send scene link-pads "audio" audio-selector #f)))
 
              (send video-selector link-filtered multiqueue video-720p)
              (send audio-selector link multiqueue)
@@ -183,13 +186,13 @@
                  (and (bin-add-many pipeline preview-queue preview)
                       (send video-tee link preview-queue)
                       (send preview-queue link preview))
-                 #t)
+               #t)
 
              (if monitor
                  (and (bin-add-many pipeline monitor-queue audio-monitor)
                       (send audio-tee link monitor-queue)
                       (send monitor-queue link audio-monitor))
-                 #t)
+               #t)
 
              (send video-tee link h264-encoder)
              (send audio-tee link aac-encoder)
@@ -201,23 +204,26 @@
                  (and (bin-add-many pipeline recording-queue record-sink)
                       (send flvtee link recording-queue)
                       (send recording-queue link record-sink))
-                 #t)
+               #t)
 
              (send flvtee link rtmpsink)
 
              (send pipeline set-state 'playing)
-             (set-box! current-broadcast pipeline))
+             (set-box! current-broadcast pipeline)
+             (set-box! current-bus chan))
         (error "Couldn't start broadcast"))))
 
-(define (stop [broadcast (unbox current-broadcast)])
+(define (stop [broadcast (unbox current-broadcast)]
+              [chan (unbox current-bus)])
   (unless broadcast
     (error "there is no current broadcast"))
-  (define bus (send broadcast get-bus))
-  (define chan (make-bus-channel bus '(eos error)))
+  (unless chan
+    (error "there is no current bus"))
   (send broadcast send-event (event% 'new_eos))
   (let ([msg (sync chan)])
     (send broadcast set-state 'null)
-    (set-box! current-broadcast #f)))
+    (set-box! current-broadcast #f)
+    (set-box! current-bus #f)))
 
 (define (graphviz filepath [broadcast (unbox current-broadcast)])
   (call-with-output-file filepath
