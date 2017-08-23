@@ -275,6 +275,9 @@
              instance)
         (error "could not create scene"))))
 
+(struct pipeline (bin bus)
+  #:property prop:evt 1)
+
 (define (add-scene scene [broadcast (unbox current-broadcast)])
   (define bin (scene-bin scene))
   (unless broadcast
