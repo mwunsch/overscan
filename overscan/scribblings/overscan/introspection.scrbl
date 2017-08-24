@@ -145,3 +145,15 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
 
 @defproc[(is-a?/c [type gi-registered-type?]) flat-contract?]{
 }
+
+@defproc[(dynamic-send [obj (or/c gobject? gstruct?)] [method-name symbol?] [argument any/c] ...) any]{
+}
+
+@defproc[(dynamic-get-field [field-name symbol?] [obj (or/c gobject? gstruct?)]) any]{
+}
+
+@defproc[(dynamic-set-field! [field-name symbol?] [obj (or/c gobject? gstruct?)] [v any/c]) void?]{
+}
+
+@defproc[(method-names [obj (or/c gobject? gstruct?)]) (listof symbol?)]{
+}
