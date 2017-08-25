@@ -1,7 +1,8 @@
 #lang scribble/manual
 @require[@for-label[ffi/unsafe/introspection
                     racket/base
-                    ffi/unsafe]]
+                    racket/contract
+                    (except-in ffi/unsafe ->)]]
 
 @title[#:tag "gobject-introspection"]{GObject Introspection}
 
@@ -141,6 +142,7 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
 }
 
 @defproc[(is-a? [instance gtype-instance?] [type gi-registered-type?]) boolean?]{
+  Returns @racket[#t] if @racket[instance] is an instance of @racket[type], @racket[#f] otherwise. Similar to the associated @secref["objectutils" #:doc '(lib "scribblings/reference/reference.scrbl")] function.
 }
 
 @defproc[(is-a?/c [type gi-registered-type?]) flat-contract?]{
@@ -156,4 +158,23 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
 }
 
 @defproc[(method-names [obj (or/c gobject? gstruct?)]) (listof symbol?)]{
+}
+
+@defproc[(connect [object gobject?] [signal-name symbol?] [handler procedure?]
+          [#:data data cpointer? #f]
+          [#:cast _user-data (or/c ctype? gi-object?) #f]) exact-integer?]{
+}
+
+@defproc[(gobject-cast [pointer cpointer?] [obj gi-object?]) gobject?]{
+}
+
+@defproc[(gobject-get [obj gobject?] [propname string?] [ctype ctype?]) any?]{
+}
+
+@defproc[(gobject-set! [obj gobject?] [propname string?] [value any/c]
+          [ctype (or/c ctype? (listof symbol?)) #f]) void?]{
+}
+
+@defproc[(gobject-with-properties [instance gobject?]
+          [properties (hash/c symbol? any/c)]) gobject?]{
 }
