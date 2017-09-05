@@ -135,6 +135,8 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
 
 @section[#:tag "gobject"]{GObjects}
 
+GObjects like the introspected metadata entries provided by GIR, are transparent pointers with additional tooling to be called as objects within Racket. They therefore behave like Racket objects, with the exception that they aren't backed by _classes_, but instead the introspected metadata. To make using GObjects more like using objects, the library provides several functions and syntax with the same names as those found in @secref["mzlib:class" #:doc '(lib "scribblings/reference/reference.scrbl")].
+
 @defstruct*[(gobject gtype-instance)
             ([type gi-object?] [pointer cpointer?])
             #:omit-constructor ]{
@@ -146,23 +148,29 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
 }
 
 @defproc[(is-a?/c [type gi-registered-type?]) flat-contract?]{
+  Accepts a @racket[type] and returns a flat contract that recognizes objects that instantiate it.
 }
 
 @defproc[(dynamic-send [obj (or/c gobject? gstruct?)] [method-name symbol?] [argument any/c] ...) any]{
+  Calls the method on @racket[obj] whose name matches @racket[method-name], passing along all given @racket[argument]s.
 }
 
 @defproc[(dynamic-get-field [field-name symbol?] [obj (or/c gobject? gstruct?)]) any]{
+  Extracts the field from @racket[obj] whose name matches @racket[field-name].
 }
 
 @defproc[(dynamic-set-field! [field-name symbol?] [obj (or/c gobject? gstruct?)] [v any/c]) void?]{
+  Sets the field from @racket[obj] whose name matches @racket[field-name] to @racket[v].
 }
 
 @defproc[(method-names [obj (or/c gobject? gstruct?)]) (listof symbol?)]{
+  Extracts a list that @racket[obj] recognizes as names of methods it understands. This list might not be exhaustive.
 }
 
-@defproc[(connect [object gobject?] [signal-name symbol?] [handler procedure?]
+@defproc[(connect [obj gobject?] [signal-name symbol?] [handler procedure?]
           [#:data data cpointer? #f]
           [#:cast _user-data (or/c ctype? gi-object?) #f]) exact-integer?]{
+  Register a callback @racket[handler] for the @hyperlink["https://developer.gnome.org/gobject/stable/signal.html"]{@emph{Signal}} matching the name @racket[signal-name] for the @racket[obj]. The @racket[handler] will receive three arguments, @racket[obj], the name of the signal as a string, and @racket[data].
 }
 
 @defproc[(gobject-cast [pointer cpointer?] [obj gi-object?]) gobject?]{
