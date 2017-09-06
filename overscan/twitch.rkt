@@ -1,10 +1,13 @@
 #lang racket/base
 
 (require gstreamer
-         ffi/unsafe/introspection)
+         ffi/unsafe/introspection
+         racket/contract)
 
-(provide twitch-sink
-         twitch-stream-key)
+(provide (contract-out [twitch-sink
+                        (->* () (#:test boolean?) (is-a?/c element%))]
+                       [twitch-stream-key
+                        (parameter/c string?)]))
 
 (define twitch-stream-key (make-parameter (getenv "TWITCH_STREAM_KEY")))
 
