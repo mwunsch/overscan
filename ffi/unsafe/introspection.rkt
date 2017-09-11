@@ -878,7 +878,7 @@
 
 (define-syntax (responds-to? stx)
   (syntax-parse stx
-    [(_ obj method-id:id args:expr ...)
+    [(_ obj method-id:id)
      #:declare obj (expr/c #'(or/c gobject? gstruct?)
                            #:name "receiver")
      (with-syntax ([method-name (string->symbol (string-replace
