@@ -43,9 +43,13 @@ GIR's @hyperlink["https://developer.gnome.org/gi/stable/GIRepository.html"]{@tt{
                [(repository [name symbol?]) gi-base?])]{
       When called as in the first form, without an argument, the proc will return a @racket[hash] of all of the known members of the namespace.
 
-      When called as the second form, this is the equivalent to @racket[gi-repository-find-name] with the first argument already set. e.g. @racketinput[(gst 'version)]
+      When called as the second form, this is the equivalent to @racket[gi-repository-find-name] with the first argument already set. e.g.
 
-      This will return an introspected foreign binding to the @hyperlink["https://gstreamer.freedesktop.org/data/doc/gstreamer/head/gstreamer/html/gstreamer-Gst.html#gst-version"]{@tt{gst_version()}} C function.
+      @racketinput[
+        (gst 'version)
+      ]
+
+      This will return an introspected foreign binding to the @hyperlink["https://gstreamer.freedesktop.org/data/doc/gstreamer/head/gstreamer/html/gstreamer-Gst.html#gst-version"]{@tt{gst_version()}} C function, represented as a @racket[gi-function?].
     }
   }
 
@@ -82,6 +86,10 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
 
 @defproc[(gi-base=? [a gi-base?] [b gi-base?]) boolean?]{
   Compare two @racket[gi-base]s. Doing pointer comparison or other equality comparisons does not work. This function compares two entries of the typelib.
+}
+
+@defproc[(gi-function? [v any/c]) boolean?]{
+  A @hyperlink["https://developer.gnome.org/gi/stable/gi-GIFunctionInfo.html"]{@tt{GIFunctionInfo}} struct inherits from GIBaseInfo and represents a C function. Returns @racket[#t] if @racket[v] is a Function Info, @racket[#f] otherwise.
 }
 
 @defproc[(gi-registered-type? [v any/c]) boolean?]{
@@ -174,15 +182,19 @@ GObjects like the introspected metadata entries provided by GIR, are transparent
 }
 
 @defproc[(gobject-cast [pointer cpointer?] [obj gi-object?]) gobject?]{
+  This will cast @racket[pointer] to @racket[(_gi-object obj)], thereby transforming it into a @racket[gobject].
 }
 
 @defproc[(gobject-get [obj gobject?] [propname string?] [ctype ctype?]) any?]{
+  Extract the @hyperlink["https://developer.gnome.org/gobject/stable/gobject-properties.html"]{property} from @racket[obj] whose name matches @racket[propname] and can be dereferenced as a @racket[ctype].
 }
 
-@defproc[(gobject-set! [obj gobject?] [propname string?] [value any/c]
+@defproc[(gobject-set! [obj gobject?] [propname string?] [v any/c]
           [ctype (or/c ctype? (listof symbol?)) #f]) void?]{
+  Sets the property of @racket[obj] whose name matches @racket[propname] to @racket[v]. If @racket[ctype] is a @racket[(listof symbol?)], @racket[v] is assumed to be a symbol in that list, used for representing @racket[_enum]s. If no @racket[ctype] is provided, one is inferred based on @racket[v].
 }
 
-@defproc[(gobject-with-properties [instance gobject?]
+@defproc[(gobject-with-properties [obj gobject?]
           [properties (hash/c symbol? any/c)]) gobject?]{
+  Sets a group of properties on @racket[obj] based on a hash and returns @racket[obj]. Note that you cannot explicitly set the @racket[ctype] of the properties with this form.
 }

@@ -14,12 +14,14 @@
                      (only-in racket/string string-replace)))
 
 (provide (contract-out [struct gi-base
-                         ((info cpointer?))
-                         #:omit-constructor]
+                               ((info cpointer?))
+                               #:omit-constructor]
                        [gi-base-name
                         (->> gi-base? symbol?)]
                        [gi-base=?
                         (->> gi-base? gi-base? boolean?)]
+                       [gi-function?
+                        (->> any/c boolean?)]
                        [gi-registered-type?
                         (->> any/c boolean?)]
                        [gi-enum?
@@ -35,8 +37,8 @@
                        [_gi-object
                         (->> gi-object? ctype?)]
                        [struct gtype-instance
-                         ((type gi-registered-type?) (pointer cpointer?))
-                         #:omit-constructor]
+                               ((type gi-registered-type?) (pointer cpointer?))
+                               #:omit-constructor]
                        [gtype-instance-type-name
                         (->> gtype-instance? symbol?)]
                        [gtype-instance-name
@@ -46,11 +48,11 @@
                        [is-a?/c
                         (->> gi-registered-type? flat-contract?)]
                        [struct (gstruct gtype-instance)
-                         ((type gi-struct?) (pointer cpointer?))
-                         #:omit-constructor]
+                               ((type gi-struct?) (pointer cpointer?))
+                               #:omit-constructor]
                        [struct (gobject gtype-instance)
-                         ((type gi-object?) (pointer cpointer?))
-                         #:omit-constructor]
+                               ((type gi-object?) (pointer cpointer?))
+                               #:omit-constructor]
                        [dynamic-send
                         (->* ((or/c gobject? gstruct?) symbol?) #:rest (listof any/c) any)]
                        [dynamic-get-field
@@ -64,7 +66,7 @@
                        [connect
                         (->* (gobject? symbol? procedure?)
                              (#:data cpointer?
-                              #:cast (or/c ctype? gi-object?))
+                                     #:cast (or/c ctype? gi-object?))
                              exact-integer?)]
                        [gobject-cast
                         (->> cpointer? gi-object? gobject?)]
@@ -81,8 +83,8 @@
                        [introspection
                         (->* (symbol?) (string?) gi-repository?)]
                        [struct gi-repository
-                         ([namespace symbol?] [version string?] [info-hash (hash/c symbol? gi-base?)])
-                         #:omit-constructor]
+                               ([namespace symbol?] [version string?] [info-hash (hash/c symbol? gi-base?)])
+                               #:omit-constructor]
                        [gi-repository-find-name
                         (->> gi-repository? symbol? gi-base?)]
                        [gi-repository->ffi-lib
