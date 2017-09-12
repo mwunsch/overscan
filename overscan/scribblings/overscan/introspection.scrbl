@@ -14,6 +14,23 @@ The Overscan package provides a module designed to accompany Racket's FFI collec
 
 @defmodule[ffi/unsafe/introspection]
 
+@section[#:tag "gir-basic-usage"]{Basic Usage}
+
+Using GIR will typically go as follows: Introspect a namespace that you have a typelib for with @racket[introspection], call that namespace as a procedure to look up a binding, work with that binding either as a procedure or some other value (typically a @racket[gobject]).
+
+In this case of a typical "Hello, world" style example with GStreamer, that would look like this:
+
+@racketblock[
+  (define gst (introspection 'Gst))
+  (define version (gst 'version_string))
+  (printf "This program is linked against ~a"
+          (version))
+]
+
+This will result in the string @tt{"This program is linked against GStreamer 1.10.4"} being printed, or whatever version of GStreamer is available.
+
+In the second line of this program, the @racket['version_string] symbol is looked up against the GStreamer namespace and a @racket[gi-function?] is returned. That can then be called as a procedure, which in this case takes no arguments.
+
 @section[#:tag "girepository"]{GIRepository}
 
 GIR's @hyperlink["https://developer.gnome.org/gi/stable/GIRepository.html"]{@tt{GIRepository}} API manages the namespaces provided by the GIR system and type libraries. Each namespace contains metadata entries that map to C functionality. In the case of @secref{gstreamer}, the @racket['Gst] namespace contains all of the introspection information used to power that interface.
