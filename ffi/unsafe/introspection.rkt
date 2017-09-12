@@ -66,7 +66,7 @@
                        [connect
                         (->* (gobject? symbol? procedure?)
                              (#:data cpointer?
-                                     #:cast (or/c ctype? gi-object?))
+                              #:cast (or/c ctype? gi-object?))
                              exact-integer?)]
                        [gobject-cast
                         (->> cpointer? gi-object? gobject?)]

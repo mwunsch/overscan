@@ -8,9 +8,9 @@
 
 @secref{gstreamer} is the core framework that powers much of the capabilities of Overscan. GStreamer is also a @bold{C} framework, which means that a big part of Overscan's codebase is dedicated to the interop between Racket and C. Racket provides a phenomenal @seclink["top" #:doc '(lib "scribblings/foreign/foreign.scrbl")]{Foreign Interface}, but to create foreign functions for all the relevant portions of GStreamer would be cumbersome, at best.
 
-Luckily, GStreamer is written with @hyperlink["https://wiki.gnome.org/Projects/GLib"]{GLib} and contains @hyperlink["https://wiki.gnome.org/Projects/GObjectIntrospection"]{GObject Introspection} metadata. @emph{GObject Introspection} (aka @emph{GIR}) is a middleware layer that allows for a language to read this metadata and dynamically create bindings for the C library.
+Luckily, GStreamer is written with @hyperlink["https://wiki.gnome.org/Projects/GLib"]{GLib} and contains @hyperlink["https://wiki.gnome.org/Projects/GObjectIntrospection"]{GObject Introspection} metadata. @emph{GObject Introspection} (aka @emph{GIR}) is a interface description layer that allows for a language to read this metadata and dynamically create bindings for the C library.
 
-The Overscan package provides a module designed to accompany Racket's FFI collection. This module brings additional functionality and @secref["types" #:doc '(lib "scribblings/foreign/foreign.scrbl")] for working with Introspected C libraries. This module powers the @secref{gstreamer} module, but can be used outside of Overscan for working with other GLib libraries.
+The Overscan package provides a module designed to accompany Racket's FFI collection. This module brings additional functionality and @secref["types" #:doc '(lib "scribblings/foreign/foreign.scrbl")] for working with introspected C libraries. This module powers the @secref{gstreamer} module, but can be used outside of Overscan for working with other GLib libraries.
 
 @defmodule[ffi/unsafe/introspection]
 
@@ -29,7 +29,7 @@ In this case of a typical "Hello, world" style example with GStreamer, that woul
 
 This will result in the string @tt{"This program is linked against GStreamer 1.10.4"} being printed, or whatever version of GStreamer is available.
 
-In the second line of this program, the @racket['version_string] symbol is looked up against the GStreamer namespace and a @racket[gi-function?] is returned. That can then be called as a procedure, which in this case takes no arguments.
+In the second line of this program, the @racket['version_string] symbol is looked up against the GStreamer typelib and a @racket[gi-function?] is returned. That can then be called as a procedure, which in this case takes no arguments.
 
 @section[#:tag "girepository"]{GIRepository}
 
@@ -52,7 +52,7 @@ GIR's @hyperlink["https://developer.gnome.org/gi/stable/GIRepository.html"]{@tt{
                            [version string?]
                            [info-hash (hash/c symbol? gi-base?)])
             #:omit-constructor ]{
-  A struct representing a namespace of an introspected typelib. The constructor is not provided. Call @racket[introspection] for this to be returned. This struct has the @racket[prop:procedure] property and is intended to be called as a procedure:
+  A struct representing a namespace of an introspected typelib. This struct is constructed bye calling @racket[introspection]. This struct has the @racket[prop:procedure] property and is intended to be called as a procedure:
 
   @nested[#:style 'inset]{
     @defproc*[#:kind "gi-repository" #:link-target? #f
@@ -94,7 +94,7 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
 
 @defstruct*[gi-base ([info cpointer?])
             #:omit-constructor ]{
-  The common base struct of all GIR metadata entries. Instances of this struct have the @racket[prop:cpointer] property, and can be used transparently as @racket[cpointers] to their respective entries.
+  The common base struct of all GIR metadata entries. Instances of this struct have the @racket[prop:cpointer] property, and can be used transparently as @racket[cpointers] to their respective entries. This struct and its descendants are constructed by looking up a symbol on a @racket[gi-repository].
 }
 
 @defproc[(gi-base-name [info gi-base?]) symbol?]{
@@ -193,7 +193,7 @@ GObjects like the introspected metadata entries provided by GIR, are transparent
 }
 
 @defproc[(gobject-get-field [field-name symbol?] [obj (or/c gobject? gstruct?)]) any]{
-  Extracts the field from @racket[obj] whose name matches @racket[field-name]. Note that @emph{fields} are distinct from GObject Properties, which are accessed with @racket[gobject-get].
+  Extracts the field from @racket[obj] whose name matches @racket[field-name]. Note that @emph{fields} are distinct from GObject @emph{properties}, which are accessed with @racket[gobject-get].
 }
 
 @defform[(get-field id obj-expr)
@@ -222,7 +222,7 @@ GObjects like the introspected metadata entries provided by GIR, are transparent
 @defproc[(connect [obj gobject?] [signal-name symbol?] [handler procedure?]
           [#:data data cpointer? #f]
           [#:cast _user-data (or/c ctype? gi-object?) #f]) exact-integer?]{
-  Register a callback @racket[handler] for the @hyperlink["https://developer.gnome.org/gobject/stable/signal.html"]{@emph{Signal}} matching the name @racket[signal-name] for the @racket[obj]. The @racket[handler] will receive three arguments, @racket[obj], the name of the signal as a string, and @racket[data].
+  Register a callback @racket[handler] for the @hyperlink["https://developer.gnome.org/gobject/stable/signal.html"]{@emph{signal}} matching the name @racket[signal-name] for the @racket[obj]. The @racket[handler] will receive three arguments, @racket[obj], the name of the signal as a string, and @racket[data]. When both are present, @racket[data] will be cast to @racket[_user-data] before being passed to the @racket[handler].
 }
 
 @defproc[(gobject-cast [pointer cpointer?] [obj gi-object?]) gobject?]{
