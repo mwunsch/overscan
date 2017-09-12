@@ -159,7 +159,7 @@ GObjects like the introspected metadata entries provided by GIR, are transparent
   Accepts a @racket[type] and returns a flat contract that recognizes objects that instantiate it.
 }
 
-@defproc[(dynamic-send [obj (or/c gobject? gstruct?)] [method-name symbol?] [argument any/c] ...) any]{
+@defproc[(gobject-send [obj (or/c gobject? gstruct?)] [method-name symbol?] [argument any/c] ...) any]{
   Calls the method on @racket[obj] whose name matches @racket[method-name], passing along all given @racket[argument]s.
 }
 
@@ -175,8 +175,8 @@ GObjects like the introspected metadata entries provided by GIR, are transparent
   Produces @racket[#t] if the result of @racket[obj-expr] or its ancestors defines a method with the name @racket[method-id], @racket[#f] otherwise.
 }
 
-@defproc[(dynamic-get-field [field-name symbol?] [obj (or/c gobject? gstruct?)]) any]{
-  Extracts the field from @racket[obj] whose name matches @racket[field-name].
+@defproc[(gobject-get-field [field-name symbol?] [obj (or/c gobject? gstruct?)]) any]{
+  Extracts the field from @racket[obj] whose name matches @racket[field-name]. Note that @emph{fields} are distinct from GObject Properties, which are accessed with @racket[gobject-get].
 }
 
 @defform[(get-field id obj-expr)
@@ -184,7 +184,7 @@ GObjects like the introspected metadata entries provided by GIR, are transparent
   Extracts the field with name @racket[id] from the value of @racket[obj-expr].
 }
 
-@defproc[(dynamic-set-field! [field-name symbol?] [obj (or/c gobject? gstruct?)] [v any/c]) void?]{
+@defproc[(gobject-set-field! [field-name symbol?] [obj (or/c gobject? gstruct?)] [v any/c]) void?]{
   Sets the field from @racket[obj] whose name matches @racket[field-name] to @racket[v].
 }
 

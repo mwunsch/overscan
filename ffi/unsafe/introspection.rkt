@@ -53,11 +53,11 @@
                        [struct (gobject gtype-instance)
                                ((type gi-object?) (pointer cpointer?))
                                #:omit-constructor]
-                       [dynamic-send
+                       [gobject-send
                         (->* ((or/c gobject? gstruct?) symbol?) #:rest (listof any/c) any)]
-                       [dynamic-get-field
+                       [gobject-get-field
                         (->> symbol? (or/c gobject? gstruct?) any)]
-                       [dynamic-set-field!
+                       [gobject-set-field!
                         (->> symbol? (or/c gobject? gstruct?) any/c void?)]
                        [method-names
                         (->> (or/c gobject? gstruct?) (listof symbol?))]
@@ -849,18 +849,18 @@
     (and (memq field-name fields)
          #t)))
 
-(define (dynamic-send obj method-name . arguments)
+(define (gobject-send obj method-name . arguments)
   (let ([base (gtype-instance-type obj)]
         [ptr (gtype-instance-pointer obj)])
     (apply base method-name (cons ptr arguments))))
 
-(define (dynamic-get-field field-name obj)
+(define (gobject-get-field field-name obj)
   (let* ([base (gtype-instance-type obj)]
          [ptr (gtype-instance-pointer obj)]
          [field (gi-registered-type-find-field base field-name)])
     (gi-field-ref field ptr)))
 
-(define (dynamic-set-field! field-name obj v)
+(define (gobject-set-field! field-name obj v)
   (let* ([base (gtype-instance-type obj)]
          [ptr (gtype-instance-pointer obj)]
          [field (gi-registered-type-find-field base field-name)])
@@ -874,7 +874,7 @@
      (with-syntax ([method-name (string->symbol (string-replace
                                                  (symbol->string (syntax-e #'method-id))
                                                  "-" "_"))])
-       #'(dynamic-send obj.c 'method-name args ...))]))
+       #'(gobject-send obj.c 'method-name args ...))]))
 
 (define-syntax (responds-to? stx)
   (syntax-parse stx
@@ -896,7 +896,7 @@
      (with-syntax ([field-name (string->symbol (string-replace
                                                  (symbol->string (syntax-e #'field-id))
                                                  "-" "_"))])
-       #'(dynamic-get-field 'field-name obj.c))]))
+       #'(gobject-get-field 'field-name obj.c))]))
 
 (define-syntax (set-field! stx)
   (syntax-parse stx
@@ -906,7 +906,7 @@
      (with-syntax ([field-name (string->symbol (string-replace
                                                  (symbol->string (syntax-e #'field-id))
                                                  "-" "_"))])
-       #'(dynamic-set-field! 'field-name obj.c val))]))
+       #'(gobject-set-field! 'field-name obj.c val))]))
 
 (define-syntax (field-bound? stx)
   (syntax-parse stx
