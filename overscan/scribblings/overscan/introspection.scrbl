@@ -16,7 +16,7 @@ The Overscan package provides a module designed to accompany Racket's FFI collec
 
 @section[#:tag "gir-basic-usage"]{Basic Usage}
 
-Using GIR will typically go as follows: Introspect a namespace that you have a typelib for with @racket[introspection], call that namespace as a procedure to look up a binding, work with that binding either as a procedure or some other value (typically a @racket[gobject]).
+Using GIR will typically go as follows: Introspect a namespace that you have a typelib for with @racket[introspection], call that namespace as a procedure to look up a binding, work with that binding either as a procedure or some other value (typically a @tech{gobject}).
 
 In this case of a typical "Hello, world" style example with GStreamer, that would look like this:
 
@@ -155,17 +155,15 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
 @defstruct*[(gstruct gtype-instance)
             ([type gi-struct?] [pointer cpointer?])
             #:omit-constructor ]{
-  Represents an instance of a C Struct. That Struct can have methods and fields. Similar in most behaviors to a @racket[gobject].
+  Represents an instance of a C Struct. That Struct can have methods and fields.
 }
 
 @section[#:tag "gobject"]{GObjects}
 
-GObjects like the introspected metadata entries provided by GIR, are transparent pointers with additional tooling to be called as objects within Racket. They therefore behave like Racket objects, with the exception that they aren't backed by _classes_, but instead the introspected metadata. To make using GObjects more like using objects, the library provides several functions and syntax with the same names as those found in @secref["mzlib:class" #:doc '(lib "scribblings/reference/reference.scrbl")].
+A @deftech{gobject} instance, like the introspected metadata entries provided by GIR, is a transparent pointer with additional utilities to be called as an object within Racket. GObjects behave like Racket objects, with the exception that they aren't backed by @emph{classes} in the @code{racket/class} sense, but instead are derived from the introspected metadata. To make using GObjects more like using @code{racket/class} objects, the library provides several functions and syntax with the same names as those found in @secref["mzlib:class" #:doc '(lib "scribblings/reference/reference.scrbl")].
 
-@defstruct*[(gobject gtype-instance)
-            ([type gi-object?] [pointer cpointer?])
-            #:omit-constructor ]{
-  An instance of @racket[type]. You can call methods, get or set fields, get/set properties, or connect to signals on a GObject.
+@defproc[(gobject? [v any/c]) boolean?]{
+  Returns @racket[#t] if @racket[v] is an instance of a GObject, @racket[#f] otherwise. You can call methods, get or set fields, get/set properties, or connect to signals on a GObject. @racket[gstruct] structs are also GObjects for the purposes of this predicate, since they behave in similar ways with the exception of signals and properties.
 }
 
 @defproc[(is-a? [instance gtype-instance?] [type gi-registered-type?]) boolean?]{
@@ -176,46 +174,46 @@ GObjects like the introspected metadata entries provided by GIR, are transparent
   Accepts a @racket[type] and returns a flat contract that recognizes objects that instantiate it.
 }
 
-@defproc[(gobject-send [obj (or/c gobject? gstruct?)] [method-name symbol?] [argument any/c] ...) any]{
+@defproc[(gobject-send [obj gobject?] [method-name symbol?] [argument any/c] ...) any]{
   Calls the method on @racket[obj] whose name matches @racket[method-name], passing along all given @racket[argument]s.
 }
 
 @defform[(send obj-expr method-id arg ...)
-         #:contracts ([obj-expr (or/c gobject? gstruct?)])]{
-  Evaluates @racket[obj-expr] to obtain a @racket[gobject] or @racket[gstruct], and calls the method with name @racket[method-id] on the object, providing the @racket[arg] results as arguments.
+         #:contracts ([obj-expr gobject?])]{
+  Evaluates @racket[obj-expr] to obtain a @tech{gobject}, and calls the method with name @racket[method-id] on the object, providing the @racket[arg] results as arguments.
 
   Just like the @code{racket/class} equivalent.
 }
 
 @defform[(responds-to? obj-expr method-id)
-         #:contracts ([obj-expr (or/c gobject? gstruct?)])]{
+         #:contracts ([obj-expr gobject?])]{
   Produces @racket[#t] if the result of @racket[obj-expr] or its ancestors defines a method with the name @racket[method-id], @racket[#f] otherwise.
 }
 
-@defproc[(gobject-get-field [field-name symbol?] [obj (or/c gobject? gstruct?)]) any]{
+@defproc[(gobject-get-field [field-name symbol?] [obj gobject?]) any]{
   Extracts the field from @racket[obj] whose name matches @racket[field-name]. Note that @emph{fields} are distinct from GObject @emph{properties}, which are accessed with @racket[gobject-get].
 }
 
 @defform[(get-field id obj-expr)
-         #:contracts ([obj-expr (or/c gobject? gstruct?)])]{
+         #:contracts ([obj-expr gobject?])]{
   Extracts the field with name @racket[id] from the value of @racket[obj-expr].
 }
 
-@defproc[(gobject-set-field! [field-name symbol?] [obj (or/c gobject? gstruct?)] [v any/c]) void?]{
+@defproc[(gobject-set-field! [field-name symbol?] [obj gobject?] [v any/c]) void?]{
   Sets the field from @racket[obj] whose name matches @racket[field-name] to @racket[v].
 }
 
 @defform[(set-field! id obj-expr val-expr)
-         #:contracts ([obj-expr (or/c gobject? gstruct?)])]{
+         #:contracts ([obj-expr gobject?])]{
   Sets the field with name @racket[id] from the value of @racket[obj-expr] to the value of @racket[val-expr].
 }
 
 @defform[(field-bound? id obj-expr)
-         #:contracts ([obj-expr (or/c gobject? gstruct?)])]{
+         #:contracts ([obj-expr gobject?])]{
   Produces @racket[#t] if the result of @racket[obj-expr] has a field with name @racket[id], @racket[#f] otherwise.
 }
 
-@defproc[(method-names [obj (or/c gobject? gstruct?)]) (listof symbol?)]{
+@defproc[(method-names [obj gobject?]) (listof symbol?)]{
   Extracts a list that @racket[obj] recognizes as names of methods it understands. This list might not be exhaustive.
 }
 
@@ -226,7 +224,7 @@ GObjects like the introspected metadata entries provided by GIR, are transparent
 }
 
 @defproc[(gobject-cast [pointer cpointer?] [obj gi-object?]) gobject?]{
-  This will cast @racket[pointer] to @racket[(_gi-object obj)], thereby transforming it into a @racket[gobject].
+  This will cast @racket[pointer] to @racket[(_gi-object obj)], thereby transforming it into a @tech{gobject}.
 }
 
 @defproc[(gobject-get [obj gobject?] [propname string?] [ctype ctype?]) any?]{
@@ -241,4 +239,10 @@ GObjects like the introspected metadata entries provided by GIR, are transparent
 @defproc[(gobject-with-properties [obj gobject?]
           [properties (hash/c symbol? any/c)]) gobject?]{
   Sets a group of properties on @racket[obj] based on a hash and returns @racket[obj]. Note that you cannot explicitly set the @racket[ctype] of the properties with this form.
+}
+
+@defthing[prop:gobject struct-type-property?]{
+  A @tech[#:doc '(lib "scribblings/reference/reference.scrbl")]{structure type property} that causes instances of a structure type to work as GObject instances. The property value must be either a @racket[gtype-instance] or a procedure that accepts the structure instance and returns a @racket[gtype-instance].
+
+  The @racket[prop:gobject] property allows a GObject instance to be transparently wrapped by a structure that may have additional values or properties.
 }

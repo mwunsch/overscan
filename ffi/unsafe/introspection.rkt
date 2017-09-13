@@ -7,7 +7,7 @@
          (rename-in racket/contract [-> ->>])
          (only-in racket/list index-of filter-map make-list)
          (only-in racket/string string-join string-replace)
-         (only-in racket/function curry curryr thunk)
+         (only-in racket/function curry curryr thunk identity)
          (for-syntax racket/base
                      racket/syntax
                      syntax/parse
@@ -50,17 +50,21 @@
                        [struct (gstruct gtype-instance)
                                ((type gi-struct?) (pointer cpointer?))
                                #:omit-constructor]
-                       [struct (gobject gtype-instance)
+                       [gobject?
+                        (->> any/c boolean?)]
+                       [prop:gobject
+                        struct-type-property?]
+                       [struct (gobject-instance gtype-instance)
                                ((type gi-object?) (pointer cpointer?))
                                #:omit-constructor]
                        [gobject-send
-                        (->* ((or/c gobject? gstruct?) symbol?) #:rest (listof any/c) any)]
+                        (->* (gobject? symbol?) #:rest (listof any/c) any)]
                        [gobject-get-field
-                        (->> symbol? (or/c gobject? gstruct?) any)]
+                        (->> symbol? gobject? any)]
                        [gobject-set-field!
-                        (->> symbol? (or/c gobject? gstruct?) any/c void?)]
+                        (->> symbol? gobject? any/c void?)]
                        [method-names
-                        (->> (or/c gobject? gstruct?) (listof symbol?))]
+                        (->> gobject? (listof symbol?))]
                        [describe-method
                         (->> gobject? symbol? string?)]
                        [connect
@@ -646,12 +650,6 @@
           (apply method arguments)
           (error "o no method not found")))))
 
-(struct gstruct gtype-instance ()
-  #:property prop:procedure
-  (lambda (instance method-name . arguments)
-    (let ([base (gtype-instance-type instance)])
-      (apply base method-name (cons instance arguments)))))
-
 (define (_gi-struct structure)
   (let ([name (gi-base-sym structure)])
     (_cpointer/null name _pointer
@@ -824,7 +822,27 @@
                             [rest (apply values rest)]))
         (error "o no method not found"))))
 
-(struct gobject gtype-instance ())
+(define-values (prop:gobject gobject? gobject-ref)
+  (make-struct-type-property 'gobject
+                             (lambda (v si)
+                               (cond
+                                 [(gtype-instance? v) (lambda (x) v)]
+                                 [(and (procedure? v)
+                                       (procedure-arity-includes? v 1)) v]
+                                 [else (raise-argument-error 'guard-for-prop:gobject
+                                                             "(or/c gtype-instance? (any/c . -> . gtype-instance?))"
+                                                             v)]))))
+
+(struct gobject-instance gtype-instance ()
+  #:reflection-name 'gobject
+  #:property prop:gobject identity)
+
+(struct gstruct gtype-instance ()
+  #:property prop:procedure
+  (lambda (instance method-name . arguments)
+    (let ([base (gtype-instance-type instance)])
+      (apply base method-name (cons instance arguments))))
+  #:property prop:gobject identity)
 
 (define (gi-object-lookup-method obj method-name)
   (let ([method (gi-object-find-method obj method-name)]
@@ -833,43 +851,48 @@
         (and parent
              (gi-object-lookup-method parent method-name)))))
 
-(define (method-names object)
-  (let ([base (gtype-instance-type object)])
+(define (method-names obj)
+  (let ([base (gtype-instance-type ((gobject-ref obj) obj))])
     (map gi-base-sym (gi-registered-type-methods base))))
 
-(define (describe-method instance method-name)
-  (let* ([base (gtype-instance-type instance)]
+(define (describe-method obj method-name)
+  (let* ([instance ((gobject-ref obj) obj)]
+         [base (gtype-instance-type instance)]
          [method (gi-object-lookup-method base method-name)])
     (and method
          (describe-gi-function method))))
 
 (define (gobject-has-field? obj field-name)
-  (let* ([base (gtype-instance-type obj)]
+  (let* ([instance ((gobject-ref obj) obj)]
+         [base (gtype-instance-type instance)]
          [fields (map gi-base-sym (gi-registered-type-fields base))])
     (and (memq field-name fields)
          #t)))
 
 (define (gobject-send obj method-name . arguments)
-  (let ([base (gtype-instance-type obj)]
-        [ptr (gtype-instance-pointer obj)])
+  (let* ([instance ((gobject-ref obj) obj)]
+         [base (gtype-instance-type instance)]
+         [ptr (gtype-instance-pointer instance)])
     (apply base method-name (cons ptr arguments))))
 
 (define (gobject-get-field field-name obj)
-  (let* ([base (gtype-instance-type obj)]
-         [ptr (gtype-instance-pointer obj)]
+  (let* ([instance ((gobject-ref obj) obj)]
+         [base (gtype-instance-type instance)]
+         [ptr (gtype-instance-pointer instance)]
          [field (gi-registered-type-find-field base field-name)])
     (gi-field-ref field ptr)))
 
 (define (gobject-set-field! field-name obj v)
-  (let* ([base (gtype-instance-type obj)]
-         [ptr (gtype-instance-pointer obj)]
+  (let* ([instance ((gobject-ref obj) obj)]
+         [base (gtype-instance-type instance)]
+         [ptr (gtype-instance-pointer instance)]
          [field (gi-registered-type-find-field base field-name)])
     (gi-field-set! field ptr v)))
 
 (define-syntax (send stx)
   (syntax-parse stx
     [(_ obj method-id:id args:expr ...)
-     #:declare obj (expr/c #'(or/c gobject? gstruct?)
+     #:declare obj (expr/c #'gobject?
                            #:name "receiver")
      (with-syntax ([method-name (string->symbol (string-replace
                                                  (symbol->string (syntax-e #'method-id))
@@ -879,19 +902,19 @@
 (define-syntax (responds-to? stx)
   (syntax-parse stx
     [(_ obj method-id:id)
-     #:declare obj (expr/c #'(or/c gobject? gstruct?)
+     #:declare obj (expr/c #'gobject?
                            #:name "receiver")
      (with-syntax ([method-name (string->symbol (string-replace
                                                  (symbol->string (syntax-e #'method-id))
                                                  "-" "_"))])
-       #'(and (gi-object-lookup-method (gtype-instance-type obj.c)
+       #'(and (gi-object-lookup-method (gtype-instance-type ((gobject-ref obj.c) obj.c))
                                        'method-name)
               #t))]))
 
 (define-syntax (get-field stx)
   (syntax-parse stx
     [(_ field-id:id obj)
-     #:declare obj (expr/c #'(or/c gobject? gstruct?)
+     #:declare obj (expr/c #'gobject?
                            #:name "instance")
      (with-syntax ([field-name (string->symbol (string-replace
                                                  (symbol->string (syntax-e #'field-id))
@@ -901,7 +924,7 @@
 (define-syntax (set-field! stx)
   (syntax-parse stx
     [(_ field-id:id obj val:expr)
-     #:declare obj (expr/c #'(or/c gobject? gstruct?)
+     #:declare obj (expr/c #'gobject?
                            #:name "instance")
      (with-syntax ([field-name (string->symbol (string-replace
                                                  (symbol->string (syntax-e #'field-id))
@@ -922,9 +945,9 @@
                     values
                     (lambda (ptr)
                       (and ptr
-                           (gobject obj (if (gtype-instance? ptr)
-                                            (gtype-instance-pointer ptr)
-                                            ptr)))))))
+                           (gobject-instance obj (if (gtype-instance? ptr)
+                                                     (gtype-instance-pointer ptr)
+                                                   ptr)))))))
 
 (define-gobject gobject-unref! (_fun _pointer -> _void)
   #:wrap (deallocator)
@@ -947,8 +970,8 @@
   (let* ([_value (cond
                    [(ctype? ctype) ctype]
                    [((listof symbol?) ctype) (_enum ctype)]
-                   [(gobject? value) (_gi-object (gtype-instance-type value))]
                    [(gstruct? value) (_gi-struct (gtype-instance-type value))]
+                   [(gobject? value) (_gi-object (gtype-instance-type ((gobject-ref value) value)))]
                    [(boolean? value) _bool]
                    [(string? value) _string]
                    [(exact-integer? value) _int]
@@ -1100,10 +1123,11 @@
 (define-gobject signal-name (_fun _int -> _symbol)
   #:c-id g_signal_name)
 
-(define (connect object signal-name handler
+(define (connect obj signal-name handler
                  #:data [data #f]
                  #:cast [_user-data #f])
-  (let* ([base (gtype-instance-type object)]
+  (let* ([object ((gobject-ref obj) obj)]
+         [base (gtype-instance-type object)]
          [ptr (gtype-instance-pointer object)]
          [signal (or (gi-object-find-signal base signal-name)
                      (error "signal not found"))]
@@ -1113,7 +1137,7 @@
                                       [(gi-object? _user-data)
                                        (_gi-object _user-data)]
                                       [(gobject? data)
-                                       (_gi-object (gtype-instance-type data))]
+                                       (_gi-object (gtype-instance-type ((gobject-ref data) data)))]
                                       [else _pointer]))])
     (define signal-connect-data
       (get-ffi-obj "g_signal_connect_data" libgobject
