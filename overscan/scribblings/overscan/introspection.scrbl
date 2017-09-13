@@ -2,6 +2,7 @@
 @require[@for-label[ffi/unsafe/introspection
                     racket/base
                     racket/contract
+                    (only-in racket/class object%)
                     (except-in ffi/unsafe ->)]]
 
 @title[#:tag "gobject-introspection"]{GObject Introspection}
@@ -245,4 +246,14 @@ A @deftech{gobject} instance, like the introspected metadata entries provided by
   A @tech[#:doc '(lib "scribblings/reference/reference.scrbl")]{structure type property} that causes instances of a structure type to work as GObject instances. The property value must be either a @racket[gtype-instance] or a procedure that accepts the structure instance and returns a @racket[gtype-instance].
 
   The @racket[prop:gobject] property allows a GObject instance to be transparently wrapped by a structure that may have additional values or properties.
+}
+
+@definterface[gobject<%> ()]{
+  A @racket[gobject<%>] object encapsulates a @tech{gobject} pointer. It looks for a field called @racket['pointer] and will use that as a value for @racket[prop:gobject], so that objects implementing this interface return @racket[#t] to @racket[gobject?] and @racket[cpointer?].
+}
+
+@defclass[gobject% object% (gobject<%>)]{
+  Instances of this class return @racket[#t] to @racket[gobject?].
+
+  @defconstructor[([pointer gtype-instance?])]
 }
