@@ -4,6 +4,7 @@
          ffi/unsafe/define
          ffi/unsafe/alloc
          ffi/cvector
+         racket/class
          (rename-in racket/contract [-> ->>])
          (only-in racket/list index-of filter-map make-list)
          (only-in racket/string string-join string-replace)
@@ -92,10 +93,13 @@
                        [gi-repository-find-name
                         (->> gi-repository? symbol? gi-base?)]
                        [gi-repository->ffi-lib
-                        (->> gi-repository? ffi-lib?)])
+                        (->> gi-repository? ffi-lib?)]
+                       [gobject%
+                        (class/c (init-field [pointer gtype-instance?]))])
          send get-field set-field! field-bound? responds-to?
          describe-gi-function
-         gir-member/c gi-repository-member/c)
+         gir-member/c gi-repository-member/c
+         gobject<%>)
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
 (define libgobject (ffi-lib "libgobject-2.0"))
@@ -1210,3 +1214,12 @@
 
 (define (introspection namespace [version #f])
   (gir-require namespace version))
+
+(define gobject<%>
+  (interface* () ([prop:gobject (lambda (obj) (dynamic-get-field 'pointer obj))]
+                  [prop:cpointer (lambda (obj) (gtype-instance-pointer (dynamic-get-field 'pointer obj)))])))
+
+(define gobject%
+  (class* object% (gobject<%>)
+          (init-field pointer)
+          (super-new)))
