@@ -4,11 +4,15 @@
          ffi/unsafe/define
          ffi/unsafe/alloc
          ffi/cvector
-         racket/class
          (rename-in racket/contract [-> ->>])
-         (only-in racket/list index-of filter-map make-list)
-         (only-in racket/string string-join string-replace)
-         (only-in racket/function curry curryr thunk identity)
+         (only-in racket/class
+                  interface* class* object% dynamic-get-field init-field super-new class/c)
+         (only-in racket/list
+                  index-of filter-map make-list)
+         (only-in racket/string
+                  string-join string-replace)
+         (only-in racket/function
+                  curry curryr thunk identity)
          (for-syntax racket/base
                      racket/syntax
                      syntax/parse
