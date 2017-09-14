@@ -2,7 +2,7 @@
 @require[@for-label[ffi/unsafe/introspection
                     racket/base
                     racket/contract
-                    (only-in racket/class object%)
+                    (only-in racket/class object% [send class/send])
                     (except-in ffi/unsafe ->)]]
 
 @title[#:tag "gobject-introspection"]{GObject Introspection}
@@ -23,9 +23,9 @@ In this case of a typical "Hello, world" style example with GStreamer, that woul
 
 @racketblock[
   (define gst (introspection 'Gst))
-  (define version (gst 'version_string))
+  (define gst-version (gst 'version_string))
   (printf "This program is linked against ~a"
-          (version))
+          (gst-version))
 ]
 
 This will result in the string @tt{"This program is linked against GStreamer 1.10.4"} being printed, or whatever version of GStreamer is available.
@@ -44,6 +44,7 @@ GIR's @hyperlink["https://developer.gnome.org/gi/stable/GIRepository.html"]{@tt{
 
   @racketinput[
     (define gst (introspection 'Gst))
+    @#,racketresult[#,(procedure "gi-repository")]
   ]
 
   This is the only provided mechanism to construct a @racket[gi-repository].
@@ -65,6 +66,7 @@ GIR's @hyperlink["https://developer.gnome.org/gi/stable/GIRepository.html"]{@tt{
 
       @racketinput[
         (gst 'version)
+        @#,racketresult[#,(procedure "gi-function")]
       ]
 
       This will return an introspected foreign binding to the @hyperlink["https://gstreamer.freedesktop.org/data/doc/gstreamer/head/gstreamer/html/gstreamer-Gst.html#gst-version"]{@tt{gst_version()}} C function, represented as a @racket[gi-function?].
@@ -161,7 +163,7 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
 
 @section[#:tag "gobject"]{GObjects}
 
-A @deftech{gobject} instance, like the introspected metadata entries provided by GIR, is a transparent pointer with additional utilities to be called as an object within Racket. GObjects behave like Racket objects, with the exception that they aren't backed by @emph{classes} in the @code{racket/class} sense, but instead are derived from the introspected metadata. To make using GObjects more like using @code{racket/class} objects, the library provides several functions and syntax with the same names as those found in @secref["mzlib:class" #:doc '(lib "scribblings/reference/reference.scrbl")].
+A @deftech{gobject} instance, like the introspected metadata entries provided by GIR, is a transparent pointer with additional utilities to be called as an object within Racket. GObjects behave like Racket objects, with the exception that they aren't backed by @emph{classes} in the @racketmodname[racket/class] sense, but instead are derived from the introspected metadata. To make using GObjects more like using @racketmodname[racket/class] objects, the library provides several functions and syntax with the same names as those found in @secref["mzlib:class" #:doc '(lib "scribblings/reference/reference.scrbl")].
 
 @defproc[(gobject? [v any/c]) boolean?]{
   Returns @racket[#t] if @racket[v] is an instance of a GObject, @racket[#f] otherwise. You can call methods, get or set fields, get/set properties, or connect to signals on a GObject. @racket[gstruct] structs are also GObjects for the purposes of this predicate, since they behave in similar ways with the exception of signals and properties.
@@ -183,7 +185,7 @@ A @deftech{gobject} instance, like the introspected metadata entries provided by
          #:contracts ([obj-expr gobject?])]{
   Evaluates @racket[obj-expr] to obtain a @tech{gobject}, and calls the method with name @racket[method-id] on the object, providing the @racket[arg] results as arguments.
 
-  Just like the @code{racket/class} equivalent.
+  See also: @racketlink[class/send #:style 'tt]{send} in the @racketmodname[racket/class] library.
 }
 
 @defform[(responds-to? obj-expr method-id)
