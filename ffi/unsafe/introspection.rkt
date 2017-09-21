@@ -6,7 +6,8 @@
          ffi/cvector
          (rename-in racket/contract [-> ->>])
          (only-in racket/class
-                  interface* class* object% dynamic-get-field init-field super-new class/c)
+                  interface* class* object% init-field inherit-field super-new class/c
+                  mixin define/public [get-field class/get-field])
          (only-in racket/list
                   index-of filter-map make-list)
          (only-in racket/string
@@ -103,7 +104,8 @@
          send get-field set-field! field-bound? responds-to?
          describe-gi-function
          gir-member/c gi-repository-member/c
-         gobject<%>)
+         gobject<%>
+         define-gobject-mixin)
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
 (define libgobject (ffi-lib "libgobject-2.0"))
@@ -1220,10 +1222,26 @@
   (gir-require namespace version))
 
 (define gobject<%>
-  (interface* () ([prop:gobject (lambda (obj) (dynamic-get-field 'pointer obj))]
-                  [prop:cpointer (lambda (obj) (gtype-instance-pointer (dynamic-get-field 'pointer obj)))])))
+  (interface* () ([prop:gobject (lambda (obj) (class/get-field pointer obj))]
+                  [prop:cpointer (lambda (obj) (gtype-instance-pointer (class/get-field pointer obj)))])))
 
 (define gobject%
   (class* object% (gobject<%>)
           (init-field pointer)
           (super-new)))
+
+(define-syntax (define-gobject-mixin stx)
+  (syntax-parse stx
+    [(_ name:id (~alt method:id (renamed:id internal-method)) ...)
+     #:declare internal-method (expr/c #'symbol?)
+     #'(define name
+         (mixin (gobject<%>) (gobject<%>)
+           (super-new)
+           (inherit-field pointer)
+           (define/public (method . args)
+             (let ([internal-name (string->symbol (string-replace
+                                                   (symbol->string 'method)
+                                                   "-" "_"))])
+               (apply gobject-send pointer internal-name args))) ...
+           (define/public (renamed . args)
+             (apply gobject-send pointer internal-method args)) ...))]))

@@ -34,19 +34,22 @@
   (let ([el (gst-element-factory 'make factory-name name)])
     (new element% [pointer el])))
 
+(define-gobject-mixin element-mixin get-name)
+
 (define element%
-  (class gobject%
-    (super-new)
-    (inherit-field pointer)
-    (define/public (get-factory)
-      (let ([fac (gobject-send pointer 'get_factory)])
-        (new element-factory% [pointer fac])))
-    (define/public (get-num-src-pads)
-      (gobject-get-field 'numsrcpads pointer))
-    (define/public (get-num-sink-pads)
-      (gobject-get-field 'numsinkpads pointer))
-    (define/public (sink?)
-      (and (zero? (get-num-src-pads))
-           (positive? (get-num-sink-pads))))
-    (define/public (src?)
-      (not (sink?)))))
+  (element-mixin
+   (class gobject%
+          (super-new)
+          (inherit-field pointer)
+          (define/public (get-factory)
+            (let ([fac (gobject-send pointer 'get_factory)])
+              (new element-factory% [pointer fac])))
+          (define/public (get-num-src-pads)
+            (gobject-get-field 'numsrcpads pointer))
+          (define/public (get-num-sink-pads)
+            (gobject-get-field 'numsinkpads pointer))
+          (define/public (sink?)
+            (and (zero? (get-num-src-pads))
+                 (positive? (get-num-sink-pads))))
+          (define/public (src?)
+            (not (sink?))))))
