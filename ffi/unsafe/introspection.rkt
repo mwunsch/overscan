@@ -105,7 +105,7 @@
          describe-gi-function
          gir-member/c gi-repository-member/c
          gobject<%>
-         define-gobject-mixin)
+         make-gobject-delegate)
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
 (define libgobject (ffi-lib "libgobject-2.0"))
@@ -1230,18 +1230,17 @@
           (init-field pointer)
           (super-new)))
 
-(define-syntax (define-gobject-mixin stx)
+(define-syntax (make-gobject-delegate stx)
   (syntax-parse stx
-    [(_ name:id (~alt method:id (renamed:id internal-method)) ...)
+    [(_ (~alt method:id (renamed:id internal-method)) ...)
      #:declare internal-method (expr/c #'symbol?)
-     #'(define name
-         (mixin (gobject<%>) (gobject<%>)
-           (super-new)
-           (inherit-field pointer)
-           (define/public (method . args)
-             (let ([internal-name (string->symbol (string-replace
-                                                   (symbol->string 'method)
-                                                   "-" "_"))])
-               (apply gobject-send pointer internal-name args))) ...
-           (define/public (renamed . args)
-             (apply gobject-send pointer internal-method args)) ...))]))
+     #'(mixin (gobject<%>) (gobject<%>)
+         (super-new)
+         (inherit-field pointer)
+         (define/public (method . args)
+           (let ([internal-name (string->symbol (string-replace
+                                                 (symbol->string 'method)
+                                                 "-" "_"))])
+             (apply gobject-send pointer internal-name args))) ...
+         (define/public (renamed . args)
+           (apply gobject-send pointer internal-method args)) ...)]))
