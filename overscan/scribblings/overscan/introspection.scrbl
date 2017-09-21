@@ -2,7 +2,7 @@
 @require[@for-label[ffi/unsafe/introspection
                     racket/base
                     racket/contract
-                    (only-in racket/class object% [send class/send])
+                    (only-in racket/class object% [send class/send] mixin inherit-field super-new define/public)
                     (except-in ffi/unsafe ->)]]
 
 @title[#:tag "gobject-introspection"]{GObject Introspection}
@@ -251,11 +251,35 @@ A @deftech{gobject} instance, like the introspected metadata entries provided by
 }
 
 @definterface[gobject<%> ()]{
-  A @racket[gobject<%>] object encapsulates a @tech{gobject} pointer. It looks for a field called @racket['pointer] and will use that as a value for @racket[prop:gobject], so that objects implementing this interface return @racket[#t] to @racket[gobject?] and @racket[cpointer?].
+  A @racket[gobject<%>] object encapsulates a @tech{gobject} pointer. It looks for a field called @racketid[pointer] and will use that as a value for @racket[prop:gobject], so that objects implementing this interface return @racket[#t] to @racket[gobject?] and @racket[cpointer?].
 }
 
 @defclass[gobject% object% (gobject<%>)]{
   Instances of this class return @racket[#t] to @racket[gobject?].
 
   @defconstructor[([pointer gtype-instance?])]
+}
+
+@defform[(make-gobject-delegate method-decl ...)
+         #:grammar [(method-decl id
+                                 (code:line (id internal-method)))]
+         #:contracts ([internal-method symbol?])]{
+  Create a @racket[mixin] that defines a class extension that implements @racket[gobject<%>]. The specified @racket[id]s will be defined as public methods that delegate to the @racketid[pointer]. When @racket[internal-method] is included, the expression is assumed to result in a symbol that will be used to look up the method in GIR. When no @racket[internal-method] is provided, the method name used by GIR will be the @racket[id] with dashes replaced with underscores.
+
+  e.g.
+  @racketblock[
+    (make-gobject-delegate get-name get-factory [static-pad 'get_static_pad])
+  ]
+  is equivalent to:
+  @racketblock[
+    (mixin (gobject<%>) (gobject<%>)
+      (super-new)
+      (inherit-field pointer)
+      (define/public (get-name . args)
+        (apply gobject-send pointer 'get_name args))
+      (define/public (get-factory . args)
+        (apply gobject-send pointer 'get_factory args))
+      (define/public (static-pad . args)
+        (apply gobject-send pointer 'get_static_pad args)))
+  ]
 }
