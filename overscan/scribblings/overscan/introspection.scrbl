@@ -98,6 +98,49 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
 @defstruct*[gi-base ([info cpointer?])
             #:omit-constructor ]{
   The common base struct of all GIR metadata entries. Instances of this struct have the @racket[prop:cpointer] property, and can be used transparently as @racket[cpointers] to their respective entries. This struct and its descendants are constructed by looking up a symbol on a @racket[gi-repository].
+
+  When a GIR metadata entry is located it will usually be a subtype of @racket[gi-base]. Most of those subtypes implement @racket[prop:procedure] and are designed to be called on return to produce meaningful values.
+
+  The typical subtypes are:
+
+  @nested[#:style 'inset]{
+    @defproc[#:kind "gi-base"
+             (gi-function [arg any/c] ...) any]{
+      An introspected C function. Call this as you would any other Racket procedure. C functions have a tendency to mutate call-by-reference pointers, and when that is the case calling a @racket[gi-function] returns multiple values. The first return value is always the return value of the function.
+    }
+  }
+
+  @nested[#:style 'inset]{
+    @defproc[#:kind "gi-base"
+             (gi-constant) any/c]{
+      Calling a @racket[gi-constant] as a procedure returns its value.
+    }
+  }
+
+  @nested[#:style 'inset]{
+    @defproc[#:kind "gi-registered-type"
+             (gi-struct [method-name symbol?] [arg any/c] ...) any]{
+
+      The first argument to a @racket[gi-struct] is the name of a method, with subsequent arguments passed in to that method call. This procedure form is mainly used for calling factory style methods, and more useful for the similar @racket[gi-object]. Usually, you'll be working with instances of this type, @racket[gstruct]s.
+    }
+  }
+
+  @nested[#:style 'inset]{
+    @defproc[#:kind "gi-registered-type"
+             (gi-object [method-name symbol?] [arg any/c] ...) any]{
+
+      Like @racket[gi-struct], calling a @racket[gi-object] as a procedure will accept a method name and subsequent arguments. This is the preferred form for calling constructors that will return @tech{gobject}s.
+    }
+  }
+
+  @nested[#:style 'inset]{
+    @defthing[#:kind "gi-registered-type"
+             gi-enum gi-enum?]{
+
+      A @racket[gi-enum] represents an enumeration of values and, unlike other @racket[gi-base] subtypes, is not represented as a procedure. The main use case is to transform it into some other Racket representation, i.e. with @racket[gi-enum->list].
+    }
+  }
+
 }
 
 @defproc[(gi-base-name [info gi-base?]) symbol?]{
