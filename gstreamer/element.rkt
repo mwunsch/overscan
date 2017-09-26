@@ -40,7 +40,16 @@
     (new element% [pointer el])))
 
 (define element-mixin
-  (make-gobject-delegate get-factory))
+  (make-gobject-delegate get-compatible-pad
+                         get-request-pad
+                         get-static-pad
+                         link
+                         unlink
+                         link-pads
+                         link-pads-filtered
+                         link-filtered
+                         get-factory
+                         set-state))
 
 (define element%
   (class (element-mixin gst-object%)
