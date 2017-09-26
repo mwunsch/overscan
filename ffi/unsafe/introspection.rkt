@@ -6,8 +6,9 @@
          ffi/cvector
          (rename-in racket/contract [-> ->>])
          (only-in racket/class
-                  interface* class* object% init-field inherit-field super-new class/c
-                  mixin define/public [get-field class/get-field])
+                  interface* class* object% init-field inherit-field super-new
+                  mixin define/public [get-field class/get-field]
+                  class/c implementation?/c)
          (only-in racket/list
                   index-of filter-map make-list)
          (only-in racket/string
@@ -100,7 +101,8 @@
                        [gi-repository->ffi-lib
                         (->> gi-repository? ffi-lib?)]
                        [gobject%
-                        (class/c (init-field [pointer gtype-instance?]))])
+                        (and/c (implementation?/c gobject<%>)
+                               (class/c (init-field [pointer gtype-instance?])))])
          send get-field set-field! field-bound? responds-to?
          describe-gi-function
          gir-member/c gi-repository-member/c
