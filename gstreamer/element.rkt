@@ -10,6 +10,10 @@
                         (subclass?/c gst-object%)]
                        [element%
                         (subclass?/c gst-object%)]
+                       [pad%
+                        (subclass?/c gst-object%)]
+                       [ghost-pad%
+                        (subclass?/c pad%)]
                        [element-factory%-find
                         (-> string? (is-a?/c element-factory%))]
                        [element-factory%-make
@@ -55,6 +59,10 @@
   (class (element-mixin gst-object%)
     (super-new)
     (inherit-field pointer)
+    (define/override (get-static-pad name)
+      (let ([static-pad (super get-static-pad name)])
+        (and static-pad
+             (new pad% [pointer static-pad]))))
     (define/override (get-factory)
       (new element-factory% [pointer (super get-factory)]))
     (define/public (get-num-src-pads)
@@ -66,3 +74,27 @@
            (positive? (get-num-sink-pads))))
     (define/public (src?)
       (not (sink?)))))
+
+(define pad-mixin
+  (make-gobject-delegate get-direction
+                         get-parent-element
+                         get-pad-template
+                         link
+                         link-maybe-ghosting
+                         unlink
+                         [linked? 'is_linked]
+                         [can-link? 'can_link]
+                         get-allowed-caps
+                         get-current-caps
+                         get-peer
+                         [active? 'is_active]))
+
+(define pad%
+  (class (pad-mixin gst-object%)
+    (super-new)
+    (inherit-field pointer)))
+
+(define ghost-pad%
+  (class pad%
+    (super-new)
+    (inherit-field pointer)))
