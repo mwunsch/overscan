@@ -7,7 +7,7 @@
          "gst.rkt")
 
 (provide (contract-out [element-factory%
-                        (subclass?/c gst-object%)]
+                        element-factory%/c]
                        [element%
                         (subclass?/c gst-object%)]
                        [pad%
@@ -15,11 +15,13 @@
                        [ghost-pad%
                         (subclass?/c pad%)]
                        [element-factory%-find
-                        (-> string? (is-a?/c element-factory%))]
+                        (-> string? (or/c false/c
+                                          (instanceof/c element-factory%/c)))]
                        [element-factory%-make
                         (->* (string?)
                              ((or/c string? false/c))
-                             (is-a?/c element%))]))
+                             (or/c false/c
+                                   (is-a?/c element%)))]))
 
 (define gst-element-factory (gst 'ElementFactory))
 
@@ -37,11 +39,13 @@
 
 (define (element-factory%-find name)
   (let ([factory (gst-element-factory 'find name)])
-    (new element-factory% [pointer factory])))
+    (and factory
+         (new element-factory% [pointer factory]))))
 
 (define (element-factory%-make factory-name [name #f])
   (let ([el (gst-element-factory 'make factory-name name)])
-    (new element% [pointer el])))
+    (and el
+         (new element% [pointer el]))))
 
 (define element-mixin
   (make-gobject-delegate get-compatible-pad
@@ -64,7 +68,7 @@
         (and static-pad
              (new pad% [pointer static-pad]))))
     (define/override (get-factory)
-      (new element-factory% [pointer (super get-factory)]))
+      (new element-factory+c% [pointer (super get-factory)]))
     (define/public (get-num-src-pads)
       (gobject-get-field 'numsrcpads pointer))
     (define/public (get-num-sink-pads)
@@ -98,3 +102,14 @@
   (class pad%
     (super-new)
     (inherit-field pointer)))
+
+(define element-factory%/c
+  (class/c
+   [create
+    (->*m () ((or/c string? false/c)) (is-a?/c element%))]
+   [get-metadata
+    (->m (hash/c symbol? any/c))]))
+
+(define/contract element-factory+c%
+  element-factory%/c
+  element-factory%)
