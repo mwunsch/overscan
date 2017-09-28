@@ -9,21 +9,23 @@
 (provide (contract-out [element-factory%
                         element-factory%/c]
                        [element%
-                        (subclass?/c gst-object%)]
+                        element%/c]
+                       [element-link-many
+                        (-> (is-a?/c element%)
+                            (is-a?/c element%)
+                            (is-a?/c element%) ... boolean?)]
                        [pad%
-                        (subclass?/c gst-object%)]
+                        pad%/c]
                        [ghost-pad%
-                        (subclass?/c pad%)]
-                       [element-factory%-find
-                        (-> string? (or/c false/c
-                                          (instanceof/c element-factory%/c)))]
-                       [element-factory%-make
-                        (->* (string?)
-                             ((or/c string? false/c))
-                             (or/c false/c
-                                   (is-a?/c element%)))]))
-
-(define gst-element-factory (gst 'ElementFactory))
+                        (and/c (subclass?/c pad%)
+                               (class/c
+                                [get-target
+                                 (->m (or/c (instanceof/c pad%/c)
+                                            false/c))]
+                                [set-target
+                                 (->m (is-a?/c pad%) boolean?)]))]
+                       [pad-direction
+                        gi-enum?]))
 
 (define element-factory%
   (class gst-object%
@@ -36,16 +38,6 @@
            (for/hash ([key (in-vector (gobject-send pointer 'get_metadata_keys))])
                      (values (string->symbol key)
                              (gobject-send pointer 'get_metadata key))))))
-
-(define (element-factory%-find name)
-  (let ([factory (gst-element-factory 'find name)])
-    (and factory
-         (new element-factory% [pointer factory]))))
-
-(define (element-factory%-make factory-name [name #f])
-  (let ([el (gst-element-factory 'make factory-name name)])
-    (and el
-         (new element% [pointer el]))))
 
 (define element-mixin
   (make-gobject-delegate get-compatible-pad
@@ -68,7 +60,7 @@
         (and static-pad
              (new pad% [pointer static-pad]))))
     (define/override (get-factory)
-      (new element-factory+c% [pointer (super get-factory)]))
+      (new element-factory% [pointer (super get-factory)]))
     (define/public (get-num-src-pads)
       (gobject-get-field 'numsrcpads pointer))
     (define/public (get-num-sink-pads)
@@ -78,6 +70,12 @@
            (positive? (get-num-sink-pads))))
     (define/public (src?)
       (not (sink?)))))
+
+(define (element-link-many el1 el2 . els)
+  (and (send el1 link el2)
+       (if (pair? els)
+           (apply element-link-many el2 (car els) (cdr els))
+           #t)))
 
 (define pad-mixin
   (make-gobject-delegate get-direction
@@ -96,20 +94,73 @@
 (define pad%
   (class (pad-mixin gst-object%)
     (super-new)
-    (inherit-field pointer)))
+    (inherit-field pointer)
+    (define/override (get-parent-element)
+      (new element% [pointer (super get-parent-element)]))))
+
+(define ghost-pad-mixin
+  (make-gobject-delegate set-target
+                         get-target))
 
 (define ghost-pad%
-  (class pad%
+  (class (ghost-pad-mixin pad%)
     (super-new)
-    (inherit-field pointer)))
+    (inherit-field pointer)
+    (define/override (get-target)
+      (let ([target (super get-target)])
+        (and target
+             (new pad% [pointer target]))))))
+
+(define pad-link-return
+  (gst 'PadLinkReturn))
+
+(define pad-direction
+  (gst 'PadDirection))
+
+(define pad%/c
+  (class/c
+   get-direction
+   [get-parent-element
+    (->m (is-a?/c element%))]
+   get-pad-template
+   [link
+    (->m (is-a?/c pad%) (gi-enum-value/c pad-link-return))]
+   [link-maybe-ghosting
+    (->m (is-a?/c pad%) boolean?)]
+   [unlink
+    (->m (is-a?/c pad%) boolean?)]
+   [linked?
+    (->m boolean?)]
+   [can-link?
+    (->m (is-a?/c pad%) boolean?)]
+   get-allowed-caps
+   get-current-caps
+   [get-peer
+    (->m (or/c (is-a?/c pad%) false/c))]
+   [active?
+    (->m boolean?)]))
+
+(define element%/c
+  (class/c
+   get-compatible-pad
+   get-request-pad
+   [get-static-pad
+    (->m string? (instanceof/c pad%/c))]
+   [link
+    (->m (is-a?/c element%) boolean?)]
+   [unlink
+    (->m (is-a?/c element%) void?)]
+   [link-pads
+    (->m (or/c string? false/c) (is-a?/c element%) (or/c string? false/c) boolean?)]
+   link-pads-filtered
+   link-filtered
+   [get-factory
+    (->m (is-a?/c element-factory%))]
+   set-state))
 
 (define element-factory%/c
   (class/c
    [create
-    (->*m () ((or/c string? false/c)) (is-a?/c element%))]
+    (->*m () ((or/c string? false/c)) (instanceof/c element%/c))]
    [get-metadata
     (->m (hash/c symbol? any/c))]))
-
-(define/contract element-factory+c%
-  element-factory%/c
-  element-factory%)

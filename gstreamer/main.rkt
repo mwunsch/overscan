@@ -1,33 +1,65 @@
 #lang racket/base
-
-(require ffi/unsafe
-         ffi/unsafe/introspection
+(require (except-in ffi/unsafe
+                    ->)
+         (except-in ffi/unsafe/introspection
+                    send get-field set-field! field-bound? is-a? is-a?/c)
          (only-in racket/list first last)
+         racket/class
+         racket/contract
          "gst.rkt"
-         "bus.rkt"
-         "caps.rkt"
          "element.rkt")
 
 (provide (all-from-out "gst.rkt"
-                       "bus.rkt"
-                       "caps.rkt"
                        "element.rkt")
-         pipeline%
-         pad%
-         bin%
-         event%
          bin-add-many
-         ghost-pad%
          seconds
          element-link-many
          _input-selector-sync-mode
          _video-test-src-pattern
          _audio-test-src-wave
-         gst-compose)
+         gst-compose
+         (contract-out [element-factory%-find
+                        (-> string? (or/c false/c
+                                          (is-a?/c element-factory%)))]
+                       [element-factory%-make
+                        (->* (string?)
+                             ((or/c string? false/c))
+                             (or/c false/c
+                                   (is-a?/c element%)))]
+                       [ghost-pad%-new
+                        (-> (or/c string? false/c) (is-a?/c pad%)
+                            (or/c (is-a?/c ghost-pad%)
+                                  false/c))]
+                       [ghost-pad%-new-no-target
+                        (-> (or/c string? false/c) (gi-enum-value/c pad-direction)
+                            (or/c (is-a?/c ghost-pad%)
+                                  false/c))]))
+
+(define gst-element-factory (gst 'ElementFactory))
+
+(define (element-factory%-find name)
+  (let ([factory (gst-element-factory 'find name)])
+    (and factory
+         (new element-factory% [pointer factory]))))
+
+(define (element-factory%-make factory-name [name #f])
+  (let ([el (gst-element-factory 'make factory-name name)])
+    (and el
+         (new element% [pointer el]))))
+
+(define gst-ghost-pad (gst 'GhostPad))
+
+(define (ghost-pad%-new name target)
+  (let ([ghost (gst-ghost-pad 'new name target)])
+    (and ghost
+         (new ghost-pad% [pointer ghost]))))
+
+(define (ghost-pad%-new-no-target name dir)
+  (let ([ghost (gst-ghost-pad 'new_no_target name dir)])
+    (and ghost
+         (new ghost-pad% [pointer ghost]))))
 
 (define pipeline% (gst 'Pipeline))
-
-(define pad% (gst 'Pad))
 
 (define bin% (gst 'Bin))
 
@@ -35,22 +67,12 @@
 
 (define second ((gst 'SECOND)))
 
-(define ghost-pad% (gst 'GhostPad))
-
 (define (seconds num)
   (* num second))
 
 (define (bin-add-many bin . elements)
   (for/and ([element elements])
     (send bin add element)))
-
-(define (element-link-many . elements)
-  (let link ([head (car elements)]
-             [tail (cdr elements)])
-    (if (pair? tail)
-        (and (send head link (car tail))
-             (link (car tail) (cdr tail)))
-        #t)))
 
 (define _input-selector-sync-mode (_enum '(active-segment clock)))
 
