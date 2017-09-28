@@ -37,6 +37,8 @@
                         (->> gi-enum? list?)]
                        [gi-enum->hash
                         (->> gi-enum? hash?)]
+                       [gi-enum-value/c
+                        (->> gi-enum? flat-contract?)]
                        [gi-object?
                         (->> any/c boolean?)]
                        [gi-struct?
@@ -100,12 +102,15 @@
                         (->> gi-repository? symbol? gi-base?)]
                        [gi-repository->ffi-lib
                         (->> gi-repository? ffi-lib?)]
+                       [gir-member/c
+                        (->> symbol? flat-contract?)]
+                       [gi-repository-member/c
+                        (->> gi-repository? flat-contract?)]
                        [gobject%
                         (and/c (implementation?/c gobject<%>)
                                (class/c (init-field [pointer gtype-instance?])))])
          send get-field set-field! field-bound? responds-to?
          describe-gi-function
-         gir-member/c gi-repository-member/c
          gobject<%>
          make-gobject-delegate)
 
@@ -813,6 +818,9 @@
                                      (gi-enum-storage-type enum))]
       [else (_enum symbols
                    (gi-enum-storage-type enum))])))
+
+(define (gi-enum-value/c enum)
+  (apply one-of/c (gi-enum->list enum)))
 
 
 ;;; Objects

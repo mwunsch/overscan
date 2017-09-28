@@ -171,6 +171,10 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
   Convert @racket[enum] to a hash mapping symbols to their numeric value.
 }
 
+@defproc[(gi-enum-value/c [enum gi-enum?]) flat-contract?]{
+  Accepts a @racket[gi-enum] and returns a flat contract that recognizes its values.
+}
+
 @defproc[(gi-object? [v any/c]) boolean?]{
   A @hyperlink["https://developer.gnome.org/gi/stable/gi-GIObjectInfo.html"]{@tt{GIObjectInfo}} is an introspected entity representing a GObject. This does not represent an instance of a GObject, but instead represents a GObject's type information (roughly analogous to a "class"). Returns @racket[#t] if @racket[v] is a GIObjectInfo, @racket[#f] otherwise.
 
