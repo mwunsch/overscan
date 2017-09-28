@@ -59,6 +59,11 @@
       (let ([static-pad (super get-static-pad name)])
         (and static-pad
              (new pad% [pointer static-pad]))))
+    (define/public (link-many el . els)
+      (and (send this link el)
+           (if (pair? els)
+               (send/apply el link-many (car els) (cdr els))
+               #t)))
     (define/override (get-factory)
       (new element-factory% [pointer (super get-factory)]))
     (define/public (get-num-src-pads)
@@ -150,6 +155,8 @@
     (->m (is-a?/c element%) boolean?)]
    [unlink
     (->m (is-a?/c element%) void?)]
+   [link-many
+    (->m (is-a?/c element%) (is-a?/c element%) ... boolean?)]
    [link-pads
     (->m (or/c string? false/c) (is-a?/c element%) (or/c string? false/c) boolean?)]
    link-pads-filtered
