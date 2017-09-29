@@ -7,17 +7,16 @@
          racket/class
          racket/contract
          "gst.rkt"
-         "element.rkt")
+         "element.rkt"
+         "bin.rkt")
 
 (provide (all-from-out "gst.rkt"
-                       "element.rkt")
-         bin-add-many
+                       "element.rkt"
+                       "bin.rkt")
          seconds
-         element-link-many
          _input-selector-sync-mode
          _video-test-src-pattern
          _audio-test-src-wave
-         gst-compose
          (contract-out [element-factory%-find
                         (-> string? (or/c false/c
                                           (is-a?/c element-factory%)))]
@@ -33,7 +32,15 @@
                        [ghost-pad%-new-no-target
                         (-> (or/c string? false/c) (gi-enum-value/c pad-direction)
                             (or/c (is-a?/c ghost-pad%)
-                                  false/c))]))
+                                  false/c))]
+                       [bin%-new
+                        (->* ()
+                             ((or/c string? false/c))
+                             (is-a?/c bin%))]
+                       [bin%-compose
+                        (-> (or/c string? false/c)
+                            (is-a?/c element%) (is-a?/c element%) ...
+                            (or/c (is-a?/c bin%) false/c))]))
 
 (define gst-element-factory (gst 'ElementFactory))
 
@@ -59,9 +66,29 @@
     (and ghost
          (new ghost-pad% [pointer ghost]))))
 
-(define pipeline% (gst 'Pipeline))
+(define gst-bin (gst 'Bin))
 
-(define bin% (gst 'Bin))
+(define (bin%-new [name #f])
+  (new bin% [pointer (gst-bin 'new name)]))
+
+(define (bin%-compose name el . els)
+  (let* ([bin (bin%-new name)]
+         [sink el]
+         [source (if (null? els) el (last els))])
+    (and (send/apply bin add-many el els)
+         (when (pair? els)
+           (send/apply el link-many els))
+         (let ([sink-pad (send sink get-static-pad "sink")])
+           (if sink-pad
+               (send bin add-pad (ghost-pad%-new "sink" sink-pad))
+             #t))
+         (let ([source-pad (send source get-static-pad "src")])
+           (if source-pad
+               (send bin add-pad (ghost-pad%-new "src" source-pad))
+             #t))
+         bin)))
+
+(define pipeline% (gst 'Pipeline))
 
 (define event% (gst 'Event))
 
@@ -70,28 +97,7 @@
 (define (seconds num)
   (* num second))
 
-(define (bin-add-many bin . elements)
-  (for/and ([element elements])
-    (send bin add element)))
-
 (define _input-selector-sync-mode (_enum '(active-segment clock)))
-
-(define (gst-compose name . elements)
-  (let* ([bin (bin% 'new name)]
-         [sink (first elements)]
-         [source (last elements)])
-    (and (> (length elements) 0)
-         (apply bin-add-many bin elements)
-         (apply element-link-many elements)
-         (let ([sink-pad (send sink get-static-pad "sink")])
-           (if sink-pad
-               (send bin add-pad (ghost-pad% 'new "sink" sink-pad))
-               #t))
-         (let ([source-pad (send source get-static-pad "src")])
-           (if source-pad
-               (send bin add-pad (ghost-pad% 'new "src" source-pad))
-               #t))
-         bin)))
 
 (define _video-test-src-pattern (_enum '(smpte
                                          snow black white red green blue
