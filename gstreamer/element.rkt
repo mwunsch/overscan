@@ -40,7 +40,8 @@
                              (gobject-send pointer 'get_metadata key))))))
 
 (define element-mixin
-  (make-gobject-delegate get-compatible-pad
+  (make-gobject-delegate add-pad
+                         get-compatible-pad
                          get-request-pad
                          get-static-pad
                          link
@@ -147,10 +148,12 @@
 
 (define element%/c
   (class/c
+   [add-pad
+    (->m (is-a?/c pad%) boolean?)]
    get-compatible-pad
    get-request-pad
    [get-static-pad
-    (->m string? (instanceof/c pad%/c))]
+    (->m string? (or/c (instanceof/c pad%/c) false/c))]
    [link
     (->m (is-a?/c element%) boolean?)]
    [unlink
