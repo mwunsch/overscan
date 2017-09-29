@@ -10,10 +10,6 @@
                         element-factory%/c]
                        [element%
                         element%/c]
-                       [element-link-many
-                        (-> (is-a?/c element%)
-                            (is-a?/c element%)
-                            (is-a?/c element%) ... boolean?)]
                        [pad%
                         pad%/c]
                        [ghost-pad%
@@ -76,12 +72,6 @@
            (positive? (get-num-sink-pads))))
     (define/public (src?)
       (not (sink?)))))
-
-(define (element-link-many el1 el2 . els)
-  (and (send el1 link el2)
-       (if (pair? els)
-           (apply element-link-many el2 (car els) (cdr els))
-           #t)))
 
 (define pad-mixin
   (make-gobject-delegate get-direction
