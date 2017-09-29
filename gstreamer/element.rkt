@@ -125,7 +125,8 @@
 
 (define pad%/c
   (class/c
-   get-direction
+   [get-direction
+    (->m (gi-enum-value/c pad-direction))]
    [get-parent-element
     (->m (is-a?/c element%))]
    get-pad-template
