@@ -6,14 +6,14 @@
          "gst.rkt")
 
 (provide (contract-out [make-bus-channel
-                        (->* ((is-a?/c bus%))
+                        (->* ((is-a?/c gst-bus))
                              ((listof symbol?)
                               #:timeout exact-nonnegative-integer?)
                              evt?)]))
 
-(define bus% (gst 'Bus))
+(define gst-bus (gst 'Bus))
 
-(define message% (gst 'Message))
+(define gst-message (gst 'Message))
 
 (define clock-time-none ((gst 'CLOCK_TIME_NONE)))
 
@@ -23,7 +23,7 @@
     (place chan
            (let*-values ([(bus-ptr timeout filters)
                           (apply values (place-channel-get chan))]
-                         [(bus) (gobject-cast bus-ptr bus%)])
+                         [(bus) (gobject-cast bus-ptr gst-bus)])
              (let loop ()
                (define msg
                  (send bus timed-pop-filtered timeout filters))
@@ -37,4 +37,4 @@
                                     timeout
                                     filters))
   (wrap-evt bus-pipe (lambda (ptr) (and ptr
-                                   (gstruct-cast ptr message%)))))
+                                   (gstruct-cast ptr gst-message)))))

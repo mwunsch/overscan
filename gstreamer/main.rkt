@@ -8,11 +8,13 @@
          racket/contract
          "gst.rkt"
          "element.rkt"
-         "bin.rkt")
+         "bin.rkt"
+         "pipeline.rkt")
 
 (provide (all-from-out "gst.rkt"
                        "element.rkt"
-                       "bin.rkt")
+                       "bin.rkt"
+                       "pipeline.rkt")
          seconds
          _input-selector-sync-mode
          _video-test-src-pattern
@@ -40,7 +42,11 @@
                        [bin%-compose
                         (-> (or/c string? false/c)
                             (is-a?/c element%) (is-a?/c element%) ...
-                            (or/c (is-a?/c bin%) false/c))]))
+                            (or/c (is-a?/c bin%) false/c))]
+                       [pipeline%-new
+                        (->* ()
+                             ((or/c string? false/c))
+                             (is-a?/c pipeline%))]))
 
 (define gst-element-factory (gst 'ElementFactory))
 
@@ -88,7 +94,10 @@
              #t))
          bin)))
 
-(define pipeline% (gst 'Pipeline))
+(define gst-pipeline (gst 'Pipeline))
+
+(define (pipeline%-new [name #f])
+  (new pipeline% [pointer (gst-pipeline 'new name)]))
 
 (define event% (gst 'Event))
 
