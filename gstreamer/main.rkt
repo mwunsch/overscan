@@ -46,7 +46,11 @@
                        [pipeline%-new
                         (->* ()
                              ((or/c string? false/c))
-                             (is-a?/c pipeline%))]))
+                             (is-a?/c pipeline%))]
+                       [pipeline%-compose
+                        (-> (or/c string? false/c)
+                            (is-a?/c element%) ...
+                            (or/c (is-a?/c pipeline%) false/c))]))
 
 (define gst-element-factory (gst 'ElementFactory))
 
@@ -98,6 +102,12 @@
 
 (define (pipeline%-new [name #f])
   (new pipeline% [pointer (gst-pipeline 'new name)]))
+
+(define (pipeline%-compose name . els)
+  (let* ([pl (pipeline%-new name)]
+         [bin (apply bin%-compose #f els)])
+    (and (send pl add bin)
+         pl)))
 
 (define event% (gst 'Event))
 
