@@ -9,9 +9,16 @@
                         (->* ((is-a?/c gst-bus))
                              ((listof symbol?)
                               #:timeout exact-nonnegative-integer?)
-                             evt?)]))
+                             evt?)]
+                       [gst-bus
+                        gi-object?]
+                       [gst-bus?
+                        (-> any/c boolean?)]))
 
 (define gst-bus (gst 'Bus))
+
+(define (gst-bus? v)
+  (is-a? v gst-bus))
 
 (define gst-message (gst 'Message))
 

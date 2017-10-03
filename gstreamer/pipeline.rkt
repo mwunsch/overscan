@@ -6,10 +6,14 @@
          racket/contract
          "gst.rkt"
          "element.rkt"
-         "bin.rkt")
+         "bin.rkt"
+         "bus.rkt")
 
 (provide (contract-out [pipeline%
-                        (subclass?/c bin%)]))
+                        (and/c (subclass?/c bin%)
+                               (class/c
+                                [get-bus
+                                 (->m gst-bus?)]))]))
 
 (define pipeline-mixin
   (make-gobject-delegate get-bus))
