@@ -216,8 +216,8 @@ A @deftech{gobject} instance, like the introspected metadata entries provided by
   Returns @racket[#t] if @racket[v] is an instance of a GObject, @racket[#f] otherwise. You can call methods, get or set fields, get/set properties, or connect to signals on a GObject. @racket[gstruct] structs are also GObjects for the purposes of this predicate, since they behave in similar ways with the exception of signals and properties.
 }
 
-@defproc[(is-a? [instance gtype-instance?] [type gi-registered-type?]) boolean?]{
-  Returns @racket[#t] if @racket[instance] is an instance of @racket[type], @racket[#f] otherwise. Similar to the associated @secref["objectutils" #:doc '(lib "scribblings/reference/reference.scrbl")] function.
+@defproc[(is-a? [v any/c] [type gi-registered-type?]) boolean?]{
+  Returns @racket[#t] if @racket[v] is an instance of @racket[type], @racket[#f] otherwise. Similar to the associated @secref["objectutils" #:doc '(lib "scribblings/reference/reference.scrbl")] function.
 }
 
 @defproc[(is-a?/c [type gi-registered-type?]) flat-contract?]{

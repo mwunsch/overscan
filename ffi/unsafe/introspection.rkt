@@ -53,7 +53,7 @@
                        [gtype-instance-name
                         (->> gtype-instance? symbol?)]
                        [is-a?
-                        (->> gtype-instance? gi-registered-type? boolean?)]
+                        (->> any/c gi-registered-type? boolean?)]
                        [is-a?/c
                         (->> gi-registered-type? flat-contract?)]
                        [struct (gstruct gtype-instance)
