@@ -52,9 +52,9 @@
                         (->> gtype-instance? symbol?)]
                        [gtype-instance-name
                         (->> gtype-instance? symbol?)]
-                       [is-a?
+                       [is-gtype?
                         (->> any/c gi-registered-type? boolean?)]
-                       [is-a?/c
+                       [is-gtype?/c
                         (->> gi-registered-type? flat-contract?)]
                        [struct (gstruct gtype-instance)
                                ((type gi-struct?) (pointer cpointer?))
@@ -641,14 +641,14 @@
 (define (gtype-instance-name gtype)
   (gi-base-name (gtype-instance-type gtype)))
 
-(define (is-a? instance type)
+(define (is-gtype? instance type)
   (and (gi-registered-type? type)
        (gtype-instance? instance)
        (gi-base=? (gtype-instance-type instance) type)))
 
-(define (is-a?/c type)
-  (flat-named-contract `(is-a? ,(gi-registered-type-name type))
-                       (curryr is-a? type)))
+(define (is-gtype?/c type)
+  (flat-named-contract `(is-gtype? ,(gi-registered-type-name type))
+                       (curryr is-gtype? type)))
 
 (define (gi-registered-type->ctype registered)
   (let* ([name (gi-base-sym registered)])

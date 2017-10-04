@@ -1,7 +1,7 @@
 #lang racket/base
 
 (require (except-in ffi/unsafe/introspection
-                    send get-field set-field! field-bound? is-a? is-a?/c)
+                    send get-field set-field! field-bound?)
          racket/class
          racket/contract)
 

@@ -2,7 +2,7 @@
 (require (except-in ffi/unsafe
                     ->)
          (except-in ffi/unsafe/introspection
-                    send get-field set-field! field-bound? is-a? is-a?/c)
+                    send get-field set-field! field-bound?)
          (only-in racket/list first last)
          racket/class
          racket/contract

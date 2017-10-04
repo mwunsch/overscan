@@ -2,7 +2,7 @@
 @require[@for-label[ffi/unsafe/introspection
                     racket/base
                     racket/contract
-                    (only-in racket/class object% [send class/send] mixin inherit-field super-new define/public)
+                    (only-in racket/class object% [send class/send] mixin inherit-field super-new define/public is-a?)
                     (except-in ffi/unsafe ->)]]
 
 @title[#:tag "gobject-introspection"]{GObject Introspection}
@@ -202,6 +202,14 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
   Returns the name of the instance of @racket[instance]. The difference between this function and @racket[gtype-instance-type-name] is that the GType name typically has the C prefix for an instance of a GType, where within GObject Introspection that prefix is elided. @racket[gtype-instance-type-name] derives its name from the GType, and @racket[gtype-instance-name] derives its name from GObject Introspection.
 }
 
+@defproc[(is-gtype? [v any/c] [type gi-registered-type?]) boolean?]{
+  Returns @racket[#t] if @racket[v] is an instance of @racket[type], @racket[#f] otherwise. Similar to @racket[is-a?].
+}
+
+@defproc[(is-gtype?/c [type gi-registered-type?]) flat-contract?]{
+  Accepts a @racket[type] and returns a flat contract that recognizes objects that instantiate it.
+}
+
 @defstruct*[(gstruct gtype-instance)
             ([type gi-struct?] [pointer cpointer?])
             #:omit-constructor ]{
@@ -210,18 +218,10 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
 
 @section[#:tag "gobject"]{GObjects}
 
-A @deftech{gobject} instance, like the introspected metadata entries provided by GIR, is a transparent pointer with additional utilities to be called as an object within Racket. GObjects behave like Racket objects, with the exception that they aren't backed by @emph{classes} in the @racketmodname[racket/class] sense, but instead are derived from the introspected metadata. To make using GObjects more like using @racketmodname[racket/class] objects, the library provides several functions and syntax with the same names as those found in @secref["mzlib:class" #:doc '(lib "scribblings/reference/reference.scrbl")], namely @racket[send], @racket[get-field], @racket[set-field!], @racket[field-bound?], @racket[is-a?], and @racket[is-a?/c].
+A @deftech{gobject} instance, like the introspected metadata entries provided by GIR, is a transparent pointer with additional utilities to be called as an object within Racket. GObjects behave like Racket objects, with the exception that they aren't backed by @emph{classes} in the @racketmodname[racket/class] sense, but instead are derived from the introspected metadata. To make using GObjects more like using @racketmodname[racket/class] objects, the library provides several functions and syntax with the same names as those found in @secref["mzlib:class" #:doc '(lib "scribblings/reference/reference.scrbl")], namely @racket[send], @racket[get-field], @racket[set-field!], and @racket[field-bound?].
 
 @defproc[(gobject? [v any/c]) boolean?]{
   Returns @racket[#t] if @racket[v] is an instance of a GObject, @racket[#f] otherwise. You can call methods, get or set fields, get/set properties, or connect to signals on a GObject. @racket[gstruct] structs are also GObjects for the purposes of this predicate, since they behave in similar ways with the exception of signals and properties.
-}
-
-@defproc[(is-a? [v any/c] [type gi-registered-type?]) boolean?]{
-  Returns @racket[#t] if @racket[v] is an instance of @racket[type], @racket[#f] otherwise. Similar to the associated @secref["objectutils" #:doc '(lib "scribblings/reference/reference.scrbl")] function.
-}
-
-@defproc[(is-a?/c [type gi-registered-type?]) flat-contract?]{
-  Accepts a @racket[type] and returns a flat contract that recognizes objects that instantiate it.
 }
 
 @defproc[(gobject-send [obj gobject?] [method-name symbol?] [argument any/c] ...) any]{
