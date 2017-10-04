@@ -13,7 +13,7 @@
                         (and/c (subclass?/c bin%)
                                (class/c
                                 [get-bus
-                                 (->m gst-bus?)]))]))
+                                 (->m (is-a?/c bus%))]))]))
 
 (define pipeline-mixin
   (make-gobject-delegate get-bus))
@@ -21,4 +21,6 @@
 (define pipeline%
   (class (pipeline-mixin bin%)
     (super-new)
-    (inherit-field pointer)))
+    (inherit-field pointer)
+    (define/override (get-bus)
+      (new bus% [pointer (super get-bus)]))))

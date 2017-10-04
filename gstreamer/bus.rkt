@@ -1,24 +1,50 @@
 #lang racket/base
 
-(require ffi/unsafe/introspection
+(require (except-in ffi/unsafe/introspection
+                    send get-field set-field! field-bound?)
+         racket/class
          racket/contract
          racket/place
          "gst.rkt")
 
 (provide (contract-out [make-bus-channel
-                        (->* ((is-a?/c gst-bus))
+                        (->* ((is-a?/c bus%))
                              ((listof symbol?)
                               #:timeout exact-nonnegative-integer?)
                              evt?)]
-                       [gst-bus
-                        gi-object?]
-                       [gst-bus?
-                        (-> any/c boolean?)]))
+                       [bus%
+                        (class/c
+                         post
+                         have-pending?
+                         peek
+                         pop
+                         pop-filtered
+                         timed-pop
+                         timed-pop-filtered
+                         disable-sync-message-emission!
+                         enable-sync-message-emission!
+                         poll)]))
 
 (define gst-bus (gst 'Bus))
 
-(define (gst-bus? v)
-  (is-a? v gst-bus))
+(define bus-mixin
+  (make-gobject-delegate post
+                         [have-pending? 'have_pending]
+                         peek
+                         pop
+                         pop-filtered
+                         timed-pop
+                         timed-pop-filtered
+                         [disable-sync-message-emission!
+                          'disable_sync_message_emission]
+                         [enable-sync-message-emission!
+                          'enable_sync_message_emission]
+                         poll))
+
+(define bus%
+  (class (bus-mixin gst-object%)
+    (super-new)
+    (inherit-field pointer)))
 
 (define gst-message (gst 'Message))
 
@@ -28,19 +54,19 @@
                           #:timeout [timeout clock-time-none])
   (define bus-pipe
     (place chan
-           (let*-values ([(bus-ptr timeout filters)
+           (let*-values ([(bus-ptr timeout filter)
                           (apply values (place-channel-get chan))]
-                         [(bus) (gobject-cast bus-ptr gst-bus)])
+                         [(bus-obj) (new bus% [pointer (gobject-cast bus-ptr gst-bus)])])
              (let loop ()
                (define msg
-                 (send bus timed-pop-filtered timeout filters))
-               (define msg-type (get-field type msg))
+                 (send bus-obj timed-pop-filtered timeout filter))
+               (define msg-type (gobject-get-field 'type msg))
                (place-channel-put chan (and msg
                                             (gtype-instance-pointer msg)))
                (if (or (memq 'eos msg-type) (memq 'error msg-type))
                    (exit 0)
                    (loop))))))
-  (place-channel-put bus-pipe (list (gtype-instance-pointer bus)
+  (place-channel-put bus-pipe (list (gtype-instance-pointer (get-field pointer bus))
                                     timeout
                                     filters))
   (wrap-evt bus-pipe (lambda (ptr) (and ptr
