@@ -207,7 +207,7 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
 }
 
 @defproc[(is-gtype?/c [type gi-registered-type?]) flat-contract?]{
-  Accepts a @racket[type] and returns a flat contract that recognizes objects that instantiate it.
+  Accepts a @racket[type] and returns a flat contract that recognizes its instances.
 }
 
 @defstruct*[(gstruct gtype-instance)
@@ -222,6 +222,14 @@ A @deftech{gobject} instance, like the introspected metadata entries provided by
 
 @defproc[(gobject? [v any/c]) boolean?]{
   Returns @racket[#t] if @racket[v] is an instance of a GObject, @racket[#f] otherwise. You can call methods, get or set fields, get/set properties, or connect to signals on a GObject. @racket[gstruct] structs are also GObjects for the purposes of this predicate, since they behave in similar ways with the exception of signals and properties.
+}
+
+@defproc[(gobject/c [type gi-registered-type?]) flat-contract?]{
+  Accepts a @racket[type] and returns a flat contract that recognizes objects that instantiate it. Unlike @racket[is-gtype?/c], this implies @racket[gobject?].
+}
+
+@defproc[(gobject-ptr [obj gobject?]) gtype-instance?]{
+ Returns the @racket[gtype-instance] associated with @racket[obj].
 }
 
 @defproc[(gobject-send [obj gobject?] [method-name symbol?] [argument any/c] ...) any]{
