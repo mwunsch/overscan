@@ -1,4 +1,5 @@
 #lang racket/base
+
 (require (except-in ffi/unsafe
                     ->)
          (except-in ffi/unsafe/introspection
@@ -7,11 +8,13 @@
          racket/class
          racket/contract
          "gst.rkt"
+         "bus.rkt"
          "element.rkt"
          "bin.rkt"
          "pipeline.rkt")
 
 (provide (all-from-out "gst.rkt"
+                       "bus.rkt"
                        "element.rkt"
                        "bin.rkt"
                        "pipeline.rkt")

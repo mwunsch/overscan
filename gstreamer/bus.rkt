@@ -8,10 +8,10 @@
          "gst.rkt")
 
 (provide (contract-out [make-bus-channel
-                        (->* ((is-a?/c bus%))
+                        (->* ((gobject/c gst-bus))
                              ((listof symbol?)
                               #:timeout exact-nonnegative-integer?)
-                             evt?)]
+                             (evt/c (gobject/c gst-message)))]
                        [bus%
                         (class/c
                          post
@@ -66,7 +66,7 @@
                (if (or (memq 'eos msg-type) (memq 'error msg-type))
                    (exit 0)
                    (loop))))))
-  (place-channel-put bus-pipe (list (gtype-instance-pointer (get-field pointer bus))
+  (place-channel-put bus-pipe (list (gtype-instance-pointer (gobject-ptr bus))
                                     timeout
                                     filters))
   (wrap-evt bus-pipe (lambda (ptr) (and ptr
