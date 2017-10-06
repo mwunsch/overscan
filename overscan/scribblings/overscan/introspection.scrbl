@@ -163,6 +163,10 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
   A @hyperlink["https://developer.gnome.org/gi/stable/gi-GIEnumInfo.html"]{@tt{GIEnumInfo}} is an introspected entity representing an enumeration. Returns @racket[#t] if @racket[v] is an Enumeration, @racket[#f] otherwise.
 }
 
+@defproc[(gi-bitmask? [v any/c]) boolean?]{
+  Returns @racket[#t] if @racket[v] is a @racket[gi-enum?] but is represented as a bitmask in C.
+}
+
 @defproc[(gi-enum->list [enum gi-enum?]) list?]{
   Convert @racket[enum] to a list of symbols, representing the values of the enumeration.
 }
@@ -173,6 +177,10 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
 
 @defproc[(gi-enum-value/c [enum gi-enum?]) flat-contract?]{
   Accepts a @racket[gi-enum] and returns a flat contract that recognizes its values.
+}
+
+@defproc[(gi-bitmask-value/c [enum gi-bitmask?]) list-contract?]{
+  Accepts a bitmask @racket[gi-enum] and returns a contract that recognizes a list of allowed values.
 }
 
 @defproc[(gi-object? [v any/c]) boolean?]{

@@ -33,12 +33,16 @@
                         (->> any/c boolean?)]
                        [gi-enum?
                         (->> any/c boolean?)]
+                       [gi-bitmask?
+                        (->> any/c boolean?)]
                        [gi-enum->list
                         (->> gi-enum? list?)]
                        [gi-enum->hash
                         (->> gi-enum? hash?)]
                        [gi-enum-value/c
                         (->> gi-enum? flat-contract?)]
+                       [gi-bitmask-value/c
+                        (->> gi-bitmask? list-contract?)]
                        [gi-object?
                         (->> any/c boolean?)]
                        [gi-struct?
@@ -813,6 +817,10 @@
 (define (gi-enum-methods enum)
   (gi-build-list enum gi-enum-n-methods gi-enum-value))
 
+(define (gi-bitmask? enum)
+  (and (gi-enum? enum)
+       (eq? 'GI_INFO_TYPE_FLAGS (gi-base-type enum))))
+
 (define (gi-enum->ctype enum)
   (let ([symbols (apply append
                         (for/list ([(key val) (in-hash (gi-enum->hash enum))])
@@ -825,6 +833,9 @@
 
 (define (gi-enum-value/c enum)
   (apply one-of/c (gi-enum->list enum)))
+
+(define (gi-bitmask-value/c enum)
+  (listof (gi-enum-value/c enum)))
 
 
 ;;; Objects
