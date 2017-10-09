@@ -5,12 +5,13 @@
          racket/class
          racket/contract
          racket/place
-         "gst.rkt")
+         "gst.rkt"
+         "clock.rkt")
 
 (provide (contract-out [make-bus-channel
                         (->* ((gobject/c gst-bus))
                              (message-type/c
-                              #:timeout exact-integer?)
+                              #:timeout clock-time?)
                              (evt/c (or/c message?
                                           false/c
                                           evt?)))]
@@ -27,15 +28,15 @@
                          [pop-filtered
                           (->m message-type/c message?)]
                          [timed-pop
-                          (->m exact-integer? message?)]
+                          (->m clock-time? message?)]
                          [timed-pop-filtered
-                          (->m exact-integer? message-type/c message?)]
+                          (->m clock-time? message-type/c message?)]
                          [disable-sync-message-emission!
                           (->m void?)]
                          [enable-sync-message-emission!
                           (->m void?)]
                          [poll
-                          (->m message-type/c exact-integer? message?)])]
+                          (->m message-type/c clock-time? message?)])]
                        [message?
                         (-> any/c boolean?)]
                        [message-type

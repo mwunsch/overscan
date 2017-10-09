@@ -8,17 +8,18 @@
          racket/class
          racket/contract
          "gst.rkt"
+         "clock.rkt"
          "bus.rkt"
          "element.rkt"
          "bin.rkt"
          "pipeline.rkt")
 
 (provide (all-from-out "gst.rkt"
+                       "clock.rkt"
                        "bus.rkt"
                        "element.rkt"
                        "bin.rkt"
                        "pipeline.rkt")
-         seconds
          _input-selector-sync-mode
          _video-test-src-pattern
          _audio-test-src-wave
@@ -53,7 +54,9 @@
                        [pipeline%-compose
                         (-> (or/c string? false/c)
                             (is-a?/c element%) ...
-                            (or/c (is-a?/c pipeline%) false/c))]))
+                            (or/c (is-a?/c pipeline%) false/c))]
+                       [obtain-system-clock
+                        (-> (is-a?/c clock%))]))
 
 (define gst-element-factory (gst 'ElementFactory))
 
@@ -112,12 +115,10 @@
     (and (send pl add bin)
          pl)))
 
+(define (obtain-system-clock)
+  (new clock% [pointer ((gst 'SystemClock) 'obtain)]))
+
 (define event% (gst 'Event))
-
-(define second ((gst 'SECOND)))
-
-(define (seconds num)
-  (* num second))
 
 (define _input-selector-sync-mode (_enum '(active-segment clock)))
 
