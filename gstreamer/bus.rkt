@@ -9,31 +9,43 @@
 
 (provide (contract-out [make-bus-channel
                         (->* ((gobject/c gst-bus))
-                             ((listof symbol?)
-                              #:timeout exact-nonnegative-integer?)
+                             (message-type/c
+                              #:timeout exact-integer?)
                              (evt/c (or/c message?
                                           false/c
                                           evt?)))]
                        [bus%
                         (class/c
-                         post
-                         have-pending?
-                         peek
-                         pop
-                         pop-filtered
-                         timed-pop
-                         timed-pop-filtered
-                         disable-sync-message-emission!
-                         enable-sync-message-emission!
-                         poll)]
+                         [post
+                          (->m message? boolean?)]
+                         [have-pending?
+                          (->m boolean?)]
+                         [peek
+                          (->m message?)]
+                         [pop
+                          (->m message?)]
+                         [pop-filtered
+                          (->m message-type/c message?)]
+                         [timed-pop
+                          (->m exact-integer? message?)]
+                         [timed-pop-filtered
+                          (->m exact-integer? message-type/c message?)]
+                         [disable-sync-message-emission!
+                          (->m void?)]
+                         [enable-sync-message-emission!
+                          (->m void?)]
+                         [poll
+                          (->m message-type/c exact-integer? message?)])]
                        [message?
                         (-> any/c boolean?)]
                        [message-type
-                        (-> message? (gi-bitmask-value/c gst-message-type))]
+                        (-> message? message-type/c)]
                        [message-src
                         (-> message? (is-a?/c gst-object%))]
                        [message-seqnum
-                        (-> message? exact-integer?)]))
+                        (-> message? exact-integer?)]
+                       [message-type/c
+                        list-contract?]))
 
 (define gst-bus (gst 'Bus))
 
@@ -59,6 +71,9 @@
 (define gst-message (gst 'Message))
 
 (define gst-message-type (gst 'MessageType))
+
+(define message-type/c
+  (gi-bitmask-value/c gst-message-type))
 
 (define (message? v)
   (is-gtype? v gst-message))
