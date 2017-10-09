@@ -113,6 +113,12 @@
 (define pad-direction
   (gst 'PadDirection))
 
+(define state
+  (gst 'State))
+
+(define state-change-return
+  (gst 'StateChangeReturn))
+
 (define pad%/c
   (class/c
    [get-direction
@@ -157,7 +163,8 @@
    link-filtered
    [get-factory
     (->m (is-a?/c element-factory%))]
-   set-state))
+   [set-state
+    (->m (gi-enum-value/c state) (gi-enum-value/c state-change-return))]))
 
 (define element-factory%/c
   (class/c
