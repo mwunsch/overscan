@@ -4,7 +4,8 @@
                     send get-field set-field! field-bound?)
          racket/class
          racket/contract
-         "gst.rkt")
+         "gst.rkt"
+         "clock.rkt")
 
 (provide (contract-out [element-factory%
                         element-factory%/c]
@@ -46,7 +47,8 @@
                          link-pads-filtered
                          link-filtered
                          get-factory
-                         set-state))
+                         set-state
+                         get-state))
 
 (define element%
   (class (element-mixin gst-object%)
@@ -63,6 +65,8 @@
                #t)))
     (define/override (get-factory)
       (new element-factory% [pointer (super get-factory)]))
+    (define/override (get-state [timeout clock-time-none])
+      (super get-state timeout))
     (define/public (get-num-src-pads)
       (gobject-get-field 'numsrcpads pointer))
     (define/public (get-num-sink-pads)
@@ -164,7 +168,13 @@
    [get-factory
     (->m (is-a?/c element-factory%))]
    [set-state
-    (->m (gi-enum-value/c state) (gi-enum-value/c state-change-return))]))
+    (->m (gi-enum-value/c state) (gi-enum-value/c state-change-return))]
+   [get-state
+    (->*m ()
+          (clock-time?)
+          (values (gi-enum-value/c state-change-return)
+                 (gi-enum-value/c state)
+                 (gi-enum-value/c state)))]))
 
 (define element-factory%/c
   (class/c
