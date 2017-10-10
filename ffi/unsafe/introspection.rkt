@@ -538,20 +538,20 @@
       (unless (eqv? (length arguments) arity)
         (apply raise-arity-error (gi-base-name fn) arity arguments))
 
-      (define args+values
-        (let* ([arglength (length args)]
-               [arguments (if (and method? (pair? arguments))
-                              (cdr arguments)
-                              arguments)]
-               [vals (append arguments (make-list (- arglength (length arguments)) #f))])
-          (map (lambda (arg val)
-                 (cons arg
-                       (if (eq? (gi-arg-direction arg) 'out)
-                           (ctype->_gi-argument _pointer
-                                                (gi-type-malloc (gi-arg-type arg)))
-                           (arg val))))
-               args
-               vals)))
+      (define-values (args+values vals)
+        (for/fold ([res null]
+                   [vals (if (and method? (pair? arguments))
+                             (cdr arguments)
+                             arguments)])
+                  ([arg (in-list args)])
+          (values (reverse (cons
+                            (cons arg
+                                  (if (eq? (gi-arg-direction arg) 'out)
+                                      (ctype->_gi-argument _pointer
+                                                           (gi-type-malloc (gi-arg-type arg)))
+                                      (arg (car vals))))
+                            res))
+                  (if (eq? (gi-arg-direction arg) 'out) vals (cdr vals)))))
 
       (define-values (in-args out-args)
         (let ([inputs (filter-map (lambda (pair) (and (gi-arg-direction? (car pair) '(in inout))
