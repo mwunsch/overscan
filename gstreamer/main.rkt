@@ -106,13 +106,11 @@
          (when (pair? els)
            (send/apply el link-many els))
          (let ([sink-pad (send sink get-static-pad "sink")])
-           (if sink-pad
-               (send bin add-pad (ghost-pad%-new "sink" sink-pad))
-             #t))
+           (when sink-pad
+             (send bin add-pad (ghost-pad%-new "sink" sink-pad))))
          (let ([source-pad (send source get-static-pad "src")])
-           (if source-pad
-               (send bin add-pad (ghost-pad%-new "src" source-pad))
-             #t))
+           (when source-pad
+             (send bin add-pad (ghost-pad%-new "src" source-pad))))
          bin)))
 
 (define gst-pipeline (gst 'Pipeline))
