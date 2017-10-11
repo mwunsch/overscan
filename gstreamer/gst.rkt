@@ -2,7 +2,9 @@
 
 (require ffi/unsafe/introspection
          racket/class
-         racket/contract)
+         racket/contract
+         (only-in racket/function
+                  curry curryr))
 
 (provide (contract-out [gst
                         gi-repository?]
@@ -16,8 +18,17 @@
                           (->m gobject? boolean?)]
                          [get-path-string
                           (->m string?)])]
+                       [gst-version-string
+                        (-> string?)]
                        [gst-version
-                        (-> string?)]))
+                        (-> (values exact-integer?
+                                    exact-integer?
+                                    exact-integer?
+                                    exact-integer?))]
+                       [gst-initialized?
+                        (-> boolean?)]
+                       [gst-initialize
+                        (-> boolean?)]))
 
 (define gst (introspection 'Gst))
 
@@ -32,5 +43,19 @@
     (super-new)
     (inherit-field pointer)))
 
-(define gst-version
+(define gst-version-string
   (gst 'version_string))
+
+(define (gst-version)
+  (call-with-values (gst 'version)
+                    (compose1 (curry apply values)
+                              (curryr list-tail 1)
+                              list)))
+
+(define gst-initialized?
+  (gst 'is_initialized))
+
+(define (gst-initialize)
+  (define-values (initialized? argc argv)
+    ((gst 'init_check) 0 #f))
+  initialized?)
