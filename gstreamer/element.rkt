@@ -4,6 +4,7 @@
          racket/class
          racket/contract
          "gst.rkt"
+         "caps.rkt"
          "clock.rkt")
 
 (provide (contract-out [element-factory%
@@ -145,8 +146,10 @@
     (->m boolean?)]
    [can-link?
     (->m (is-a?/c pad%) boolean?)]
-   get-allowed-caps
-   get-current-caps
+   [get-allowed-caps
+    (->m caps?)]
+   [get-current-caps
+    (->m caps?)]
    [get-peer
     (->m (or/c (is-a?/c pad%) false/c))]
    [active?
@@ -168,8 +171,10 @@
     (->m (is-a?/c element%) (is-a?/c element%) ... boolean?)]
    [link-pads
     (->m (or/c string? false/c) (is-a?/c element%) (or/c string? false/c) boolean?)]
-   link-pads-filtered
-   link-filtered
+   [link-pads-filtered
+    (->m string? (is-a?/c element%) string? (or/c caps? false/c) boolean?)]
+   [link-filtered
+    (->m (is-a?/c element%) (or/c caps? false/c) boolean?)]
    [get-factory
     (->m (is-a?/c element-factory%))]
    [set-state

@@ -7,6 +7,7 @@
          racket/class
          racket/contract
          "gst.rkt"
+         "caps.rkt"
          "clock.rkt"
          "bus.rkt"
          "element.rkt"
@@ -14,6 +15,7 @@
          "pipeline.rkt")
 
 (provide (all-from-out "gst.rkt"
+                       "caps.rkt"
                        "clock.rkt"
                        "bus.rkt"
                        "element.rkt"
@@ -38,6 +40,10 @@
                         (-> (or/c string? false/c) (gi-enum-value/c pad-direction)
                             (or/c (is-a?/c ghost-pad%)
                                   false/c))]
+                       [capsfilter
+                        (->* (caps?)
+                             ((or/c string? false/c))
+                             (is-a?/c element%))]
                        [bin%-new
                         (->* ()
                              ((or/c string? false/c))
@@ -80,6 +86,10 @@
   (let ([ghost (gst-ghost-pad 'new_no_target name dir)])
     (and ghost
          (new ghost-pad% [pointer ghost]))))
+
+(define (capsfilter caps [name #f])
+  (gobject-with-properties (element-factory%-make "capsfilter" name)
+                           (hash 'caps caps)))
 
 (define gst-bin (gst 'Bin))
 
