@@ -80,6 +80,10 @@
                         (->> symbol? gobject? any)]
                        [gobject-set-field!
                         (->> symbol? gobject? any/c void?)]
+                       [gobject-responds-to?
+                        (->> gobject? symbol? boolean?)]
+                       [gobject-responds-to?/c
+                        (->> symbol? flat-contract?)]
                        [method-names
                         (->> gobject? (listof symbol?))]
                        [describe-method
@@ -117,7 +121,6 @@
                        [gobject%
                         (and/c (implementation?/c gobject<%>)
                                (class/c (init-field [pointer gtype-instance?])))])
-         send get-field set-field! field-bound? responds-to?
          describe-gi-function
          gobject<%>
          make-gobject-delegate)
@@ -891,7 +894,7 @@
 
 (define (method-names obj)
   (let ([base (gtype-instance-type (gobject-ptr obj))])
-    (map gi-base-sym (gi-registered-type-methods base))))
+    (map gi-base-name (gi-registered-type-methods base))))
 
 (define (describe-method obj method-name)
   (let* ([instance (gobject-ptr obj)]
@@ -927,60 +930,21 @@
          [field (gi-registered-type-find-field base field-name)])
     (gi-field-set! field ptr v)))
 
+(define (gobject-responds-to? obj method-name)
+  (and (gi-object-lookup-method (gtype-instance-type (gobject-ptr obj))
+                                method-name)
+       #t))
+
+(define (gobject-responds-to?/c method-name)
+  (flat-named-contract `(gobject-responds-to?/c ,method-name)
+                       (and/c gobject?
+                              (curryr gobject-responds-to? method-name))))
+
 (define (gobject/c type)
   (flat-named-contract `(gobject/c ,(gi-registered-type-name type))
                        (and/c gobject?
                               (compose1 (is-gtype?/c type)
                                         gobject-ptr))))
-
-(define-syntax (send stx)
-  (syntax-parse stx
-    [(_ obj method-id:id args:expr ...)
-     #:declare obj (expr/c #'gobject?
-                           #:name "receiver")
-     (with-syntax ([method-name (string->symbol (string-replace
-                                                 (symbol->string (syntax-e #'method-id))
-                                                 "-" "_"))])
-       #'(gobject-send obj.c 'method-name args ...))]))
-
-(define-syntax (responds-to? stx)
-  (syntax-parse stx
-    [(_ obj method-id:id)
-     #:declare obj (expr/c #'gobject?
-                           #:name "receiver")
-     (with-syntax ([method-name (string->symbol (string-replace
-                                                 (symbol->string (syntax-e #'method-id))
-                                                 "-" "_"))])
-       #'(and (gi-object-lookup-method (gtype-instance-type (gobject-ptr obj.c))
-                                       'method-name)
-              #t))]))
-
-(define-syntax (get-field stx)
-  (syntax-parse stx
-    [(_ field-id:id obj)
-     #:declare obj (expr/c #'gobject?
-                           #:name "instance")
-     (with-syntax ([field-name (string->symbol (string-replace
-                                                 (symbol->string (syntax-e #'field-id))
-                                                 "-" "_"))])
-       #'(gobject-get-field 'field-name obj.c))]))
-
-(define-syntax (set-field! stx)
-  (syntax-parse stx
-    [(_ field-id:id obj val:expr)
-     #:declare obj (expr/c #'gobject?
-                           #:name "instance")
-     (with-syntax ([field-name (string->symbol (string-replace
-                                                 (symbol->string (syntax-e #'field-id))
-                                                 "-" "_"))])
-       #'(gobject-set-field! 'field-name obj.c val))]))
-
-(define-syntax (field-bound? stx)
-  (syntax-parse stx
-    [(_ field-id:id obj)
-     #:declare obj (expr/c #'gobject?
-                           #:name "instance")
-     #'(gobject-has-field? obj.c 'field-id)]))
 
 (define (_gi-object obj)
   (let ([name (gi-base-sym obj)]

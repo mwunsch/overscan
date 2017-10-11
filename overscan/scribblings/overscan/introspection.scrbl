@@ -2,7 +2,7 @@
 @require[@for-label[ffi/unsafe/introspection
                     racket/base
                     racket/contract
-                    (only-in racket/class object% [send class/send] mixin inherit-field super-new define/public is-a?)
+                    racket/class
                     (except-in ffi/unsafe ->)]]
 
 @title[#:tag "gobject-introspection"]{GObject Introspection}
@@ -226,7 +226,7 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
 
 @section[#:tag "gobject"]{GObjects}
 
-A @deftech{gobject} instance, like the introspected metadata entries provided by GIR, is a transparent pointer with additional utilities to be called as an object within Racket. GObjects behave like Racket objects, with the exception that they aren't backed by @emph{classes} in the @racketmodname[racket/class] sense, but instead are derived from the introspected metadata. To make using GObjects more like using @racketmodname[racket/class] objects, the library provides several functions and syntax with the same names as those found in @secref["mzlib:class" #:doc '(lib "scribblings/reference/reference.scrbl")], namely @racket[send], @racket[get-field], @racket[set-field!], and @racket[field-bound?].
+A @deftech{gobject} instance, like the introspected metadata entries provided by GIR, is a transparent pointer with additional utilities to be called as an object within Racket. GObjects behave like Racket objects, with the exception that they aren't backed by @emph{classes} in the @racketmodname[racket/class] sense, but instead are derived from the introspected metadata.
 
 @defproc[(gobject? [v any/c]) boolean?]{
   Returns @racket[#t] if @racket[v] is an instance of a GObject, @racket[#f] otherwise. You can call methods, get or set fields, get/set properties, or connect to signals on a GObject. @racket[gstruct] structs are also GObjects for the purposes of this predicate, since they behave in similar ways with the exception of signals and properties.
@@ -244,39 +244,20 @@ A @deftech{gobject} instance, like the introspected metadata entries provided by
   Calls the method on @racket[obj] whose name matches @racket[method-name], passing along all given @racket[argument]s.
 }
 
-@defform[(send obj-expr method-id arg ...)
-         #:contracts ([obj-expr gobject?])]{
-  Evaluates @racket[obj-expr] to obtain a @tech{gobject}, and calls the method with name @racket[method-id] on the object, providing the @racket[arg] results as arguments.
-
-  See also: @racketlink[class/send #:style 'tt]{send} in the @racketmodname[racket/class] library.
-}
-
-@defform[(responds-to? obj-expr method-id)
-         #:contracts ([obj-expr gobject?])]{
-  Produces @racket[#t] if the result of @racket[obj-expr] or its ancestors defines a method with the name @racket[method-id], @racket[#f] otherwise.
-}
-
 @defproc[(gobject-get-field [field-name symbol?] [obj gobject?]) any]{
   Extracts the field from @racket[obj] whose name matches @racket[field-name]. Note that @emph{fields} are distinct from GObject @emph{properties}, which are accessed with @racket[gobject-get].
-}
-
-@defform[(get-field id obj-expr)
-         #:contracts ([obj-expr gobject?])]{
-  Extracts the field with name @racket[id] from the value of @racket[obj-expr].
 }
 
 @defproc[(gobject-set-field! [field-name symbol?] [obj gobject?] [v any/c]) void?]{
   Sets the field from @racket[obj] whose name matches @racket[field-name] to @racket[v].
 }
 
-@defform[(set-field! id obj-expr val-expr)
-         #:contracts ([obj-expr gobject?])]{
-  Sets the field with name @racket[id] from the value of @racket[obj-expr] to the value of @racket[val-expr].
+@defproc[(gobject-responds-to? [obj gobject?] [method-name symbol?]) boolean?]{
+  Produces @racket[#t] if @racket[obj] or its ancestors defines a method with the name @racket[method-name], @racket[#f] otherwise.
 }
 
-@defform[(field-bound? id obj-expr)
-         #:contracts ([obj-expr gobject?])]{
-  Produces @racket[#t] if the result of @racket[obj-expr] has a field with name @racket[id], @racket[#f] otherwise.
+@defproc[(gobject-responds-to?/c [method-name symbol?]) flat-contract?]{
+  Accepts a @racket[method-name] and returns a flat contract that recognizes objects with a method defined with the given name in it or its ancestors. Useful for duck-typing.
 }
 
 @defproc[(method-names [obj gobject?]) (listof symbol?)]{

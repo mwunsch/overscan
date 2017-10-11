@@ -1,7 +1,6 @@
 #lang racket/base
 
-(require (except-in ffi/unsafe/introspection
-                    send get-field set-field! field-bound?)
+(require ffi/unsafe/introspection
          racket/class
          racket/contract
          "gst.rkt"
