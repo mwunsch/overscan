@@ -87,8 +87,6 @@
 (define (message-src msg)
   (new gst-object% [pointer (gobject-get-field 'src msg)]))
 
-(define clock-time-none ((gst 'CLOCK_TIME_NONE)))
-
 (define (make-bus-channel bus [filters '(any)]
                           #:timeout [timeout clock-time-none])
   (define bus-pipe

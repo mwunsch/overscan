@@ -10,6 +10,7 @@
          "caps.rkt"
          "clock.rkt"
          "bus.rkt"
+         "event.rkt"
          "element.rkt"
          "bin.rkt"
          "pipeline.rkt")
@@ -18,6 +19,7 @@
                        "caps.rkt"
                        "clock.rkt"
                        "bus.rkt"
+                       "event.rkt"
                        "element.rkt"
                        "bin.rkt"
                        "pipeline.rkt")
@@ -126,8 +128,6 @@
 
 (define (obtain-system-clock)
   (new clock% [pointer ((gst 'SystemClock) 'obtain)]))
-
-(define event% (gst 'Event))
 
 (define _input-selector-sync-mode (_enum '(active-segment clock)))
 

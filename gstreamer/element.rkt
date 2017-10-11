@@ -5,7 +5,8 @@
          racket/contract
          "gst.rkt"
          "caps.rkt"
-         "clock.rkt")
+         "clock.rkt"
+         "event.rkt")
 
 (provide (contract-out [element-factory%
                         element-factory%/c]
@@ -48,7 +49,8 @@
                          link-filtered
                          get-factory
                          set-state
-                         get-state))
+                         get-state
+                         send-event))
 
 (define element%
   (class (element-mixin gst-object%)
@@ -184,7 +186,9 @@
           (clock-time?)
           (values (gi-enum-value/c state-change-return)
                  (gi-enum-value/c state)
-                 (gi-enum-value/c state)))]))
+                 (gi-enum-value/c state)))]
+   [send-event
+    (->m event? boolean?)]))
 
 (define element-factory%/c
   (class/c
