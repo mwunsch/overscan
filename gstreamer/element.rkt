@@ -23,7 +23,19 @@
                                 [set-target
                                  (->m (is-a?/c pad%) boolean?)]))]
                        [pad-direction
-                        gi-enum?]))
+                        gi-enum?]
+                       [pad-presence
+                        gi-enum?]
+                       [pad-template?
+                        (-> any/c boolean?)]
+                       [pad-template-caps
+                        (-> pad-template? caps?)]
+                       [make-pad-template
+                        (-> string?
+                            (gi-enum-value/c pad-direction)
+                            (gi-enum-value/c pad-presence)
+                            caps?
+                            pad-template?)]))
 
 (define element-factory%
   (class gst-object%
@@ -56,6 +68,14 @@
   (class (element-mixin gst-object%)
     (super-new)
     (inherit-field pointer)
+    (define/override (get-compatible-pad pad [caps #f])
+      (let ([compatible-pad (super get-compatible-pad pad caps)])
+        (and compatible-pad
+             (new pad% [pointer compatible-pad]))))
+    (define/override (get-request-pad name)
+      (let ([req-pad (super get-request-pad name)])
+        (and req-pad
+             (new pad% [pointer req-pad]))))
     (define/override (get-static-pad name)
       (let ([static-pad (super get-static-pad name)])
         (and static-pad
@@ -96,15 +116,23 @@
                          [can-link? 'can_link]
                          get-allowed-caps
                          get-current-caps
+                         get-pad-template-caps
                          get-peer
-                         [active? 'is_active]))
+                         [has-current-caps? 'has_current_caps]
+                         [active? 'is_active]
+                         [blocked? 'is_blocked]
+                         [blocking? 'is_blocking]))
 
 (define pad%
   (class (pad-mixin gst-object%)
     (super-new)
     (inherit-field pointer)
     (define/override (get-parent-element)
-      (new element% [pointer (super get-parent-element)]))))
+      (new element% [pointer (super get-parent-element)]))
+    (define/override (get-peer)
+      (let ([peer (super get-peer)])
+        (and peer
+             (new pad% [pointer peer]))))))
 
 (define ghost-pad-mixin
   (make-gobject-delegate set-target
@@ -125,11 +153,26 @@
 (define pad-direction
   (gst 'PadDirection))
 
+(define pad-presence
+  (gst 'PadPresence))
+
 (define state
   (gst 'State))
 
 (define state-change-return
   (gst 'StateChangeReturn))
+
+(define gst-pad-template
+  (gst 'PadTemplate))
+
+(define (pad-template? v)
+  (is-gtype? v gst-pad-template))
+
+(define (pad-template-caps template)
+  (gobject-send template 'get_caps))
+
+(define (make-pad-template name dir presence caps)
+  (gst-pad-template 'new name dir presence caps))
 
 (define pad%/c
   (class/c
@@ -137,7 +180,8 @@
     (->m (gi-enum-value/c pad-direction))]
    [get-parent-element
     (->m (is-a?/c element%))]
-   get-pad-template
+   [get-pad-template
+    (->m (or/c pad-template? false/c))]
    [link
     (->m (is-a?/c pad%) (gi-enum-value/c pad-link-return))]
    [link-maybe-ghosting
@@ -152,17 +196,29 @@
     (->m caps?)]
    [get-current-caps
     (->m caps?)]
+   [get-pad-template-caps
+    (->m caps?)]
    [get-peer
     (->m (or/c (is-a?/c pad%) false/c))]
+   [has-current-caps?
+    (->m boolean?)]
    [active?
+    (->m boolean?)]
+   [blocked?
+    (->m boolean?)]
+   [blocking?
     (->m boolean?)]))
 
 (define element%/c
   (class/c
    [add-pad
     (->m (is-a?/c pad%) boolean?)]
-   get-compatible-pad
-   get-request-pad
+   [get-compatible-pad
+    (->*m ((is-a?/c pad%))
+          ((or/c caps? false/c))
+          (or/c (instanceof/c pad%/c) false/c))]
+   [get-request-pad
+    (->m string? (or/c (instanceof/c pad%/c) false/c))]
    [get-static-pad
     (->m string? (or/c (instanceof/c pad%/c) false/c))]
    [link

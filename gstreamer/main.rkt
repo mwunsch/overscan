@@ -34,6 +34,11 @@
                              ((or/c string? false/c))
                              (or/c false/c
                                    (is-a?/c element%)))]
+                       [pad%-new-from-template
+                        (->* (pad-template?)
+                             ((or/c string? false/c))
+                             (or/c (is-a?/c pad%)
+                                   false/c))]
                        [ghost-pad%-new
                         (-> (or/c string? false/c) (is-a?/c pad%)
                             (or/c (is-a?/c ghost-pad%)
@@ -76,6 +81,13 @@
   (let ([el (gst-element-factory 'make factory-name name)])
     (and el
          (new element% [pointer el]))))
+
+(define gst-pad (gst 'Pad))
+
+(define (pad%-new-from-template templ [name #f])
+  (let ([pad (gst-pad 'new_from_template templ name)])
+    (and pad
+         (new pad% [pointer pad]))))
 
 (define gst-ghost-pad (gst 'GhostPad))
 
