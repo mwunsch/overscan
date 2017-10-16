@@ -12,6 +12,10 @@
                         element-factory%/c]
                        [element%
                         element%/c]
+                       [source?
+                        (-> any/c boolean?)]
+                       [sink?
+                        (-> any/c boolean?)]
                        [pad%
                         pad%/c]
                        [ghost-pad%
@@ -94,16 +98,17 @@
     (define/public (pause!)
       (send this set-state 'paused))
     (define/public (stop!)
-      (send this set-state 'null))
-    (define/public (get-num-src-pads)
-      (gobject-get-field 'numsrcpads pointer))
-    (define/public (get-num-sink-pads)
-      (gobject-get-field 'numsinkpads pointer))
-    (define/public (sink?)
-      (and (zero? (get-num-src-pads))
-           (positive? (get-num-sink-pads))))
-    (define/public (src?)
-      (not (sink?)))))
+      (send this set-state 'null))))
+
+(define (source? v)
+  (and (is-a? v element%)
+       (positive? (gobject-get-field 'numsrcpads v))
+       (zero? (gobject-get-field 'numsinkpads v))))
+
+(define (sink? v)
+  (and (is-a? v element%)
+       (positive? (gobject-get-field 'numsinkpads v))
+       (zero? (gobject-get-field 'numsrcpads v))))
 
 (define pad-mixin
   (make-gobject-delegate get-direction
