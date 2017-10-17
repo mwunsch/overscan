@@ -5,27 +5,27 @@
          ffi/unsafe/introspection
          racket/class
          racket/contract
-         "gst.rkt"
-         "caps.rkt"
-         "clock.rkt"
-         "bus.rkt"
-         "event.rkt"
-         "element.rkt"
-         "bin.rkt"
-         "pipeline.rkt"
-         "factories.rkt"
-         "elements.rkt")
+         gstreamer/gst
+         gstreamer/caps
+         gstreamer/clock
+         gstreamer/bus
+         gstreamer/event
+         gstreamer/element
+         gstreamer/bin
+         gstreamer/pipeline
+         gstreamer/factories
+         gstreamer/elements)
 
-(provide (all-from-out "gst.rkt"
-                       "caps.rkt"
-                       "clock.rkt"
-                       "bus.rkt"
-                       "event.rkt"
-                       "element.rkt"
-                       "bin.rkt"
-                       "pipeline.rkt"
-                       "factories.rkt"
-                       "elements.rkt")
+(provide (all-from-out gstreamer/gst
+                       gstreamer/caps
+                       gstreamer/clock
+                       gstreamer/bus
+                       gstreamer/event
+                       gstreamer/element
+                       gstreamer/bin
+                       gstreamer/pipeline
+                       gstreamer/factories
+                       gstreamer/elements)
          (contract-out [obtain-system-clock
                         (-> (is-a?/c clock%))]))
 

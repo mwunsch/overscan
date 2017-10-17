@@ -3,10 +3,10 @@
 (require ffi/unsafe/introspection
          racket/class
          racket/contract
-         "gst.rkt"
-         "caps.rkt"
-         "element.rkt"
-         "factories.rkt")
+         gstreamer/gst
+         gstreamer/caps
+         gstreamer/element
+         gstreamer/factories)
 
 (provide (contract-out [capsfilter
                         (->* (caps?)

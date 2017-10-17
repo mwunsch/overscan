@@ -4,11 +4,11 @@
          racket/class
          racket/contract
          (only-in racket/list first last)
-         "gst.rkt"
-         "caps.rkt"
-         "element.rkt"
-         "bin.rkt"
-         "pipeline.rkt")
+         gstreamer/gst
+         gstreamer/caps
+         gstreamer/element
+         gstreamer/bin
+         gstreamer/pipeline)
 
 (provide (contract-out [element-factory%-find
                         (-> string? (or/c false/c

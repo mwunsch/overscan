@@ -3,10 +3,10 @@
 (require ffi/unsafe/introspection
          racket/class
          racket/contract
-         "gst.rkt"
-         "caps.rkt"
-         "clock.rkt"
-         "event.rkt")
+         gstreamer/gst
+         gstreamer/caps
+         gstreamer/clock
+         gstreamer/event)
 
 (provide (contract-out [element-factory%
                         element-factory%/c]

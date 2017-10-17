@@ -2,7 +2,7 @@
 
 (require ffi/unsafe/introspection
          racket/contract
-         "gst.rkt")
+         gstreamer/gst)
 
 (provide (contract-out [caps?
                         (-> any/c boolean?)]

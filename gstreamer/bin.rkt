@@ -3,8 +3,8 @@
 (require ffi/unsafe/introspection
          racket/class
          racket/contract
-         "gst.rkt"
-         "element.rkt")
+         gstreamer/gst
+         gstreamer/element)
 
 (provide (contract-out [bin%
                         (class/c

@@ -3,11 +3,11 @@
 (require ffi/unsafe/introspection
          racket/class
          racket/contract
-         "gst.rkt"
-         "clock.rkt"
-         "element.rkt"
-         "bin.rkt"
-         "bus.rkt")
+         gstreamer/gst
+         gstreamer/clock
+         gstreamer/element
+         gstreamer/bin
+         gstreamer/bus)
 
 (provide (contract-out [pipeline%
                         (class/c

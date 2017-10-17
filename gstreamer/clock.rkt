@@ -3,7 +3,7 @@
 (require ffi/unsafe/introspection
          racket/class
          racket/contract
-         "gst.rkt")
+         gstreamer/gst)
 
 (provide (contract-out [clock%
                         (class/c

@@ -4,8 +4,8 @@
          racket/class
          racket/contract
          racket/place
-         "gst.rkt"
-         "clock.rkt")
+         gstreamer/gst
+         gstreamer/clock)
 
 (provide (contract-out [make-bus-channel
                         (->* ((gobject/c gst-bus))
