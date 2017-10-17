@@ -246,8 +246,8 @@
     (->*m ()
           (clock-time?)
           (values (gi-enum-value/c state-change-return)
-                 (gi-enum-value/c state)
-                 (gi-enum-value/c state)))]
+                  (gi-enum-value/c state)
+                  (gi-enum-value/c state)))]
    [send-event
     (->m event? boolean?)]))
 
