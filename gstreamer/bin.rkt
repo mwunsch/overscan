@@ -19,7 +19,11 @@
                          [find-unlinked-pad
                           (->m (gi-enum-value/c pad-direction) (or/c (is-a?/c pad%) false/c))]
                          [sync-children-states
-                          (->m boolean?)])]))
+                          (->m boolean?)])]
+                       [bin->dot
+                        (->* ((is-a?/c bin%))
+                             (#:details (gi-enum-value/c gst-debug-graph-details))
+                             string?)]))
 
 (define bin-mixin
   (make-gobject-delegate add
@@ -43,3 +47,13 @@
       (let ([pad (super find-unlinked-pad direction)])
         (and pad
              (new pad% [pointer pad]))))))
+
+(define gst-debug-bin->dot-data
+  (gst 'debug_bin_to_dot_data))
+
+(define gst-debug-graph-details
+  (gst 'DebugGraphDetails))
+
+(define (bin->dot bin
+                  #:details [details 'all])
+  (gst-debug-bin->dot-data bin details))
