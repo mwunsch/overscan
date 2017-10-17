@@ -21,21 +21,21 @@
                          [have-pending?
                           (->m boolean?)]
                          [peek
-                          (->m message?)]
+                          (->m (or/c message? false/c))]
                          [pop
-                          (->m message?)]
+                          (->m (or/c message? false/c))]
                          [pop-filtered
-                          (->m message-type/c message?)]
+                          (->m message-type/c (or/c message? false/c))]
                          [timed-pop
-                          (->m clock-time? message?)]
+                          (->m clock-time? (or/c message? false/c))]
                          [timed-pop-filtered
-                          (->m clock-time? message-type/c message?)]
+                          (->m clock-time? message-type/c (or/c message? false/c))]
                          [disable-sync-message-emission!
                           (->m void?)]
                          [enable-sync-message-emission!
                           (->m void?)]
                          [poll
-                          (->m message-type/c clock-time? message?)])]
+                          (->m message-type/c clock-time? (or/c message? false/c))])]
                        [message?
                         (-> any/c boolean?)]
                        [message-type
@@ -97,12 +97,12 @@
              (let loop ()
                (define msg
                  (gobject-send bus-obj 'timed_pop_filtered timeout filter))
+               (define msg-type
+                 (message-type msg))
                (place-channel-put chan (and msg
                                             (gtype-instance-pointer msg)))
-
                (when (and msg
-                          (let ([msg-type (message-type msg)])
-                            (or (memq 'eos msg-type) (memq 'error msg-type))))
+                          (or (memq 'eos msg-type) (memq 'error msg-type)))
                  (exit 0))
                (loop)))))
   (place-channel-put bus-pipe (list (gtype-instance-pointer (gobject-ptr bus))
