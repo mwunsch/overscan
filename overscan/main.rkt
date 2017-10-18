@@ -14,7 +14,25 @@
                              (source? sink?)
                              evt?)]
                        [stop
-                        (-> void?)])
+                        (->* ()
+                             (#:timeout (and/c real? (not/c negative?)))
+                             (gi-enum-value/c state-change-return))]
+                       [add-listener
+                        (-> (-> message? (is-a?/c pipeline%) any) exact-integer?)]
+                       [remove-listener
+                        (-> exact-integer? void?)]
+                       [playing?
+                        (->* ()
+                             ((is-a?/c pipeline%))
+                             boolean?)]
+                       [stopped?
+                        (->* ()
+                             ((is-a?/c pipeline%))
+                             boolean?)]
+                       [graphviz
+                        (->* (path-string?)
+                             ((is-a?/c pipeline%))
+                             any)])
          (all-from-out racket/base
                        gstreamer
                        overscan/twitch))
@@ -28,11 +46,11 @@
 (define current-broadcast
   (box #f))
 
-(define current-bus
-  (box #f))
+(define broadcast-complete-evt
+  (make-semaphore))
 
 (define (default-broadcast-listener msg broadcast)
-  (when (eos-or-error-message? msg)
+  (when (fatal-message? msg)
     (send broadcast set-state 'null)))
 
 (define broadcast-listeners
@@ -48,23 +66,22 @@
                    [sink (make-fake-sink)])
   (when (unbox current-broadcast)
     (error "Already a broadcast in progress"))
-  (let* ([pipeline (pipeline%-new #f)])
+  (let ([pipeline (pipeline%-new #f)])
     (and (send pipeline add source)
          (send pipeline add sink)
          (send source link sink)
          (set-box! current-broadcast pipeline)
-         (set-box! current-bus (spawn-bus-worker pipeline))
+         (spawn-bus-worker pipeline)
          (send pipeline set-state 'playing))))
 
-(define (stop)
+(define (stop #:timeout [timeout 5])
   (define broadcast (get-current-broadcast))
-  (define bus (unbox current-bus))
   (send broadcast send-event (make-eos-event))
-  (thread-wait bus)
-  (let-values ([(result current pending) (send broadcast get-state)])
-    (set-box! current-broadcast #f)
-    (set-box! current-bus #f)
-    result))
+  (if (sync/timeout timeout broadcast-complete-evt)
+      (let-values ([(result current pending) (send broadcast get-state)])
+        (set-box! current-broadcast #f)
+        result)
+      (error "Could not stop broadcast")))
 
 (define (spawn-bus-worker broadcast)
   (let* ([bus (send broadcast get-bus)]
@@ -72,10 +89,12 @@
     (thread (thunk
              (let loop ()
                   (let ([ev (sync chan)])
-                    (unless (evt? ev)
-                      (for ([proc (in-hash-values broadcast-listeners)])
-                           (proc ev broadcast))
-                      (loop))))))))
+                    (if (evt? ev)
+                        (semaphore-post broadcast-complete-evt)
+                        (begin
+                          (for ([proc (in-hash-values broadcast-listeners)])
+                            (proc ev broadcast))
+                          (loop)))))))))
 
 (define (add-listener proc)
   (let* ([stack broadcast-listeners]
@@ -86,14 +105,14 @@
 (define (remove-listener key)
   (hash-remove! broadcast-listeners key))
 
-(define (eos-or-error-message? msg)
-  (and (message? msg)
-       (memf (symbols 'eos 'error) (message-type msg))))
-
 (define (playing? [broadcast (get-current-broadcast)])
   (let-values ([(result current pending) (send broadcast get-state)])
     (and (eq? result 'success)
          (eq? current 'playing))))
+
+(define (stopped? [broadcast (get-current-broadcast)])
+  (let-values ([(result current pending) (send broadcast get-state)])
+    (eq? current 'null)))
 
 (define (graphviz filepath [broadcast (get-current-broadcast)])
   (call-with-output-file filepath

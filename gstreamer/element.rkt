@@ -30,6 +30,10 @@
                         gi-enum?]
                        [pad-presence
                         gi-enum?]
+                       [state
+                        gi-enum?]
+                       [state-change-return
+                        gi-enum?]
                        [pad-template?
                         (-> any/c boolean?)]
                        [pad-template-caps
