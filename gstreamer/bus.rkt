@@ -40,10 +40,19 @@
                         (-> any/c boolean?)]
                        [message-type
                         (-> message? message-type/c)]
-                       [message-src
-                        (-> message? (is-a?/c gst-object%))]
                        [message-seqnum
                         (-> message? exact-integer?)]
+                       [message-src
+                        (-> message? (is-a?/c gst-object%))]
+                       [message-of-type?
+                        (-> message? message-type/c message-type/c ...
+                            (or/c message-type/c false/c))]
+                       [eos-message?
+                        (-> any/c boolean?)]
+                       [error-message?
+                        (-> any/c boolean?)]
+                       [fatal-message?
+                        (-> any/c boolean?)]
                        [message-type/c
                         list-contract?]))
 
@@ -87,6 +96,23 @@
 (define (message-src msg)
   (new gst-object% [pointer (gobject-get-field 'src msg)]))
 
+(define (message-of-type? msg type_1 . types)
+  (memf (apply symbols type_1 types) (message-type msg)))
+
+(define (eos-message? v)
+  (and (message? v)
+       (message-of-type? v 'eos)
+       #t))
+
+(define (error-message? v)
+  (and (message? v)
+       (message-of-type? v 'error)
+       #t))
+
+(define (fatal-message? v)
+  (or (eos-message? v)
+      (error-message? v)))
+
 (define (make-bus-channel bus [filters '(any)]
                           #:timeout [timeout clock-time-none])
   (define bus-pipe
@@ -97,12 +123,9 @@
              (let loop ()
                (define msg
                  (gobject-send bus-obj 'timed_pop_filtered timeout filter))
-               (define msg-type
-                 (message-type msg))
                (place-channel-put chan (and msg
                                             (gtype-instance-pointer msg)))
-               (when (and msg
-                          (or (memq 'eos msg-type) (memq 'error msg-type)))
+               (when (fatal-message? msg)
                  (exit 0))
                (loop)))))
   (place-channel-put bus-pipe (list (gtype-instance-pointer (gobject-ptr bus))
