@@ -4,6 +4,7 @@
          racket/class
          racket/contract
          racket/place
+         (only-in racket/function const thunk)
          gstreamer/gst
          gstreamer/clock)
 
@@ -13,7 +14,7 @@
                               #:timeout clock-time?)
                              (evt/c (or/c message?
                                           false/c
-                                          evt?)))]
+                                          (evt/c exact-integer?))))]
                        [bus%
                         (class/c
                          [post
@@ -115,22 +116,26 @@
 
 (define (make-bus-channel bus [filters '(any)]
                           #:timeout [timeout clock-time-none])
-  (define bus-pipe
-    (place chan
-           (let*-values ([(bus-ptr timeout filter)
-                          (apply values (place-channel-get chan))]
-                         [(bus-obj) (gobject-cast bus-ptr gst-bus)])
-             (let loop ()
-               (define msg
-                 (gobject-send bus-obj 'timed_pop_filtered timeout filter))
-               (place-channel-put chan (and msg
-                                            (gtype-instance-pointer msg)))
-               (when (fatal-message? msg)
-                 (exit 0))
-               (loop)))))
-  (place-channel-put bus-pipe (list (gtype-instance-pointer (gobject-ptr bus))
-                                    timeout
-                                    filters))
-  (choice-evt (wrap-evt bus-pipe
-                        (lambda (ptr) (and ptr (gstruct-cast ptr gst-message))))
-              (place-dead-evt bus-pipe)))
+  (let* ([bus-pipe (spawn-bus-place)]
+         [bus-dead? (place-dead-evt bus-pipe)])
+    (place-channel-put bus-pipe (list (gtype-instance-pointer (gobject-ptr bus))
+                                      timeout
+                                      filters))
+    (choice-evt (wrap-evt bus-pipe
+                          (lambda (ptr) (and ptr (gstruct-cast ptr gst-message))))
+                (handle-evt bus-dead?
+                            (lambda (ev) (wrap-evt ev (const (place-wait bus-pipe))))))))
+
+(define (spawn-bus-place)
+  (place chan
+         (let*-values ([(bus-ptr timeout filter)
+                        (apply values (place-channel-get chan))]
+                       [(bus-obj) (gobject-cast bus-ptr gst-bus)])
+           (let loop ()
+             (define msg
+               (gobject-send bus-obj 'timed_pop_filtered timeout filter))
+             (place-channel-put chan (and msg
+                                          (gtype-instance-pointer msg)))
+             (when (fatal-message? msg)
+               (exit 0))
+             (loop)))))
