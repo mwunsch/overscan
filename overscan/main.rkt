@@ -7,16 +7,18 @@
          gstreamer
          overscan/twitch)
 
-(provide (contract-out [current-broadcast
-                        (box/c (or/c (is-a?/c pipeline%) false/c))]
-                       [broadcast
+(provide (contract-out [broadcast
                         (->* ()
                              (source? sink?)
-                             evt?)]
+                             (is-a?/c pipeline%))]
+                       [start
+                        (-> (is-a?/c pipeline%) thread?)]
                        [stop
                         (->* ()
                              (#:timeout (and/c real? (not/c negative?)))
                              (gi-enum-value/c state-change-return))]
+                       [kill-broadcast
+                        (-> void?)]
                        [add-listener
                         (-> (-> message? (is-a?/c pipeline%) any) exact-integer?)]
                        [remove-listener
@@ -64,15 +66,19 @@
 
 (define (broadcast [source (make-fake-source)]
                    [sink (make-fake-sink)])
-  (when (unbox current-broadcast)
-    (error "Already a broadcast in progress"))
   (let ([pipeline (pipeline%-new #f)])
     (and (send pipeline add source)
          (send pipeline add sink)
          (send source link sink)
-         (set-box! current-broadcast pipeline)
-         (spawn-bus-worker pipeline)
-         (send pipeline set-state 'playing))))
+         (start pipeline)
+         pipeline)))
+
+(define (start pipeline)
+  (when (unbox current-broadcast)
+    (error "Already a broadcast in progress"))
+  (set-box! current-broadcast pipeline)
+  (send pipeline set-state 'playing)
+  (spawn-bus-worker pipeline))
 
 (define (stop #:timeout [timeout 5])
   (define broadcast (get-current-broadcast))
@@ -83,18 +89,25 @@
         result)
       (error "Could not stop broadcast")))
 
+(define (kill-broadcast)
+  (define broadcast (get-current-broadcast))
+  (send broadcast send-event (make-eos-event))
+  (semaphore-try-wait? broadcast-complete-evt)
+  (send broadcast set-state 'null)
+  (set-box! current-broadcast #f))
+
 (define (spawn-bus-worker broadcast)
   (let* ([bus (send broadcast get-bus)]
          [chan (make-bus-channel bus)])
     (thread (thunk
              (let loop ()
-                  (let ([ev (sync chan)])
-                    (if (evt? ev)
-                        (semaphore-post broadcast-complete-evt)
-                        (begin
-                          (for ([proc (in-hash-values broadcast-listeners)])
-                            (proc ev broadcast))
-                          (loop)))))))))
+               (let ([ev (sync chan)])
+                 (if (evt? ev)
+                     (semaphore-post broadcast-complete-evt)
+                     (begin
+                       (for ([proc (in-hash-values broadcast-listeners)])
+                         (proc ev broadcast))
+                       (loop)))))))))
 
 (define (add-listener proc)
   (let* ([stack broadcast-listeners]
