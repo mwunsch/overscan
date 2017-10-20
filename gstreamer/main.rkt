@@ -25,9 +25,4 @@
                        gstreamer/bin
                        gstreamer/pipeline
                        gstreamer/factories
-                       gstreamer/elements)
-         (contract-out [obtain-system-clock
-                        (-> (is-a?/c clock%))]))
-
-(define (obtain-system-clock)
-  (new clock% [pointer ((gst 'SystemClock) 'obtain)]))
+                       gstreamer/elements))

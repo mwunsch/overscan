@@ -6,6 +6,7 @@
          (only-in racket/list first last)
          gstreamer/gst
          gstreamer/caps
+         gstreamer/clock
          gstreamer/element
          gstreamer/bin
          gstreamer/pipeline)
@@ -46,7 +47,9 @@
                        [pipeline%-compose
                         (-> (or/c string? false/c)
                             (is-a?/c element%) ...
-                            (or/c (is-a?/c pipeline%) false/c))]))
+                            (or/c (is-a?/c pipeline%) false/c))]
+                       [obtain-system-clock
+                        (-> (is-a?/c clock%))]))
 
 (define gst-element-factory (gst 'ElementFactory))
 
@@ -109,3 +112,6 @@
          [bin (apply bin%-compose #f els)])
     (and (send pl add bin)
          pl)))
+
+(define (obtain-system-clock)
+  (new clock% [pointer ((gst 'SystemClock) 'obtain)]))
