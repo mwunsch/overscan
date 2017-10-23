@@ -15,6 +15,7 @@
 
 @include-section["gstreamer/element.scrbl"]
 @include-section["gstreamer/element-factory.scrbl"]
+@include-section["gstreamer/pad.scrbl"]
 
 @section[#:tag "gstreamer-support"]{Base Support}
 

@@ -2,6 +2,7 @@
 @require[@for-label[gstreamer
                     racket/base
                     racket/contract
+                    racket/class
                     ffi/unsafe/introspection]]
 
 
