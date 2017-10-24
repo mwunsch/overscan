@@ -17,6 +17,7 @@
 @include-section["gstreamer/element-factory.scrbl"]
 @include-section["gstreamer/pad.scrbl"]
 @include-section["gstreamer/clock.scrbl"]
+@include-section["gstreamer/caps.scrbl"]
 
 @section[#:tag "gstreamer-support"]{Base Support}
 
