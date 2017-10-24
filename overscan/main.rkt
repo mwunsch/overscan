@@ -31,6 +31,8 @@
                         (->* ()
                              ((is-a?/c pipeline%))
                              boolean?)]
+                       [on-air?
+                        (-> boolean?)]
                        [graphviz
                         (->* (path-string?)
                              ((is-a?/c pipeline%))
@@ -126,6 +128,9 @@
 (define (stopped? [broadcast (get-current-broadcast)])
   (let-values ([(result current pending) (send broadcast get-state)])
     (eq? current 'null)))
+
+(define (on-air?)
+  (and (unbox current-broadcast) #t))
 
 (define (graphviz filepath [broadcast (get-current-broadcast)])
   (call-with-output-file filepath
