@@ -92,3 +92,8 @@
           [caps caps?]) pad-template?]{
   Creates a new pad template with a name and with the given arguments.
 }
+
+@defproc[(pad%-new-from-template [template pad-template?] [name (or/c string? #f) #f])
+          (or/c (is-a?/c pad%) #f)]{
+  Creates a new pad from @racket[template] with the given @racket[name], generating a unique name if @racket[name] is @racket[#f]. Returns @racket[#f] in case of error.
+}

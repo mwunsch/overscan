@@ -110,7 +110,8 @@
 (define (pipeline%-compose name . els)
   (let* ([pl (pipeline%-new name)]
          [bin (apply bin%-compose #f els)])
-    (and (send pl add bin)
+    (and bin
+         (send pl add bin)
          pl)))
 
 (define (obtain-system-clock)
