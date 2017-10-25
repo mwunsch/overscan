@@ -42,8 +42,24 @@
     Checks if @this-obj[] and @racket[sinkpad] are compatible so they can be linked. Returns @racket[#t] if they can be linked, @racket[#f] otherwise.
   }
 
+  @defmethod[(get-allowed-caps) (or/c caps? #f)]{
+    Gets the @tech[#:key "caps"]{capabilities} of the allowed media types that can flow through @this-obj[] and its peer. Returns @racket[#f] if @this-obj[] has no peer.
+  }
+
+  @defmethod[(get-current-caps) caps?]{
+    Gets the @tech[#:key "caps"]{capabilities} currently configured on @this-obj[], or @racket[#f] when @this-obj[] has no caps.
+  }
+
+  @defmethod[(get-pad-template-caps) caps?]{
+    Gets the @tech[#:key "caps"]{capabilities} for @this-obj[]'s template.
+  }
+
   @defmethod[(get-peer) (or/c (is-a?/c pad%) #f)]{
     Gets the peer of @this-obj[] or @racket[#f] if there is none.
+  }
+
+  @defmethod[(has-current-caps?) boolean?]{
+    Returns @racket[#t] if @this-obj[] has @tech{caps} set on it, @racket[#f] otherwise.
   }
 
   @defmethod[(active?) boolean?]{
@@ -57,8 +73,22 @@
   @defmethod[(blocking?) boolean?]{
     Returns @racket[#t] if @this-obj[] is blocking downstream links, @racket[#f] otherwise.
   }
+}
 
-  @defproc[(pad-template? [v any/c]) boolean?]{
-    A @deftech{pad template} describes the possible media types a pad can handle. Returns @racket[#t] if @racket[v] is a pad template, @racket[#f] otherwise.
-  }
+@section{Pad Templates}
+
+@defproc[(pad-template? [v any/c]) boolean?]{
+  A @deftech{pad template} describes the possible media types a pad can handle. Returns @racket[#t] if @racket[v] is a pad template, @racket[#f] otherwise.
+}
+
+@defproc[(pad-template-caps [template pad-template?]) caps?]{
+  Gets the @tech[#:key "caps"]{capabilities} of @racket[template].
+}
+
+@defproc[(make-pad-template
+          [name string?]
+          [direction (one-of/c 'unknown 'src 'sink)]
+          [presence (one-of/c 'always 'sometimes 'request)]
+          [caps caps?]) pad-template?]{
+  Creates a new pad template with a name and with the given arguments.
 }

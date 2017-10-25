@@ -202,9 +202,9 @@
    [can-link?
     (->m (is-a?/c pad%) boolean?)]
    [get-allowed-caps
-    (->m caps?)]
+    (->m (or/c caps? false/c))]
    [get-current-caps
-    (->m caps?)]
+    (->m (or/c caps? false/c))]
    [get-pad-template-caps
     (->m caps?)]
    [get-peer
@@ -239,7 +239,9 @@
    [link-pads
     (->m (or/c string? false/c) (is-a?/c element%) (or/c string? false/c) boolean?)]
    [link-pads-filtered
-    (->m string? (is-a?/c element%) string? (or/c caps? false/c) boolean?)]
+    (->m (or/c string? false/c) (is-a?/c element%) (or/c string? false/c)
+         (or/c caps? false/c)
+         boolean?)]
    [link-filtered
     (->m (is-a?/c element%) (or/c caps? false/c) boolean?)]
    [get-factory

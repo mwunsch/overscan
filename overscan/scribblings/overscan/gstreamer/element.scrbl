@@ -36,6 +36,18 @@
     Links the two named pads of @this-obj[] and @racket[dest]. If both elements have different parents, the link fails. Both @racket[srcpadname] and @racket[destpadname] could be @racket[#f], in which acase any pad will be selected. Returns @racket[#t] if the pads could be linked, @racket[#f] otherwise.
   }
 
+  @defmethod[(link-pads-filtered
+              [srcpadname (or/c string? #f)]
+              [dest (is-a?/c element%)]
+              [destpadname (or/c string? #f)]
+              [filter (or/c caps? #f)]) boolean?]{
+    Equivalent to @method[element% link-pads], but if @racket[filter] is present and not @racket[#f], the link will be constrained by the specified set of @tech{caps}.
+  }
+
+  @defmethod[(link-filtered [dest (is-a?/c element%)] [filter (or/c caps? #f)]) boolean?]{
+    Equivalent to @method[element% link], but if @racket[filter] is present and not @racket[#f], the link will be constrained by the specified set of @tech{caps}.
+  }
+
   @defmethod[(get-factory) (is-a?/c element-factory%)]{
     Retrieves the factory that was used to create @this-obj[].
   }

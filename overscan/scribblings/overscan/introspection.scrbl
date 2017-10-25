@@ -9,7 +9,7 @@
 
 @secref{gstreamer} is the core framework that powers the multimedia capabilities of Overscan. GStreamer is also a @bold{C} framework, which means that a big part of Overscan's codebase is dedicated to the interop between Racket and C. Racket provides a phenomenal @seclink["top" #:doc '(lib "scribblings/foreign/foreign.scrbl")]{Foreign Interface}, but to create foreign functions for all the relevant portions of GStreamer would be cumbersome, at best.
 
-Luckily, GStreamer is written with @hyperlink["https://wiki.gnome.org/Projects/GLib"]{GLib} and contains @hyperlink["https://wiki.gnome.org/Projects/GObjectIntrospection"]{GObject Introspection} metadata. @emph{GObject Introspection} (aka @emph{GIR}) is an interface description layer that allows for a language to read this metadata and dynamically create bindings for the C library.
+Luckily, GStreamer is written with @hyperlink["https://wiki.gnome.org/Projects/GLib"]{GLib} and contains @hyperlink["https://wiki.gnome.org/Projects/GObjectIntrospection"]{GObject Introspection} metadata. @deftech{GObject Introspection} (aka @deftech{GIR}) is an interface description layer that allows for a language to read this metadata and dynamically create bindings for the C library.
 
 The Overscan package provides a module designed to accompany Racket's FFI collection. This module brings additional functionality and @secref["types" #:doc '(lib "scribblings/foreign/foreign.scrbl")] for working with introspected C libraries. This module powers the @secref{gstreamer} module, but can be used outside of Overscan for working with other GLib libraries.
 
