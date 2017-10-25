@@ -46,7 +46,7 @@
                        [message-src
                         (-> message? (is-a?/c gst-object%))]
                        [message-of-type?
-                        (-> message? message-type/c message-type/c ...
+                        (-> message? symbol? symbol? ...
                             (or/c message-type/c false/c))]
                        [eos-message?
                         (-> any/c boolean?)]
@@ -98,6 +98,7 @@
   (new gst-object% [pointer (gobject-get-field 'src msg)]))
 
 (define (message-of-type? msg type_1 . types)
+  ;; TODO: Investigate if this works with its stated contract
   (memf (apply symbols type_1 types) (message-type msg)))
 
 (define (eos-message? v)
