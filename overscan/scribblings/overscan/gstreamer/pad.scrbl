@@ -30,6 +30,10 @@
     Links @this-obj[] and the @racket[sinkpad]. Returns a result code indicating if the connection worked or what went wrong.
   }
 
+  @defmethod[(link-maybe-ghosting [sink (is-a?/c pad%)]) boolean?]{
+    Links @this-obj[] to @racket[sink], creating any @tech{ghost pads} in between as necessary. Returns @racket[#t] if the link succeeded, @racket[#f] otherwise.
+  }
+
   @defmethod[(unlink [sinkpad (is-a?/c pad%)]) boolean?]{
     Unlinks @this-obj[] from the @racket[sinkpad]. Returns @racket[#t] if the pads were unlinked and @racket[#f] if the pads were not linked together.
   }
@@ -73,6 +77,33 @@
   @defmethod[(blocking?) boolean?]{
     Returns @racket[#t] if @this-obj[] is blocking downstream links, @racket[#f] otherwise.
   }
+}
+
+@section[#:style 'hidden]{@racket[ghost-pad%]}
+
+@defclass[ghost-pad% pad% ()]{
+  A @deftech{ghost pad} acts as a proxy for another pad, and are used when working with @tech{bins}. They allow the bin to have sink and/or source pads that link to the sink/source pads of the child elements.
+
+  @defmethod[(get-target) (or/c (is-a?/c pad%) #f)]{
+    Get the target pad of @this-obj[] or @racket[#f] if no target is set.
+  }
+
+  @defmethod[(set-target [target (is-a?/c pad%)]) boolean?]{
+    Sets the new target of @this-obj[] to @racket[target]. Returns @racket[#t] on success or @racket[#f] if pads could not be linked.
+  }
+}
+
+@defproc[(ghost-pad%-new [name (or/c string? #f)]
+          [target (is-a?/c pad%)])
+          (or/c (is-a?/c ghost-pad%) #f)]{
+  Create a new ghost pad with @racket{target} as the target, or @racket[#f] if there is an error.
+}
+
+@defproc[(ghost-pad%-new-no-target
+         [name (or/c string? #f)]
+         [direction (one-of/c 'unknown 'src 'sink)])
+         (or/c (is-a?/c ghost-pad%) #f)]{
+  Create a new ghost pad without a target with the given @racket[direction], or @racket[#f] if there is an error.
 }
 
 @section{Pad Templates}
