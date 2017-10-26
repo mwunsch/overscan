@@ -18,4 +18,4 @@
   (let ([location (format "rtmp://live-jfk.twitch.tv/app/~a~a live=1"
                           stream-key
                           (if bandwidth-test "?bandwidthtest=true" ""))])
-    (rtmpsink location "sink:rtmp:twitch")))
+    (make-rtmpsink location "sink:rtmp:twitch")))
