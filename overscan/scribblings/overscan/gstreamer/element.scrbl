@@ -71,4 +71,12 @@
 
     The third return value is the pending state of the element, i.e. what the next state will be when the result of the state change is @racket['async].
   }
+
+  @defproc[(source? [v any/c]) boolean?]{
+    Returns @racket[#t] if @racket[v] is an element with no sink pads and at least one source pad, @racket[#f] otherwise. Implies @racket[(is-a? v element%)].
+  }
+
+  @defproc[(sink? [v any/c]) boolean?]{
+    Returns @racket[#t] if @racket[v] is an element with no source pads and at least one sink pad, @racket[#f] otherwise. Implies @racket[(is-a? v element%)]. The opposite of @racket[source?].
+  }
 }
