@@ -41,7 +41,7 @@ Capabilities, or @deftech{caps}, are a mechanism to describe the data that can f
   Returns @racket[#t] if @racket[caps1] and @racket[caps2] represent the same set of caps, @racket[#f] otherwise.
 }
 
-@defproc[(make-capsfilter [caps caps?] [name (or/c string? #f) #f])
+@defproc[(capsfilter [caps caps?] [name (or/c string? #f) #f])
          (is-a?/c element%)]{
   Create a @deftech{capsfilter} element with the given @racket[name] (or use a generated name if @racket[#f]). A capsfilter element does not modify data but can enforce limitations on the data passing through it via its @racket[caps] property.
 }
