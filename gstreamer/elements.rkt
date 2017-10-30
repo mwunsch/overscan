@@ -11,11 +11,11 @@
 (provide (contract-out [capsfilter
                         (->* (caps?)
                              ((or/c string? false/c))
-                             (is-a?/c element%))]
+                             (element/c "capsfilter"))]
                        [rtmpsink
                         (->* (string?)
                              ((or/c string? false/c))
-                             sink?)]))
+                             (element/c "rtmpsink"))]))
 
 (define (capsfilter caps [name #f])
   (gobject-with-properties (element-factory%-make "capsfilter" name)

@@ -3,6 +3,7 @@
 (require ffi/unsafe/introspection
          racket/class
          racket/contract
+         (only-in racket/function curryr)
          gstreamer/gst
          gstreamer/caps
          gstreamer/clock
@@ -16,6 +17,8 @@
                         (-> any/c boolean?)]
                        [sink?
                         (-> any/c boolean?)]
+                       [element/c
+                        (-> string? flat-contract?)]
                        [pad%
                         pad%/c]
                        [ghost-pad%
@@ -72,6 +75,8 @@
                          get-state
                          send-event))
 
+(define gst-element (gst 'Element))
+
 (define element%
   (class (element-mixin gst-object%)
     (super-new)
@@ -113,6 +118,12 @@
   (and (is-a? v element%)
        (positive? (gobject-get-field 'numsinkpads v))
        (zero? (gobject-get-field 'numsrcpads v))))
+
+(define (element/c factoryname)
+  (and/c (gobject/c gst-element)
+         (compose1 (curryr equal? factoryname)
+                   (curryr gobject-send 'get_name)
+                   (curryr gobject-send 'get_factory))))
 
 (define pad-mixin
   (make-gobject-delegate get-direction
