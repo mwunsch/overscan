@@ -72,6 +72,10 @@
     The third return value is the pending state of the element, i.e. what the next state will be when the result of the state change is @racket['async].
   }
 
+  @defproc[(element/c [factoryname string?]) flat-contract?]{
+    Accepts a string @racket[factoryname] and returns a flat contract that recognizes elements created by a factory of that name.
+  }
+
   @defproc[(source? [v any/c]) boolean?]{
     Returns @racket[#t] if @racket[v] is an element with no sink pads and at least one source pad, @racket[#f] otherwise. Implies @racket[(is-a? v element%)].
   }

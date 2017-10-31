@@ -120,10 +120,11 @@
        (zero? (gobject-get-field 'numsrcpads v))))
 
 (define (element/c factoryname)
-  (and/c (gobject/c gst-element)
-         (compose1 (curryr equal? factoryname)
-                   (curryr gobject-send 'get_name)
-                   (curryr gobject-send 'get_factory))))
+  (flat-named-contract `(element/c ,factoryname)
+                       (and/c (gobject/c gst-element)
+                              (compose1 (curryr equal? factoryname)
+                                        (curryr gobject-send 'get_name)
+                                        (curryr gobject-send 'get_factory)))))
 
 (define pad-mixin
   (make-gobject-delegate get-direction
