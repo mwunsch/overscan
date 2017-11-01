@@ -72,6 +72,10 @@
     The third return value is the pending state of the element, i.e. what the next state will be when the result of the state change is @racket['async].
   }
 
+  @defmethod[(send-event [event event?]) boolean?]{
+    Sends an @tech{event} to @this-obj[]. Returns @racket[#t] if the event was handled, @racket[#f] otherwise.
+  }
+
   @defproc[(element/c [factoryname string?]) flat-contract?]{
     Accepts a string @racket[factoryname] and returns a flat contract that recognizes elements created by a factory of that name.
   }
@@ -106,4 +110,38 @@
 @defproc[(element-factory%-make [factoryname string?] [name (or/c string? #f) #f])
          (or/c (is-a?/c element%) #f)]{
   Create a new element of the type defined by the given @racket[factoryname]. The element's name will be given the @racket[name] if supplied, otherwise the element will receive a unique name. Returns @racket[#f] if an element was unable to be created.
+}
+
+@section{Events}
+
+An @deftech{event} in GStreamer is a small structure to describe notification signals that can be passed up and down a @tech{pipeline}. Events can move both upstream and downstream, notifying elements of stream states. Send an event through a pipeline with @method[element% send-event].
+
+@defproc[(event? [v any/c]) boolean?]{
+  Returns @racket[#t] if @racket[v] is a GStreamer event, @racket[#f] otherwise.
+}
+
+@defproc[(event-type [ev event?])
+         (one-of/c 'unknown 'flush-start 'flush-stop 'stream-start 'caps 'segment
+                   'stream-collection 'tag 'buffersize 'sink-message 'stream-group-done
+                   'eos 'toc 'protection 'segment-done 'gap 'qos 'seek 'navigation
+                   'latency 'step 'reconfigure 'toc-select 'select-streams
+                   'custom-upstream 'custom-downstream 'custom-downstream-oob
+                   'custom-downstream-sticky 'custom-both 'custom-both-oob)]{
+  Gets the type of event for @racket[ev].
+}
+
+@defproc[(event-seqnum [ev event?]) exact-integer?]{
+  Retrieve the sequence number of @racket[ev].
+
+  Events have ever-incrementing sequence numbers. Sequence numbers are typically used to indicate that an event corresponds to some other set of messages or events.
+
+  Events and @tech{messages} share the same sequence number incrementor; two events or messages will never have the same sequence number unless that correspondence was made explicitly.
+}
+
+@defproc[(make-eos-event) event?]{
+  Create a new @deftech{EOS} (end-of-stream) event.
+
+  The EOS event will travel down to the sink elements in the pipeline which will then post an @racket[eos-message?] on the bus after they have finished playing any buffered data.
+
+  The EOS event itself will not cause any state transitions of the pipeline.
 }
