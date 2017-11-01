@@ -84,3 +84,26 @@
     Returns @racket[#t] if @racket[v] is an element with no source pads and at least one sink pad, @racket[#f] otherwise. Implies @racket[(is-a? v element%)]. The opposite of @racket[source?].
   }
 }
+
+@section[#:style 'hidden]{@racket[element-factory%]}
+
+@defclass[element-factory% gst-object% ()]{
+  Used to create instances of @racket[element%].
+
+  @defmethod[(create [name (or/c string? #f) #f]) (is-a?/c element%)]{
+    Creates a new instance of @racket[element%] of the type defined by @this-obj[]. It will be given the @racket[name] supplied, or if @racket[name] is @racket[#f], a unique name will be created for it.
+  }
+
+  @defmethod[(get-metadata) (hash/c symbol? any/c)]{
+    Returns a @racket[hash] of @this-obj[] metadata e.g. author, description, etc.
+  }
+}
+
+@defproc[(element-factory%-find [name string?]) (or/c (is-a?/c element-factory%) #f)]{
+  Search for an element factory of @racket[name]. Returns @racket[#f] if the factory could not be found.
+}
+
+@defproc[(element-factory%-make [factoryname string?] [name (or/c string? #f) #f])
+         (or/c (is-a?/c element%) #f)]{
+  Create a new element of the type defined by the given @racket[factoryname]. The element's name will be given the @racket[name] if supplied, otherwise the element will receive a unique name. Returns @racket[#f] if an element was unable to be created.
+}
