@@ -98,7 +98,7 @@
                        [gstruct-cast
                         (->> cpointer? gi-struct? gstruct?)]
                        [gobject-get
-                        (->> gobject? string? ctype? any)]
+                        (->> gobject? string? (or/c ctype? gi-registered-type?) any)]
                        [gobject-set!
                         (->* (gobject? string? any/c)
                              ((or/c ctype? (listof symbol?)))
@@ -325,7 +325,7 @@
                                   [(gi-struct? type-interface)
                                    (_gi-struct type-interface)]
                                   [(gi-enum? type-interface)
-                                   (gi-enum->ctype type-interface)]
+                                   (_gi-enum type-interface)]
                                   [(gi-object? type-interface)
                                    (_gi-object type-interface)]
                                   [(gi-registered-type? type-interface)
@@ -824,15 +824,17 @@
   (and (gi-enum? enum)
        (eq? 'GI_INFO_TYPE_FLAGS (gi-base-type enum))))
 
-(define (gi-enum->ctype enum)
+(define (_gi-enum enum)
   (let ([symbols (apply append
                         (for/list ([(key val) (in-hash (gi-enum->hash enum))])
                           (list key '= val)))])
     (case (gi-base-type enum)
-      ['GI_INFO_TYPE_FLAGS (_bitmask symbols
-                                     (gi-enum-storage-type enum))]
-      [else (_enum symbols
-                   (gi-enum-storage-type enum))])))
+      ['GI_INFO_TYPE_FLAGS
+       (_bitmask symbols
+                 (gi-enum-storage-type enum))]
+      [else
+       (_enum symbols
+              (gi-enum-storage-type enum))])))
 
 (define (gi-enum-value/c enum)
   (apply one-of/c (gi-enum->list enum)))
@@ -969,7 +971,17 @@
   (cast pointer _pointer (_gi-object obj)))
 
 (define-gobject gobject-get (_fun _pointer _string (ctype : _?)
-                                  [ret : (_ptr o ctype)] (_pointer = #f)
+                                  [ret : (_ptr o (cond
+                                                  [(gi-struct? ctype)
+                                                   (_gi-struct ctype)]
+                                                  [(gi-enum? ctype)
+                                                   (_gi-enum ctype)]
+                                                  [(gi-object? ctype)
+                                                   (_gi-object ctype)]
+                                                  [(gi-registered-type? ctype)
+                                                   (gi-registered-type->ctype ctype)]
+                                                  [else ctype]))]
+                                  (_pointer = #f)
                                   -> _void
                                   -> ret)
   #:c-id g_object_get)

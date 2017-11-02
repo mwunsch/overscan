@@ -19,6 +19,7 @@
 @include-section["gstreamer/pad.scrbl"]
 @include-section["gstreamer/clock.scrbl"]
 @include-section["gstreamer/caps.scrbl"]
+@include-section["gstreamer/elements.scrbl"]
 
 @section[#:tag "gstreamer-support"]{Base Support}
 

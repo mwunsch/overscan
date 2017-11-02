@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require ffi/unsafe/introspection
+         (only-in ffi/unsafe _string)
          racket/class
          racket/contract
          gstreamer/gst
@@ -11,16 +12,36 @@
 (provide (contract-out [capsfilter
                         (->* (caps?)
                              ((or/c string? false/c))
-                             (element/c "capsfilter"))]
+                             capsfilter?)]
+                       [capsfilter?
+                        (-> any/c boolean?)]
+                       [capsfilter-caps
+                        (-> capsfilter? caps?)]
                        [rtmpsink
                         (->* (string?)
                              ((or/c string? false/c))
-                             (element/c "rtmpsink"))]))
+                             rtmpsink?)]
+                       [rtmpsink?
+                        (-> any/c boolean?)]
+                       [rtmpsink-location
+                        (-> rtmpsink? string?)]))
 
 (define (capsfilter caps [name #f])
   (gobject-with-properties (element-factory%-make "capsfilter" name)
                            (hash 'caps caps)))
 
+(define capsfilter?
+  (element/c "capsfilter"))
+
+(define (capsfilter-caps element)
+  (gobject-get element "caps" (gst 'Caps)))
+
 (define (rtmpsink location [name #f])
   (gobject-with-properties (element-factory%-make "rtmpsink" name)
                            (hash 'location location)))
+
+(define rtmpsink?
+  (element/c "rtmpsink"))
+
+(define (rtmpsink-location element)
+  (gobject-get element "location" _string))
