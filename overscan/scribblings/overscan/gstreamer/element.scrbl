@@ -7,7 +7,7 @@
 
 
 @defclass/title[element% gst-object% ()]{
-  The basic building block for any GStreamer media pipeline. Elements are like a black box: something goes in, and something else will come out the other side. For example, a @emph{decoder} element would take in encoded data and would output decoded data. A @emph{muxer} element would take in several different media streams and combine them into one. Elements are linked via @tech{pads}.
+  The basic building block for any GStreamer media pipeline. @deftech{Elements} are like a black box: something goes in, and something else will come out the other side. For example, a @emph{decoder} element would take in encoded data and would output decoded data. A @emph{muxer} element would take in several different media streams and combine them into one. Elements are linked via @tech{pads}.
 
   @defmethod[(get-request-pad [name string?]) (or/c (is-a?/c pad%) #f)]{
     Retrieves a pad from @this-obj[] by name. This version only retrieves request pads. Returns @racket[#f] if a pad could not be found.
@@ -104,7 +104,7 @@
 @section[#:style 'hidden]{@racket[element-factory%]}
 
 @defclass[element-factory% gst-object% ()]{
-  Used to create instances of @racket[element%].
+  @deftech{Element factories} are used to create instances of @racket[element%].
 
   @defmethod[(create [name (or/c string? #f) #f]) (is-a?/c element%)]{
     Creates a new instance of @racket[element%] of the type defined by @this-obj[]. It will be given the @racket[name] supplied, or if @racket[name] is @racket[#f], a unique name will be created for it.

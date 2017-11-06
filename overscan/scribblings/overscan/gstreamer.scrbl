@@ -13,6 +13,52 @@
 
 @local-table-of-contents[]
 
+@section[#:tag "gstreamer-usage"]{Using GStreamer}
+
+GStreamer must be initialized before using it. Initialization loads the GStreamer libraries and plug-ins.
+
+@racketblock[
+  (require gstreamer)
+
+  (unless (gst-initialized?)
+    (if (gst-initialize)
+        (displayln (gst-version-string))
+        (error "Could not load GStreamer")))
+]
+
+This initializes GStreamer if it hasn't already been loaded, and prints its version, or raises an error if GStreamer could not be initialized.
+
+From here, a GStreamer @tech{pipeline} is constructed by linking together @tech{elements}. Create an element by using an @tech{element factory} to make elements.
+
+@racketblock[
+  (define videotestsrc
+    (element-factory%-make "videotestsrc"))
+
+  (define osxvideosink
+    (element-factory%-make "osxvideosink"))
+
+  (define my-pipeline
+    (pipeline%-compose "my-pipeline"
+                       videotestsrc
+                       osxvideosink))
+]
+
+This code creates two elements: a source that generates test video data and a native macOS video sink. It then composes a pipeline by linking those two elements together. Every GStreamer application needs a pipeline and @racket[pipeline%-compose] is a convenient mechanism for quickly creating them.
+
+From here the pipeline can be played by setting its state:
+
+@racketblock[
+  (send my-pipeline @#,method[element% set-state] 'playing)
+]
+
+This will draw a new window where a test video signal of @hyperlink["https://en.wikipedia.org/wiki/SMPTE_color_bars"]{SMPTE color bars} will be displayed.
+
+Shut down the pipeline by setting its state again:
+
+@racketblock[
+  (send my-pipeline @#,method[element% set-state] 'null)
+]
+
 @include-section["gstreamer/element.scrbl"]
 @include-section["gstreamer/bin.scrbl"]
 @include-section["gstreamer/bus.scrbl"]
