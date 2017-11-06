@@ -76,6 +76,18 @@
     Sends an @tech{event} to @this-obj[]. Returns @racket[#t] if the event was handled, @racket[#f] otherwise.
   }
 
+  @defmethod[(play!) (one-of/c 'failure 'success 'async 'no-preroll)]{
+    Shorthand equivalent to calling @method[element% set-state] on @this-obj[] with @racket['playing].
+  }
+
+  @defmethod[(pause!) (one-of/c 'failure 'success 'async 'no-preroll)]{
+    Shorthand equivalent to calling @method[element% set-state] on @this-obj[] with @racket['paused].
+  }
+
+  @defmethod[(stop!) (one-of/c 'failure 'success 'async 'no-preroll)]{
+    Shorthand equivalent to calling @method[element% set-state] on @this-obj[] with @racket['null].
+  }
+
   @defproc[(element/c [factoryname string?]) flat-contract?]{
     Accepts a string @racket[factoryname] and returns a flat contract that recognizes elements created by a factory of that name.
   }
