@@ -34,6 +34,14 @@ Examples include an h.264 encoder, an mp4 muxer, or a tee element --- used to ta
   Returns the possible allowed @tech{caps} of the @racket[element].
 }
 
+@defproc[(tee [name (or/c string? #f) #f]) tee?]{
+  Create a @deftech{tee} element with the given @racket[name] (or use a generated name if @racket[#f]). A tee element is a 1-to-N pipe fitting element, meant for splitting data to multiple pads.
+}
+
+@defproc[(tee? [v any/c]) boolean?]{
+  Returns @racket[#t] if @racket[v] is an element of the @racket["tee"] factory, @racket[#f] otherwise.
+}
+
 @section{Sink Elements}
 
 Sink elements are the end points in a media pipeline. They accept data but do not produce anything. Writing to a disk or video or audio playback are implemented by sink elements.

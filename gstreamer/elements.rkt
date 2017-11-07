@@ -17,6 +17,12 @@
                         (-> any/c boolean?)]
                        [capsfilter-caps
                         (-> capsfilter? caps?)]
+                       [tee
+                        (->* ()
+                             ((or/c string? false/c))
+                             tee?)]
+                       [tee?
+                        (-> any/c boolean?)]
                        [rtmpsink
                         (->* (string?)
                              ((or/c string? false/c))
@@ -35,6 +41,12 @@
 
 (define (capsfilter-caps element)
   (gobject-get element "caps" (gst 'Caps)))
+
+(define (tee [name #f])
+  (element-factory%-make "tee" name))
+
+(define tee?
+  (element/c "tee"))
 
 (define (rtmpsink location [name #f])
   (gobject-with-properties (element-factory%-make "rtmpsink" name)
