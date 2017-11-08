@@ -35,13 +35,14 @@ When installing the base plugins, be sure to include
 by GTK+. Overscan uses this for working with text overlays while
 streaming.
 
-@commandline{brew install gst-plugins-good}
+@commandline{brew install gst-plugins-good --with-aalib}
 
-@commandline{brew install gst-plugins-bad --with-rtmpdump --with-faac}
+@hyperlink["http://aa-project.sourceforge.net/aalib/"]{AAlib} is a library for converting still and moving images to ASCII art.
+
+@commandline{brew install gst-plugins-bad --with-rtmpdump --with-fdk-aac}
 
 @hyperlink["https://rtmpdump.mplayerhq.hu"]{RTMPDump} is a toolkit for
-RTMP streams. @hyperlink["http://www.audiocoding.com/faac.html"]{FAAC}
-is an encoder for AAC audio.
+RTMP streams. @hyperlink["https://en.wikipedia.org/wiki/Fraunhofer_FDK_AAC"]{Fraunhofer FDK AAC} is an encoder for AAC audio.
 
 @commandline{brew install gst-plugins-ugly --with-x264}
 
