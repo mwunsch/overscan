@@ -274,7 +274,7 @@ A @deftech{gobject} instance, like the introspected metadata entries provided by
   This will cast @racket[pointer] to @racket[(_gi-object obj)], thereby transforming it into a @tech{gobject}.
 }
 
-@defproc[(gobject-get [obj gobject?] [propname string?] [ctype (or/c ctype? gi-registered-type?)]) any?]{
+@defproc[(gobject-get [obj gobject?] [propname string?] [ctype (or/c ctype? gi-registered-type? (listof symbol?))]) any?]{
   Extract the @hyperlink["https://developer.gnome.org/gobject/stable/gobject-properties.html"]{property} from @racket[obj] whose name matches @racket[propname] and can be dereferenced as a @racket[ctype].
 }
 

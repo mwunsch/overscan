@@ -15,11 +15,43 @@ A source element generates data for use by a pipeline. A source element has a so
 
 Examples of source elements are those that generate video or audio signal, or those that capture data from a disk or some other input device.
 
+@subsection{@racket[videotestsrc]}
+
+@defproc[(videotestsrc [name (or/c string? #f) #f]
+                       [#:pattern pattern videotest-pattern/c  'smpte]
+                       [#:live? is-live? boolean? #f]) videotestsrc?]{
+  Creates a @deftech{videotestsrc} element with the given @racket[name] (or a generated name if @racket[#f]). A videotestsrc element produces a @racket[pattern] on its src pad.
+}
+
+@defproc[(videotestsrc? [v any/c]) boolean?]{
+  Returns @racket[#t] if @racket[v] is an element of the @racket["videotestsrc"] factory, @racket[#f] otherwise.
+}
+
+@defthing[videotest-pattern/c flat-contract?
+          #:value (one-of/c 'smpte 'snow 'black 'white 'red 'green 'blue
+                            'checkers-1 'checkers-2 'checkers-4 'checkers-8
+                            'circular 'blink 'smpte75 'zone-plate 'gamut
+                            'chroma-zone-plate 'solid-color 'ball 'smpte100
+                            'bar 'pinwheel 'spokes 'gradient 'colors)]{
+  A contract that accepts a valid pattern for a @racket[videotestsrc].
+}
+
+@defproc[(videotestsrc-pattern [element videotestsrc?]) videotest-pattern/c]{
+}
+
+@defproc[(set-videotestsrc-pattern! [element videotestsrc?] [pattern videotest-pattern/c]) void?]{
+}
+
+@defproc[(videotestsrc-live? [element videotestsrc?]) boolean?]{
+}
+
 @section{Filter-like Elements}
 
 Filters and filter-like elements have both input and output @tech{pads}, also called sink and source pads respectively. They operate on data they receive on their sink pads and provide data on their output pads.
 
 Examples include an h.264 encoder, an mp4 muxer, or a tee element --- used to take a single input and send it to multiple outputs.
+
+@subsection{@racket[capsfilter]}
 
 @defproc[(capsfilter [caps caps?] [name (or/c string? #f) #f])
          capsfilter?]{
@@ -34,6 +66,8 @@ Examples include an h.264 encoder, an mp4 muxer, or a tee element --- used to ta
   Returns the possible allowed @tech{caps} of the @racket[element].
 }
 
+@subsection{@racket[tee]}
+
 @defproc[(tee [name (or/c string? #f) #f]) tee?]{
   Create a @deftech{tee} element with the given @racket[name] (or use a generated name if @racket[#f]). A tee element is a 1-to-N pipe fitting element, meant for splitting data to multiple pads.
 }
@@ -45,6 +79,8 @@ Examples include an h.264 encoder, an mp4 muxer, or a tee element --- used to ta
 @section{Sink Elements}
 
 Sink elements are the end points in a media pipeline. They accept data but do not produce anything. Writing to a disk or video or audio playback are implemented by sink elements.
+
+@subsection{@racket[rtmpsink]}
 
 @defproc[(rtmpsink [location string?] [name (or/c string? #f) #f])
          rtmpsink?]{

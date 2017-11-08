@@ -98,7 +98,7 @@
                        [gstruct-cast
                         (->> cpointer? gi-struct? gstruct?)]
                        [gobject-get
-                        (->> gobject? string? (or/c ctype? gi-registered-type?) any)]
+                        (->> gobject? string? (or/c ctype? gi-registered-type? (listof symbol?)) any)]
                        [gobject-set!
                         (->* (gobject? string? any/c)
                              ((or/c ctype? (listof symbol?)))
@@ -980,6 +980,7 @@
                                                    (_gi-object ctype)]
                                                   [(gi-registered-type? ctype)
                                                    (gi-registered-type->ctype ctype)]
+                                                  [((listof symbol?) ctype) (_enum ctype)]
                                                   [else ctype]))]
                                   (_pointer = #f)
                                   -> _void
