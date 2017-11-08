@@ -18,9 +18,8 @@ GStreamer codebase (i.e. it isn&rsquo;t well documented or doesn&rsquo;t include
 tests).</p><p><span class="hspace">&nbsp;&nbsp;</span><span class="stt">brew install gst-plugins-base --with-pango</span></p><p>When installing the base plugins, be sure to include
 <a href="http://www.pango.org">Pango</a>, a text layout library used
 by GTK+. Overscan uses this for working with text overlays while
-streaming.</p><p><span class="hspace">&nbsp;&nbsp;</span><span class="stt">brew install gst-plugins-good</span></p><p><span class="hspace">&nbsp;&nbsp;</span><span class="stt">brew install gst-plugins-bad --with-rtmpdump --with-faac</span></p><p><a href="https://rtmpdump.mplayerhq.hu">RTMPDump</a> is a toolkit for
-RTMP streams. <a href="http://www.audiocoding.com/faac.html">FAAC</a>
-is an encoder for AAC audio.</p><p><span class="hspace">&nbsp;&nbsp;</span><span class="stt">brew install gst-plugins-ugly --with-x264</span></p><p><a href="http://www.videolan.org/developers/x264.html">x264</a> is a
+streaming.</p><p><span class="hspace">&nbsp;&nbsp;</span><span class="stt">brew install gst-plugins-good --with-aalib</span></p><p><a href="http://aa-project.sourceforge.net/aalib/">AAlib</a> is a library for converting still and moving images to ASCII art.</p><p><span class="hspace">&nbsp;&nbsp;</span><span class="stt">brew install gst-plugins-bad --with-rtmpdump --with-fdk-aac</span></p><p><a href="https://rtmpdump.mplayerhq.hu">RTMPDump</a> is a toolkit for
+RTMP streams. <a href="https://en.wikipedia.org/wiki/Fraunhofer_FDK_AAC">Fraunhofer FDK AAC</a> is an encoder for AAC audio.</p><p><span class="hspace">&nbsp;&nbsp;</span><span class="stt">brew install gst-plugins-ugly --with-x264</span></p><p><a href="http://www.videolan.org/developers/x264.html">x264</a> is a
 library for encoding video streams into the H.264/MPEG-4 AVC
 format.</p><p>With these dependencies in place and a running Racket implementation,
 you are now ready to begin broadcasting. <span class="refelem"><span class="refcolumn"><span class="refcontent">Personally, I
