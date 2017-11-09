@@ -37,12 +37,15 @@ Examples of source elements are those that generate video or audio signal, or th
 }
 
 @defproc[(videotestsrc-pattern [element videotestsrc?]) videotest-pattern/c]{
+  Returns the test pattern of @racket[element].
 }
 
 @defproc[(set-videotestsrc-pattern! [element videotestsrc?] [pattern videotest-pattern/c]) void?]{
+  Sets the test pattern of @racket[element].
 }
 
 @defproc[(videotestsrc-live? [element videotestsrc?]) boolean?]{
+  Returns @racket[#t] if @racket[element] is being used as a live source, @racket[#f] otherwise.
 }
 
 @section{Filter-like Elements}
@@ -63,7 +66,11 @@ Examples include an h.264 encoder, an mp4 muxer, or a tee element --- used to ta
 }
 
 @defproc[(capsfilter-caps [element capsfilter?]) caps?]{
-  Returns the possible allowed @tech{caps} of the @racket[element].
+  Returns the possible allowed @tech{caps} of @racket[element].
+}
+
+@defproc[(set-capsfilter-caps! [element capsfilter?] [caps caps?]) void?]{
+  Sets the allowed @tech{caps} of @racket[element] to @racket[caps].
 }
 
 @subsection{@racket[tee]}

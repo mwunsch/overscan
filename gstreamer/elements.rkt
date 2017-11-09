@@ -17,6 +17,8 @@
                         (-> any/c boolean?)]
                        [capsfilter-caps
                         (-> capsfilter? caps?)]
+                       [set-capsfilter-caps!
+                        (-> capsfilter? caps? void?)]
                        [tee
                         (->* ()
                              ((or/c string? false/c))
@@ -57,6 +59,9 @@
 
 (define (capsfilter-caps element)
   (gobject-get element "caps" (gst 'Caps)))
+
+(define (set-capsfilter-caps! element caps)
+  (gobject-set! element "caps" caps (gst 'Caps)))
 
 (define (tee [name #f])
   (element-factory%-make "tee" name))
