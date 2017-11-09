@@ -105,6 +105,11 @@
                              void?)]
                        [gobject-with-properties
                         (->> gobject? (hash/c symbol? any/c) gobject?)]
+                       [make-gobject-property-procedures
+                        (->> string?
+                             (or/c ctype? gi-registered-type? (listof symbol?))
+                             (values (->> gobject? any)
+                                     (->> gobject? any/c void?)))]
                        [introspection
                         (->* (symbol?) (string?) gi-repository?)]
                        [struct gi-repository
@@ -1011,6 +1016,16 @@
 
 (define-gir gi-object-parent (_fun _gi-base-info -> _gi-base-info)
   #:c-id g_object_info_get_parent)
+
+(define (make-gobject-property-procedures propname ctype)
+  (values (procedure-rename
+           (lambda (obj)
+             (gobject-get obj propname ctype))
+           'gobject-property-accessor)
+          (procedure-rename
+           (lambda (obj val)
+             (gobject-set! obj propname val ctype))
+           'gobject-property-mutator)))
 
 (define (gi-object-ancestors obj)
   (let ([parent (gi-object-parent obj)])

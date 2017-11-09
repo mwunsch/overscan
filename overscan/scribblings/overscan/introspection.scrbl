@@ -288,6 +288,16 @@ A @deftech{gobject} instance, like the introspected metadata entries provided by
   Sets a group of properties on @racket[obj] based on a hash and returns @racket[obj]. Note that you cannot explicitly set the @racket[ctype] of the properties with this form.
 }
 
+@defproc[(make-gobject-property-procedures
+          [propname string?]
+          [ctype (or/c ctype? gi-registered-type? (listof symbol?))])
+          (values (-> gobject? any)
+                  (-> gobject? any/c void?))]{
+  Accepts a @racket[propname] and a @racket[ctype] and creates and returns a @deftech{gobject-property-accessor} and a @deftech{gobject-property-mutator}. The accessor accepts a @tech{gobject} and returns the value of the property with the name matching @racket[propname] via @racket[gobject-get]. The mutator accepts a gobject and a value and mutates the property matching @racket[propname] via @racket[gobject-set!].
+
+  A convenient mechanism for creating a getter and a setter for a GObject property.
+}
+
 @defthing[prop:gobject struct-type-property?]{
   A @tech[#:doc '(lib "scribblings/reference/reference.scrbl")]{structure type property} that causes instances of a structure type to work as GObject instances. The property value must be either a @racket[gtype-instance] or a procedure that accepts the structure instance and returns a @racket[gtype-instance].
 

@@ -57,11 +57,8 @@
 (define capsfilter?
   (element/c "capsfilter"))
 
-(define (capsfilter-caps element)
-  (gobject-get element "caps" (gst 'Caps)))
-
-(define (set-capsfilter-caps! element caps)
-  (gobject-set! element "caps" caps (gst 'Caps)))
+(define-values (capsfilter-caps set-capsfilter-caps!)
+  (make-gobject-property-procedures "caps" (gst 'Caps)))
 
 (define (tee [name #f])
   (element-factory%-make "tee" name))
@@ -100,11 +97,8 @@
 (define videotestsrc?
   (element/c "videotestsrc"))
 
-(define (videotestsrc-pattern element)
-  (gobject-get element "pattern" videotest-patterns))
-
-(define (set-videotestsrc-pattern! element pattern)
-  (gobject-set! element "pattern" pattern videotest-patterns))
+(define-values (videotestsrc-pattern set-videotestsrc-pattern!)
+  (make-gobject-property-procedures "pattern" videotest-patterns))
 
 (define (videotestsrc-live? element)
   (gobject-get element "is-live" _bool))
