@@ -49,7 +49,9 @@
                             (is-a?/c element%) ...
                             (or/c (is-a?/c pipeline%) false/c))]
                        [obtain-system-clock
-                        (-> (is-a?/c clock%))]))
+                        (-> (is-a?/c clock%))]
+                       [parse/launch
+                        (-> string? (or/c (is-a?/c element%) false/c))]))
 
 (define gst-element-factory (gst 'ElementFactory))
 
@@ -116,3 +118,8 @@
 
 (define (obtain-system-clock)
   (new clock% [pointer ((gst 'SystemClock) 'obtain)]))
+
+(define (parse/launch description)
+  (let ([parsed ((gst 'parse_launch) description)])
+    (and parsed
+         (new element% [pointer parsed]))))

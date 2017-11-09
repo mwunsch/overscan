@@ -5,7 +5,7 @@
                     racket/class
                     ffi/unsafe/introspection]]
 
-@title{Common Elements}
+@title[#:tag "common-elements"]{Common Elements}
 
 Included in @racketmodname[gstreamer] are helpers and utilities for working with frequently used elements, including predicates (implemented with @racket[element/c]) and property getters/setters.
 

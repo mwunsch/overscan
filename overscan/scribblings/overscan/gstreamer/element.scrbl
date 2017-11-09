@@ -99,6 +99,10 @@
   @defproc[(sink? [v any/c]) boolean?]{
     Returns @racket[#t] if @racket[v] is an element with no source pads and at least one sink pad, @racket[#f] otherwise. Implies @racket[(is-a? v element%)]. The opposite of @racket[source?].
   }
+
+  @defproc[(parse/launch [description string?]) (or/c (is-a?/c element%) #f)]{
+    Create a new element based on @hyperlink["https://gstreamer.freedesktop.org/documentation/tools/gst-launch.html#pipeline-description"]{command line syntax}, where @racket[description] is a command line describing a pipeline. Returns @racket[#f] if an element could not be created.
+  }
 }
 
 @section[#:style 'hidden]{@racket[element-factory%]}
