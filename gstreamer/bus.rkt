@@ -119,7 +119,7 @@
                           #:timeout [timeout clock-time-none])
   (let* ([bus-pipe (spawn-bus-place)]
          [bus-dead? (place-dead-evt bus-pipe)])
-    (place-channel-put bus-pipe (list (gtype-instance-pointer (gobject-ptr bus))
+    (place-channel-put bus-pipe (list (gi-instance-pointer (gobject-ptr bus))
                                       timeout
                                       filters))
     (choice-evt (wrap-evt bus-pipe
@@ -136,7 +136,7 @@
              (define msg
                (gobject-send bus-obj 'timed_pop_filtered timeout filter))
              (place-channel-put chan (and msg
-                                          (gtype-instance-pointer msg)))
+                                          (gi-instance-pointer msg)))
              (when (fatal-message? msg)
                (exit 0))
              (loop)))))

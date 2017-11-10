@@ -52,8 +52,6 @@
                        [struct gi-instance
                                ((type gi-registered-type?) (pointer cpointer?))
                                #:omit-constructor]
-                       [gi-instance-type-name
-                        (->> gi-instance? symbol?)]
                        [gi-instance-name
                         (->> gi-instance? symbol?)]
                        [is-gtype?
@@ -71,6 +69,8 @@
                         (->> gi-registered-type? flat-contract?)]
                        [gobject-ptr
                         (->> gobject? gi-instance?)]
+                       [gobject-gtype
+                        (->> gobject? gtype?)]
                        [struct (gobject-instance gi-instance)
                                ((type gi-object?) (pointer cpointer?))
                                #:omit-constructor]
@@ -125,7 +125,11 @@
                         (->> gi-repository? flat-contract?)]
                        [gobject%
                         (and/c (implementation?/c gobject<%>)
-                               (class/c (init-field [pointer gi-instance?])))])
+                               (class/c (init-field [pointer gi-instance?])))]
+                       [gtype-name
+                        (->> gtype? symbol?)]
+                       [gtype?
+                        (->> any/c boolean?)])
          describe-gi-function
          gobject<%>
          make-gobject-delegate)
@@ -197,7 +201,26 @@
 
 (define _gtype (make-ctype _size #f #f))
 
+(define-cstruct _gtype-class ([gtype _gtype]))
+
+(define-cstruct _gtype-instance ([gclass _gtype-class-pointer]))
+
 (define-cstruct _gerror ([domain _uint32] [code _int] [message _string]))
+
+(define-cstruct _gtype-query ([type _gtype] [type-name _symbol] [class-size _uint] [instance-size _uint]))
+
+(define-gobject gtype-name (_fun _gtype -> _symbol)
+  #:c-id g_type_name)
+
+(define-gobject query-gtype (_fun _gtype [query :  (_ptr o _gtype-query)]
+                                  -> _void
+                                  -> query)
+  #:c-id g_type_query)
+
+(define (gtype? v)
+  (and (exact-integer? v)
+       (let ([query (query-gtype v)])
+         (not (zero? (gtype-query-type query))))))
 
 
 ;;; BaseInfo
@@ -648,14 +671,11 @@
 (struct gi-instance (type pointer)
   #:property prop:cpointer 1)
 
-(define (gi-instance-gtype gtype)
-  (gi-registered-type-gtype (gi-instance-type gtype)))
+(define (gi-instance-type-name instance)
+  (gi-registered-type-name (gi-instance-type instance)))
 
-(define (gi-instance-type-name gtype)
-  (gi-registered-type-name (gi-instance-type gtype)))
-
-(define (gi-instance-name gtype)
-  (gi-base-name (gi-instance-type gtype)))
+(define (gi-instance-name instance)
+  (gi-base-name (gi-instance-type instance)))
 
 (define (is-gtype? instance type)
   (and (gi-registered-type? type)
@@ -884,6 +904,10 @@
 
 (define (gobject-ptr obj)
   ((gobject-ref obj) obj))
+
+(define (gobject-gtype obj)
+  (let ([instance (cast (gobject-ptr obj) _pointer _gtype-instance-pointer)])
+    (gtype-class-gtype (gtype-instance-gclass instance))))
 
 (struct gstruct gi-instance ()
   #:property prop:procedure

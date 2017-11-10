@@ -202,12 +202,8 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
   Represents an instance of a GType @racket[type]. This struct and its descendants have the @racket[prop:cpointer] property, and can be used as a pointer in FFI calls. Registered type instances can have methods and fields associated with them.
 }
 
-@defproc[(gi-instance-type-name [instance gi-instance?]) symbol?]{
-  Returns the name of the registered GType of @racket[instance].
-}
-
 @defproc[(gi-instance-name [instance gi-instance?]) symbol?]{
-  Returns the name of the instance of @racket[instance]. The difference between this function and @racket[gi-instance-type-name] is that the GType name typically has the C prefix for an instance of a GType, where within GObject Introspection that prefix is elided. @racket[gi-instance-type-name] derives its name from the GType, and @racket[gi-instance-name] derives its name from GObject Introspection.
+  Returns the name of the type of @racket[instance].
 }
 
 @defproc[(is-gtype? [v any/c] [type gi-registered-type?]) boolean?]{
@@ -216,6 +212,14 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
 
 @defproc[(is-gtype?/c [type gi-registered-type?]) flat-contract?]{
   Accepts a @racket[type] and returns a flat contract that recognizes its instances.
+}
+
+@defproc[(gtype? [v any/c]) boolean?]{
+  Returns @racket[#t] if @racket[v] is a valid GType, @racket[#f] otherwise.
+}
+
+@defproc[(gtype-name [gtype gtype?]) symbol?]{
+  Gets the unique name that is assigned to @racket[gtype].
 }
 
 @defstruct*[(gstruct gi-instance)
@@ -237,7 +241,11 @@ A @deftech{gobject} instance, like the introspected metadata entries provided by
 }
 
 @defproc[(gobject-ptr [obj gobject?]) gi-instance?]{
- Returns the @racket[gi-instance] associated with @racket[obj].
+  Returns the @racket[gi-instance] associated with @racket[obj].
+}
+
+@defproc[(gobject-gtype [obj gobject?]) gtype?]{
+  Returns the GType of @racket[obj].
 }
 
 @defproc[(gobject-send [obj gobject?] [method-name symbol?] [argument any/c] ...) any]{
