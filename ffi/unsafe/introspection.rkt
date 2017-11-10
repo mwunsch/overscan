@@ -217,6 +217,37 @@
                                   -> query)
   #:c-id g_type_query)
 
+(define gtype-fundamental-shift 2)
+
+(define (gtype->ctype gtype)
+  (case (arithmetic-shift gtype (- gtype-fundamental-shift))
+    [(1) _void]
+    [(3) _int8]
+    [(4) _byte]
+    [(5) _bool]
+    [(6) _int]
+    [(7) _uint]
+    [(8) _long]
+    [(9) _ulong]
+    [(10) _int64]
+    [(11) _uint64]
+    [(14) _float]
+    [(15) _double]
+    [(16) _string]
+    [else (let ([info (gir-find-by-gtype gtype)])
+            (if info
+                (cond
+                  [(gi-struct? info)
+                   (_gi-struct info)]
+                  [(gi-enum? info)
+                   (_gi-enum info)]
+                  [(gi-object? info)
+                   (_gi-object info)]
+                  [(gi-registered-type? info)
+                   (gi-registered-type->ctype info)]
+                  [else (_cpointer/null (gi-base-name info))])
+                _pointer))]))
+
 (define (gtype? v)
   (and (exact-integer? v)
        (let ([query (query-gtype v)])
@@ -1119,6 +1150,8 @@
 
 (struct gi-property gi-base ())
 
+
+;;; Signals
 (define-gir gi-object-n-signals (_fun _gi-base-info -> _int)
   #:c-id g_object_info_get_n_signals)
 
@@ -1135,18 +1168,6 @@
 
 (struct gi-signal gi-callable ())
 
-(define (gi-signal->ctype obj signal
-                          [_user-data _pointer])
-  (let ([args (gi-callable-args signal)]
-        [returns (gi-callable-returns signal)]
-        [worker (make-signal-worker (gi-base-name signal))])
-    (_cprocedure #:async-apply (lambda (thunk)
-                                 (thread-send worker thunk))
-                 (append (list (_gi-object obj))
-                         (map (compose1 gi-type->ctype gi-arg-type) args)
-                         (list _user-data))
-                 (gi-type->ctype returns))))
-
 (define (make-signal-worker signal-name)
   (thread (thunk
             (let loop ()
@@ -1154,25 +1175,30 @@
                 (callback)
                 (loop))))))
 
-(define _gsignal-flags (_bitmask '(run-first
-                                   run-last
-                                   run-cleanup
-                                   no-recurse
-                                   detailed
-                                   action
-                                   no-hooks
-                                   must-collect
-                                   deprecated)))
+(define _signal-flags (_bitmask '(run-first
+                                  run-last
+                                  run-cleanup
+                                  no-recurse
+                                  detailed
+                                  action
+                                  no-hooks
+                                  must-collect
+                                  deprecated)))
 
-(define-cstruct _gsignal-query ([id _uint]
-                                [name _string]
-                                [itype _gtype]
-                                [flags _gsignal-flags]
-                                [return-type _gtype]
-                                [n-params _uint]
-                                [param-types _bytes]))
+(define-cstruct _signal ([id _uint]
+                         [name _string]
+                         [itype _gtype]
+                         [flags _signal-flags]
+                         [return-type _gtype]
+                         [n-params _uint]
+                         [param-types _pointer]))
 
-(define-gobject signal-query (_fun _int [query : (_ptr o _gsignal-query)]
+(define (signal-params query)
+  (let ([n-params (signal-n-params query)]
+        [param-types (signal-param-types query)])
+    (ptr-ref param-types (_array _gtype n-params))))
+
+(define-gobject signal-query (_fun _int [query : (_ptr o _signal)]
                                    -> _void
                                    -> query)
   #:c-id g_signal_query)
@@ -1180,35 +1206,52 @@
 (define-gobject signal-lookup (_fun _symbol _gtype -> _int)
   #:c-id g_signal_lookup)
 
-(define-gobject signal-name (_fun _int -> _symbol)
+(define-gobject signal-get-name (_fun _int -> _symbol)
   #:c-id g_signal_name)
+
+(define (_signal-handler info signal [_user-data _pointer])
+  (let* ([signal-name (signal-name signal)]
+         [_params (for/list ([param-type (in-array (signal-params signal))])
+                   (gtype->ctype param-type))]
+         [_returns (gtype->ctype (signal-return-type signal))]
+         [worker (make-signal-worker signal-name)])
+    (_cprocedure #:async-apply (lambda (thunk)
+                                 (thread-send worker thunk))
+                 (append (list (_gi-object info))
+                         _params
+                         (list _user-data))
+                 _returns)))
 
 (define (connect obj signal-name handler
                  #:data [data #f]
                  #:cast [_user-data #f])
-  (let* ([object (gobject-ptr obj)]
-         [base (gi-instance-type object)]
-         [ptr (gi-instance-pointer object)]
-         [signal (or (gi-object-find-signal base signal-name)
-                     (error "signal not found"))]
-         [_signal (gi-signal->ctype base signal
+  (define ptr (gobject-ptr obj))
+  (define gtype (gobject-gtype ptr))
+  (define signal-id (signal-lookup signal-name gtype))
+  (when (zero? signal-id)
+    (error (format "Signal ~v not found for object of type ~v"
+                   signal-name
+                   (gtype-name gtype))))
+  (let* ([info (gi-instance-type ptr)]
+         [signal (signal-query signal-id)]
+         [_handler (_signal-handler info
+                                    signal
                                     (cond
                                       [(ctype? _user-data) _user-data]
-                                      [(gi-object? _user-data)
-                                       (_gi-object _user-data)]
+                                      [(gi-object? _user-data) (_gi-object _user-data)]
                                       [(gobject? data)
                                        (_gi-object (gi-instance-type (gobject-ptr data)))]
-                                      [else _pointer]))])
-    (define signal-connect-data
-      (get-ffi-obj "g_signal_connect_data" libgobject
-                   (_fun _pointer _string _signal _pointer
-                         (_pointer = #f) (_bitmask '(after swapped))
-                         -> _ulong)))
-    (signal-connect-data ptr
-                         (symbol->string signal-name)
-                         handler
-                         data
-                         null)))
+                                      [else _pointer]))]
+         [connect-data (get-ffi-obj "g_signal_connect_data"
+                                    libgobject
+                                    (_fun (_gi-object info) _symbol _handler _pointer
+                                          (_pointer = #f) (_bitmask '(after swapped))
+                                          -> _ulong))])
+    (connect-data ptr
+                  signal-name
+                  handler
+                  data
+                  null)))
 
 ;;; Repositories
 (struct gi-repository (namespace version info-hash)
