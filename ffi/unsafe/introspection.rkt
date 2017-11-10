@@ -49,18 +49,18 @@
                         (->> any/c boolean?)]
                        [_gi-object
                         (->> gi-object? ctype?)]
-                       [struct gtype-instance
+                       [struct gi-instance
                                ((type gi-registered-type?) (pointer cpointer?))
                                #:omit-constructor]
-                       [gtype-instance-type-name
-                        (->> gtype-instance? symbol?)]
-                       [gtype-instance-name
-                        (->> gtype-instance? symbol?)]
+                       [gi-instance-type-name
+                        (->> gi-instance? symbol?)]
+                       [gi-instance-name
+                        (->> gi-instance? symbol?)]
                        [is-gtype?
                         (->> any/c gi-registered-type? boolean?)]
                        [is-gtype?/c
                         (->> gi-registered-type? flat-contract?)]
-                       [struct (gstruct gtype-instance)
+                       [struct (gstruct gi-instance)
                                ((type gi-struct?) (pointer cpointer?))
                                #:omit-constructor]
                        [gobject?
@@ -70,8 +70,8 @@
                        [gobject/c
                         (->> gi-registered-type? flat-contract?)]
                        [gobject-ptr
-                        (->> gobject? gtype-instance?)]
-                       [struct (gobject-instance gtype-instance)
+                        (->> gobject? gi-instance?)]
+                       [struct (gobject-instance gi-instance)
                                ((type gi-object?) (pointer cpointer?))
                                #:omit-constructor]
                        [gobject-send
@@ -125,7 +125,7 @@
                         (->> gi-repository? flat-contract?)]
                        [gobject%
                         (and/c (implementation?/c gobject<%>)
-                               (class/c (init-field [pointer gtype-instance?])))])
+                               (class/c (init-field [pointer gi-instance?])))])
          describe-gi-function
          gobject<%>
          make-gobject-delegate)
@@ -645,22 +645,22 @@
                               (format "~.v" (gi-registered-type-field/c registered))
                               field-name))))
 
-(struct gtype-instance (type pointer)
+(struct gi-instance (type pointer)
   #:property prop:cpointer 1)
 
-(define (gtype-instance-gtype gtype)
-  (gi-registered-type-gtype (gtype-instance-type gtype)))
+(define (gi-instance-gtype gtype)
+  (gi-registered-type-gtype (gi-instance-type gtype)))
 
-(define (gtype-instance-type-name gtype)
-  (gi-registered-type-name (gtype-instance-type gtype)))
+(define (gi-instance-type-name gtype)
+  (gi-registered-type-name (gi-instance-type gtype)))
 
-(define (gtype-instance-name gtype)
-  (gi-base-name (gtype-instance-type gtype)))
+(define (gi-instance-name gtype)
+  (gi-base-name (gi-instance-type gtype)))
 
 (define (is-gtype? instance type)
   (and (gi-registered-type? type)
-       (gtype-instance? instance)
-       (gi-base=? (gtype-instance-type instance) type)))
+       (gi-instance? instance)
+       (gi-base=? (gi-instance-type instance) type)))
 
 (define (is-gtype?/c type)
   (flat-named-contract `(is-gtype? ,(gi-registered-type-name type))
@@ -672,7 +672,7 @@
                     values
                     (lambda (ptr)
                       (and ptr
-                          (gtype-instance registered ptr))))))
+                          (gi-instance registered ptr))))))
 
 ;;; Structs
 (struct gi-struct gi-registered-type ()
@@ -859,7 +859,7 @@
                             [(invocation)
                              (if (and (gobject? invocation)
                                       (memq 'constructor? (gi-function-flags method)))
-                                 (let ([base (gtype-instance-type invocation)])
+                                 (let ([base (gi-instance-type invocation)])
                                    (cast invocation
                                          (_gi-object base)
                                          (_gi-object object)))
@@ -871,24 +871,24 @@
   (make-struct-type-property 'gobject
                              (lambda (v si)
                                (cond
-                                 [(gtype-instance? v) (lambda (x) v)]
+                                 [(gi-instance? v) (lambda (x) v)]
                                  [(and (procedure? v)
                                        (procedure-arity-includes? v 1)) v]
                                  [else (raise-argument-error 'guard-for-prop:gobject
-                                                             "(or/c gtype-instance? (any/c . -> . gtype-instance?))"
+                                                             "(or/c gi-instance? (any/c . -> . gi-instance?))"
                                                              v)]))))
 
-(struct gobject-instance gtype-instance ()
+(struct gobject-instance gi-instance ()
   #:reflection-name 'gobject
   #:property prop:gobject identity)
 
 (define (gobject-ptr obj)
   ((gobject-ref obj) obj))
 
-(struct gstruct gtype-instance ()
+(struct gstruct gi-instance ()
   #:property prop:procedure
   (lambda (instance method-name . arguments)
-    (let ([base (gtype-instance-type instance)])
+    (let ([base (gi-instance-type instance)])
       (apply base method-name (cons instance arguments))))
   #:property prop:gobject identity)
 
@@ -900,45 +900,45 @@
              (gi-object-lookup-method parent method-name)))))
 
 (define (method-names obj)
-  (let ([base (gtype-instance-type (gobject-ptr obj))])
+  (let ([base (gi-instance-type (gobject-ptr obj))])
     (map gi-base-name (gi-registered-type-methods base))))
 
 (define (describe-method obj method-name)
   (let* ([instance (gobject-ptr obj)]
-         [base (gtype-instance-type instance)]
+         [base (gi-instance-type instance)]
          [method (gi-object-lookup-method base method-name)])
     (and method
          (describe-gi-function method))))
 
 (define (gobject-has-field? obj field-name)
   (let* ([instance (gobject-ptr obj)]
-         [base (gtype-instance-type instance)]
+         [base (gi-instance-type instance)]
          [fields (map gi-base-sym (gi-registered-type-fields base))])
     (and (memq field-name fields)
          #t)))
 
 (define (gobject-send obj method-name . arguments)
   (let* ([instance (gobject-ptr obj)]
-         [base (gtype-instance-type instance)]
-         [ptr (gtype-instance-pointer instance)])
+         [base (gi-instance-type instance)]
+         [ptr (gi-instance-pointer instance)])
     (apply base method-name (cons ptr arguments))))
 
 (define (gobject-get-field field-name obj)
   (let* ([instance (gobject-ptr obj)]
-         [base (gtype-instance-type instance)]
-         [ptr (gtype-instance-pointer instance)]
+         [base (gi-instance-type instance)]
+         [ptr (gi-instance-pointer instance)]
          [field (gi-registered-type-find-field base field-name)])
     (gi-field-ref field ptr)))
 
 (define (gobject-set-field! field-name obj v)
   (let* ([instance (gobject-ptr obj)]
-         [base (gtype-instance-type instance)]
-         [ptr (gtype-instance-pointer instance)]
+         [base (gi-instance-type instance)]
+         [ptr (gi-instance-pointer instance)]
          [field (gi-registered-type-find-field base field-name)])
     (gi-field-set! field ptr v)))
 
 (define (gobject-responds-to? obj method-name)
-  (and (gi-object-lookup-method (gtype-instance-type (gobject-ptr obj))
+  (and (gi-object-lookup-method (gi-instance-type (gobject-ptr obj))
                                 method-name)
        #t))
 
@@ -960,8 +960,8 @@
                     values
                     (lambda (ptr)
                       (and ptr
-                           (gobject-instance obj (if (gtype-instance? ptr)
-                                                     (gtype-instance-pointer ptr)
+                           (gobject-instance obj (if (gi-instance? ptr)
+                                                     (gi-instance-pointer ptr)
                                                    ptr)))))))
 
 (define-gobject gobject-unref! (_fun _pointer -> _void)
@@ -996,8 +996,8 @@
   (let* ([_value (cond
                    [(ctype? ctype) ctype]
                    [((listof symbol?) ctype) (_enum ctype)]
-                   [(gstruct? value) (_gi-struct (gtype-instance-type value))]
-                   [(gobject? value) (_gi-object (gtype-instance-type (gobject-ptr value)))]
+                   [(gstruct? value) (_gi-struct (gi-instance-type value))]
+                   [(gobject? value) (_gi-object (gi-instance-type (gobject-ptr value)))]
                    [(boolean? value) _bool]
                    [(string? value) _string]
                    [(exact-integer? value) _int]
@@ -1163,8 +1163,8 @@
                  #:data [data #f]
                  #:cast [_user-data #f])
   (let* ([object (gobject-ptr obj)]
-         [base (gtype-instance-type object)]
-         [ptr (gtype-instance-pointer object)]
+         [base (gi-instance-type object)]
+         [ptr (gi-instance-pointer object)]
          [signal (or (gi-object-find-signal base signal-name)
                      (error "signal not found"))]
          [_signal (gi-signal->ctype base signal
@@ -1173,7 +1173,7 @@
                                       [(gi-object? _user-data)
                                        (_gi-object _user-data)]
                                       [(gobject? data)
-                                       (_gi-object (gtype-instance-type (gobject-ptr data)))]
+                                       (_gi-object (gi-instance-type (gobject-ptr data)))]
                                       [else _pointer]))])
     (define signal-connect-data
       (get-ffi-obj "g_signal_connect_data" libgobject
@@ -1249,7 +1249,7 @@
 
 (define gobject<%>
   (interface* () ([prop:gobject (lambda (obj) (class/get-field pointer obj))]
-                  [prop:cpointer (lambda (obj) (gtype-instance-pointer (class/get-field pointer obj)))])))
+                  [prop:cpointer (lambda (obj) (gi-instance-pointer (class/get-field pointer obj)))])))
 
 (define gobject%
   (class* object% (gobject<%>)

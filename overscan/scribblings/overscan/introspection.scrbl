@@ -197,17 +197,17 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
   Constructs a @racket[ctype] for the given @racket[obj], which is effectively a @racket[_cpointer] that will dereference into an instance of the @racket[obj].
 }
 
-@defstruct*[gtype-instance ([type gi-registered-type?] [pointer cpointer?])
+@defstruct*[gi-instance ([type gi-registered-type?] [pointer cpointer?])
             #:omit-constructor ]{
-  Represents an instance of a GType @racket[type]. This struct and its descendants have the @racket[prop:cpointer] property, and can be used as a pointer in FFI calls. GType Instances can have methods and fields associated with them.
+  Represents an instance of a GType @racket[type]. This struct and its descendants have the @racket[prop:cpointer] property, and can be used as a pointer in FFI calls. Registered type instances can have methods and fields associated with them.
 }
 
-@defproc[(gtype-instance-type-name [instance gtype-instance?]) symbol?]{
+@defproc[(gi-instance-type-name [instance gi-instance?]) symbol?]{
   Returns the name of the registered GType of @racket[instance].
 }
 
-@defproc[(gtype-instance-name [instance gtype-instance?]) symbol?]{
-  Returns the name of the instance of @racket[instance]. The difference between this function and @racket[gtype-instance-type-name] is that the GType name typically has the C prefix for an instance of a GType, where within GObject Introspection that prefix is elided. @racket[gtype-instance-type-name] derives its name from the GType, and @racket[gtype-instance-name] derives its name from GObject Introspection.
+@defproc[(gi-instance-name [instance gi-instance?]) symbol?]{
+  Returns the name of the instance of @racket[instance]. The difference between this function and @racket[gi-instance-type-name] is that the GType name typically has the C prefix for an instance of a GType, where within GObject Introspection that prefix is elided. @racket[gi-instance-type-name] derives its name from the GType, and @racket[gi-instance-name] derives its name from GObject Introspection.
 }
 
 @defproc[(is-gtype? [v any/c] [type gi-registered-type?]) boolean?]{
@@ -218,7 +218,7 @@ The @hyperlink["https://developer.gnome.org/gi/stable/gi-GIBaseInfo.html"]{@tt{G
   Accepts a @racket[type] and returns a flat contract that recognizes its instances.
 }
 
-@defstruct*[(gstruct gtype-instance)
+@defstruct*[(gstruct gi-instance)
             ([type gi-struct?] [pointer cpointer?])
             #:omit-constructor ]{
   Represents an instance of a C Struct. That Struct can have methods and fields.
@@ -236,8 +236,8 @@ A @deftech{gobject} instance, like the introspected metadata entries provided by
   Accepts a @racket[type] and returns a flat contract that recognizes objects that instantiate it. Unlike @racket[is-gtype?/c], this implies @racket[gobject?].
 }
 
-@defproc[(gobject-ptr [obj gobject?]) gtype-instance?]{
- Returns the @racket[gtype-instance] associated with @racket[obj].
+@defproc[(gobject-ptr [obj gobject?]) gi-instance?]{
+ Returns the @racket[gi-instance] associated with @racket[obj].
 }
 
 @defproc[(gobject-send [obj gobject?] [method-name symbol?] [argument any/c] ...) any]{
@@ -299,7 +299,7 @@ A @deftech{gobject} instance, like the introspected metadata entries provided by
 }
 
 @defthing[prop:gobject struct-type-property?]{
-  A @tech[#:doc '(lib "scribblings/reference/reference.scrbl")]{structure type property} that causes instances of a structure type to work as GObject instances. The property value must be either a @racket[gtype-instance] or a procedure that accepts the structure instance and returns a @racket[gtype-instance].
+  A @tech[#:doc '(lib "scribblings/reference/reference.scrbl")]{structure type property} that causes instances of a structure type to work as GObject instances. The property value must be either a @racket[gi-instance] or a procedure that accepts the structure instance and returns a @racket[gi-instance].
 
   The @racket[prop:gobject] property allows a GObject instance to be transparently wrapped by a structure that may have additional values or properties.
 }
@@ -311,7 +311,7 @@ A @deftech{gobject} instance, like the introspected metadata entries provided by
 @defclass[gobject% object% (gobject<%>)]{
   Instances of this class return @racket[#t] to @racket[gobject?].
 
-  @defconstructor[([pointer gtype-instance?])]
+  @defconstructor[([pointer gi-instance?])]
 }
 
 @defform[(make-gobject-delegate method-decl ...)
