@@ -217,9 +217,10 @@
                                   -> query)
   #:c-id g_type_query)
 
-(define gtype-fundamental-shift 2)
-
 (define (gtype->ctype gtype)
+  (define gtype-fundamental-shift 2)
+  ;; See GType constants beginning with G_TYPE_INVALID:
+  ;; https://developer.gnome.org/gobject/stable/gobject-Type-Information.html#G-TYPE-INVALID:CAPS
   (case (arithmetic-shift gtype (- gtype-fundamental-shift))
     [(1) _void]
     [(3) _int8]
