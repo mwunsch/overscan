@@ -13,6 +13,7 @@
          gstreamer/element
          gstreamer/bin
          gstreamer/pipeline
+         gstreamer/device
          gstreamer/factories
          gstreamer/elements)
 
@@ -24,5 +25,6 @@
                        gstreamer/element
                        gstreamer/bin
                        gstreamer/pipeline
+                       gstreamer/device
                        gstreamer/factories
                        gstreamer/elements))
