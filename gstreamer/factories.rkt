@@ -9,7 +9,8 @@
          gstreamer/clock
          gstreamer/element
          gstreamer/bin
-         gstreamer/pipeline)
+         gstreamer/pipeline
+         gstreamer/device)
 
 (provide (contract-out [element-factory%-find
                         (-> string? (or/c false/c
@@ -51,7 +52,9 @@
                        [obtain-system-clock
                         (-> (is-a?/c clock%))]
                        [parse/launch
-                        (-> string? (or/c (is-a?/c element%) false/c))]))
+                        (-> string? (or/c (is-a?/c element%) false/c))]
+                       [device-monitor%-new
+                        (-> (is-a?/c device-monitor%))]))
 
 (define gst-element-factory (gst 'ElementFactory))
 
@@ -123,3 +126,7 @@
   (let ([parsed ((gst 'parse_launch) description)])
     (and parsed
          (new element% [pointer parsed]))))
+
+(define (device-monitor%-new)
+  (let ([monitor ((gst 'DeviceMonitor) 'new)])
+    (new device-monitor% [pointer monitor])))

@@ -78,6 +78,7 @@ A @deftech{playbin} element is used to quickly play media from a URI. In additio
 @include-section["gstreamer/bus.scrbl"]
 @include-section["gstreamer/pad.scrbl"]
 @include-section["gstreamer/clock.scrbl"]
+@include-section["gstreamer/device.scrbl"]
 @include-section["gstreamer/caps.scrbl"]
 @include-section["gstreamer/elements.scrbl"]
 
