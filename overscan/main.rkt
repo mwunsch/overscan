@@ -36,7 +36,9 @@
                        [graphviz
                         (->* (path-string?)
                              ((is-a?/c pipeline%))
-                             any)])
+                             any)]
+                       [audio-sources
+                        (vectorof (is-a?/c device%))])
          (all-from-out racket/base
                        gstreamer
                        overscan/twitch))
@@ -46,6 +48,16 @@
   (if (gst-initialize)
       (displayln (gst-version-string))
       (error "Could not load GStreamer")))
+
+(define audio-sources
+  (let ([monitor (device-monitor%-new)])
+    (if (positive? (send monitor add-filter "Audio/Source" #f))
+        (for/vector ([device (send monitor get-devices)]
+                     [i (in-naturals)])
+          (displayln (format "Audio Device ~a: ~a" i (send device get-display-name)))
+          device)
+        (and (displayln "No Audio Devices detected.")
+             (vector)))))
 
 (define current-broadcast
   (box #f))
