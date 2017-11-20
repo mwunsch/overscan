@@ -78,14 +78,8 @@
 (define broadcast-listeners
   (make-hash (list (cons 0 default-broadcast-listener))))
 
-(define (make-fake-source)
-  (element-factory%-make "fakesrc" "source:fake"))
-
-(define (make-fake-sink)
-  (element-factory%-make "fakesink" "sink:fake"))
-
-(define (broadcast [source (make-fake-source)]
-                   [sink (make-fake-sink)])
+(define (broadcast [source (videotestsrc #:live? #t)]
+                   [sink (element-factory%-make "fakesink")])
   (let ([pipeline (pipeline%-new #f)])
     (and (send pipeline add source)
          (send pipeline add sink)
