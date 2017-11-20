@@ -49,6 +49,7 @@
     (inherit-field pointer)
     (define/override (create-element [name #f])
       (let ([el (super create-element name)])
+        (gobject-send el 'ref_sink)
         (new element% [pointer el])))))
 
 (define device%/c

@@ -38,7 +38,9 @@
                              ((is-a?/c pipeline%))
                              any)]
                        [audio-sources
-                        (vectorof (is-a?/c device%))])
+                        (vectorof (is-a?/c device%))]
+                       [audio
+                        (-> exact-nonnegative-integer? source?)])
          (all-from-out racket/base
                        gstreamer
                        overscan/twitch))
@@ -58,6 +60,10 @@
           device)
         (and (displayln "No Audio Devices detected.")
              (vector)))))
+
+(define (audio ref)
+  (let ([device (vector-ref audio-sources ref)])
+    (send device create-element)))
 
 (define current-broadcast
   (box #f))
