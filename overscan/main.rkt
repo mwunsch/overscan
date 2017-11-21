@@ -15,14 +15,14 @@
                         (-> (is-a?/c pipeline%) thread?)]
                        [stop
                         (->* ()
-                             (#:timeout (and/c real? (not/c negative?)))
+                             (#:timeout exact-nonnegative-integer?)
                              (gi-enum-value/c state-change-return))]
                        [kill-broadcast
                         (-> void?)]
                        [add-listener
-                        (-> (-> message? (is-a?/c pipeline%) any) exact-integer?)]
+                        (-> (-> message? (is-a?/c pipeline%) any) exact-nonnegative-integer?)]
                        [remove-listener
-                        (-> exact-integer? void?)]
+                        (-> exact-nonnegative-integer? void?)]
                        [playing?
                         (->* ()
                              ((is-a?/c pipeline%))
@@ -40,6 +40,14 @@
                        [audio-sources
                         (vectorof (is-a?/c device%))]
                        [audio
+                        (-> exact-nonnegative-integer? source?)]
+                       [camera-sources
+                        (vectorof (-> source?))]
+                       [camera
+                        (-> exact-nonnegative-integer? source?)]
+                       [screen-sources
+                        (vectorof (-> source?))]
+                       [screen
                         (-> exact-nonnegative-integer? source?)])
          (all-from-out racket/base
                        gstreamer
@@ -64,6 +72,51 @@
 (define (audio ref)
   (let ([device (vector-ref audio-sources ref)])
     (send device create-element)))
+
+;;; TODO: Abstract avfvideosrc specifics out
+(define camera-sources
+  (let* ([factory (element-factory%-find "avfvideosrc")]
+         [test-el (send factory create)])
+    (define (source-exists? ref)
+      (gobject-set! test-el "device-index" ref)
+      (and (eq? 'success (send test-el set-state 'ready))
+           (send test-el set-state 'null)
+           ref))
+    (for/vector ([i (in-naturals)]
+                 #:break (not (source-exists? i)))
+      (displayln (format "Camera ~a: ~a" i (hash-ref (send factory get-metadata)
+                                                     'long-name)))
+      (lambda () (gobject-with-properties (send factory create)
+                                     (hash 'device-index i))))))
+
+(define screen-sources
+  (let* ([factory (element-factory%-find "avfvideosrc")]
+         [test-el (send factory create)])
+    (define (source-exists? ref)
+      (gobject-set! test-el "capture-screen" #t)
+      (gobject-set! test-el "device-index" ref)
+      (and (eq? 'success (send test-el set-state 'ready))
+           (send test-el set-state 'null)
+           ref))
+    (for/vector ([i (in-naturals)]
+                 #:break (not (source-exists? i)))
+      (displayln (format "Screen Capture ~a: ~a" i (hash-ref (send factory get-metadata)
+                                                     'long-name)))
+      (lambda () (gobject-with-properties (send factory create)
+                                     (hash 'capture-screen #t
+                                           'device-index i))))))
+
+(define (camera ref)
+  (let ([device (vector-ref camera-sources ref)])
+    (device)))
+
+(define (screen ref
+                #:capture-cursor [cursor? #f]
+                #:capture-clicks [clicks? #f])
+  (let ([device (vector-ref screen-sources ref)])
+    (gobject-with-properties (device)
+                             (hash 'capture-screen-cursor cursor?
+                                   'capture-screen-mouse-clicks clicks?))))
 
 (define current-broadcast
   (box #f))
