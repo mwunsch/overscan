@@ -20,7 +20,8 @@
                        [kill-broadcast
                         (-> void?)]
                        [add-listener
-                        (-> (-> message? (is-a?/c pipeline%) any) exact-nonnegative-integer?)]
+                        (-> (-> message? (is-a?/c pipeline%) any)
+                            exact-nonnegative-integer?)]
                        [remove-listener
                         (-> exact-nonnegative-integer? void?)]
                        [playing?
@@ -48,7 +49,10 @@
                        [screen-sources
                         (vectorof (-> source?))]
                        [screen
-                        (-> exact-nonnegative-integer? source?)])
+                        (->* (exact-nonnegative-integer?)
+                             (#:capture-cursor boolean?
+                              #:capture-clicks boolean?)
+                             source?)])
          (all-from-out racket/base
                        gstreamer
                        overscan/twitch))
@@ -58,6 +62,28 @@
   (if (gst-initialize)
       (displayln (gst-version-string))
       (error "Could not load GStreamer")))
+
+(define current-broadcast
+  (box #f))
+
+(define broadcast-complete-evt
+  (make-semaphore))
+
+(define (default-broadcast-listener msg broadcast)
+  (when (fatal-message? msg)
+    (send broadcast set-state 'null)))
+
+(define broadcast-listeners
+  (make-hash (list (cons 0 default-broadcast-listener))))
+
+(define (add-listener proc)
+  (let* ([stack broadcast-listeners]
+         [key (hash-count stack)])
+    (hash-set! stack key proc)
+    key))
+
+(define (remove-listener key)
+  (hash-remove! broadcast-listeners key))
 
 (define audio-sources
   (let ([monitor (device-monitor%-new)])
@@ -118,19 +144,6 @@
                              (hash 'capture-screen-cursor cursor?
                                    'capture-screen-mouse-clicks clicks?))))
 
-(define current-broadcast
-  (box #f))
-
-(define broadcast-complete-evt
-  (make-semaphore))
-
-(define (default-broadcast-listener msg broadcast)
-  (when (fatal-message? msg)
-    (send broadcast set-state 'null)))
-
-(define broadcast-listeners
-  (make-hash (list (cons 0 default-broadcast-listener))))
-
 (define (broadcast [source (videotestsrc #:live? #t)]
                    [sink (element-factory%-make "fakesink")])
   (let ([pipeline (pipeline%-new #f)])
@@ -175,15 +188,6 @@
                        (for ([proc (in-hash-values broadcast-listeners)])
                          (proc ev broadcast))
                        (loop)))))))))
-
-(define (add-listener proc)
-  (let* ([stack broadcast-listeners]
-         [key (hash-count stack)])
-    (hash-set! stack key proc)
-    key))
-
-(define (remove-listener key)
-  (hash-remove! broadcast-listeners key))
 
 (define (playing? [broadcast (get-current-broadcast)])
   (let-values ([(result current pending) (send broadcast get-state)])
