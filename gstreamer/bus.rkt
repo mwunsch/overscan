@@ -4,7 +4,7 @@
          racket/class
          racket/contract
          racket/place
-         (only-in racket/function const thunk)
+         (only-in racket/function const thunk curry curryr)
          gstreamer/gst
          gstreamer/clock)
 
@@ -55,7 +55,13 @@
                        [fatal-message?
                         (-> any/c boolean?)]
                        [message-type/c
-                        list-contract?]))
+                        list-contract?]
+                       [message/c
+                        (-> symbol? flat-contract?)]
+                       [parse-message:state-changed
+                        (-> message? (values symbol?
+                                             symbol?
+                                             symbol?))]))
 
 (define gst-bus (gst 'Bus))
 
@@ -114,6 +120,59 @@
 (define (fatal-message? v)
   (or (eos-message? v)
       (error-message? v)))
+
+(define (message/c type)
+  (flat-named-contract `(message/c ',type)
+                       (and/c message?
+                              (curryr message-of-type? type))))
+
+(define (make-parse-msg-proc parsefn)
+  (lambda (msg) (call-with-values (thunk (gobject-send msg parsefn))
+                             (compose1 (curry apply values)
+                                       cdr
+                                       list))))
+
+(define parse-message:error
+  (make-parse-msg-proc 'parse_error))
+
+(define parse-message:warning
+  (make-parse-msg-proc 'parse_warning))
+
+(define parse-message:info
+  (make-parse-msg-proc 'parse_info))
+
+(define parse-message:tag
+  (make-parse-msg-proc 'parse_tag))
+
+(define parse-message:buffering
+  (make-parse-msg-proc 'parse_buffering))
+
+(define parse-message:buffering-stats
+  (make-parse-msg-proc 'parse_buffering_stats))
+
+(define parse-message:state-changed
+  (make-parse-msg-proc 'parse_state_changed))
+
+(define parse-message:step-done
+  (make-parse-msg-proc 'parse_step_done))
+
+(define parse-message:new-clock
+  (make-parse-msg-proc 'parse_new_clock))
+
+(define parse-message:async-done
+  (make-parse-msg-proc 'parse_async_done))
+
+(define parse-message:qos
+  (make-parse-msg-proc 'parse_qos))
+
+(define parse-message:qos-values
+  (make-parse-msg-proc 'parse_qos_values))
+
+(define parse-message:qos-stats
+  (make-parse-msg-proc 'parse_qos_stats))
+
+(define (parse-message:context-type msg)
+  (gobject-send msg 'parse_context_type))
 
 (define (make-bus-channel bus [filters '(any)]
                           #:timeout [timeout clock-time-none])
