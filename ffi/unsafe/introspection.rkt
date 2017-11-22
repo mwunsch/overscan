@@ -8,7 +8,7 @@
          (only-in racket/class
                   interface* class* object% init-field inherit-field super-new
                   mixin define/public [get-field class/get-field]
-                  class/c implementation?/c)
+                  interface? class/c implementation?/c)
          (only-in racket/list
                   index-of filter-map make-list)
          (only-in racket/string
@@ -123,6 +123,8 @@
                         (->> symbol? flat-contract?)]
                        [gi-repository-member/c
                         (->> gi-repository? flat-contract?)]
+                       [gobject<%>
+                        interface?]
                        [gobject%
                         (and/c (implementation?/c gobject<%>)
                                (class/c (init-field [pointer gi-instance?])))]
@@ -131,7 +133,6 @@
                        [gtype?
                         (->> any/c boolean?)])
          describe-gi-function
-         gobject<%>
          make-gobject-delegate)
 
 (define-ffi-definer define-gir (ffi-lib "libgirepository-1.0"))
