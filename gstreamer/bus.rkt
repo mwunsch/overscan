@@ -58,10 +58,53 @@
                         list-contract?]
                        [message/c
                         (-> symbol? flat-contract?)]
+                       [parse-message:error
+                        (-> message? any)]
+                       [parse-message:warning
+                        (-> message? any)]
+                       [parse-message:info
+                        (-> message? any)]
+                       [parse-message:tag
+                        (-> message? any)]
+                       [parse-message:buffering
+                        (-> message? number?)]
+                       [parse-message:buffering-stats
+                        (-> message? any)]
                        [parse-message:state-changed
                         (-> message? (values symbol?
                                              symbol?
-                                             symbol?))]))
+                                             symbol?))]
+                       [parse-message:step-done
+                        (-> message? (values symbol?
+                                             exact-integer?
+                                             number?
+                                             boolean?
+                                             boolean?
+                                             exact-integer?
+                                             boolean?))]
+                       [parse-message:new-clock
+                        (-> message? any/c)]
+                       [parse-message:async-done
+                        (-> message? clock-time?)]
+                       [parse-message:qos
+                        (-> message? (values boolean?
+                                             exact-integer?
+                                             exact-integer?
+                                             exact-integer?
+                                             exact-integer?))]
+                       [parse-message:qos-values
+                        (-> message? (values exact-integer?
+                                             number?
+                                             exact-integer?))]
+                       [parse-message:qos-stats
+                        (-> message? (values symbol?
+                                             exact-integer?
+                                             exact-integer?))]
+                       [parse-message:context-type
+                        (-> message? (values boolean?
+                                             any/c))]
+                       [parse-message:have-context
+                        (-> message? any/c)]))
 
 (define gst-bus (gst 'Bus))
 
@@ -173,6 +216,9 @@
 
 (define (parse-message:context-type msg)
   (gobject-send msg 'parse_context_type))
+
+(define parse-message:have-context
+  (make-parse-msg-proc 'parse_have_context))
 
 (define (make-bus-channel bus [filters '(any)]
                           #:timeout [timeout clock-time-none])

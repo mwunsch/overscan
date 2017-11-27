@@ -54,6 +54,7 @@
                               #:capture-clicks boolean?)
                              source?)])
          (all-from-out racket/base
+                       racket/class
                        gstreamer
                        overscan/twitch))
 
@@ -73,8 +74,32 @@
   (when (fatal-message? msg)
     (send broadcast set-state 'null)))
 
+(define (log-listener msg broadcast)
+  (let* ([msg-type (message-type msg)]
+         [owner (message-src msg)]
+         [owner-name (send owner get-name)])
+    (case msg-type
+      ['(state-changed)
+       (let-values ([(oldstate newstate pending)
+                     (parse-message:state-changed msg)])
+         (println (format "State-Changed (~a): ~a -> ~a" owner-name oldstate newstate)))]
+      ['(async-done)
+       (let-values ([(running-time)
+              (parse-message:async-done msg)])
+         (println (format "Async Done (~a): ~a" owner-name running-time)))]
+      ['(need-context)
+       (let-values ([(parsed? context-type)
+                     (parse-message:context-type msg)])
+         (println (format "Need Context (~a): ~a" owner-name context-type)))]
+      ['(have-context)
+       (let-values ([(context-type)
+                     (parse-message:have-context msg)])
+         (println (format "Have Context (~a): ~a" owner-name context-type)))]
+      [else (println msg-type)])))
+
 (define broadcast-listeners
-  (make-hash (list (cons 0 default-broadcast-listener))))
+  (make-hash (list (cons 0 default-broadcast-listener)
+                   (cons 1 log-listener))))
 
 (define (add-listener proc)
   (let* ([stack broadcast-listeners]
@@ -164,9 +189,11 @@
   (define broadcast (get-current-broadcast))
   (send broadcast send-event (make-eos-event))
   (if (sync/timeout timeout broadcast-complete-evt)
-      (let-values ([(result current pending) (send broadcast get-state)])
-        (set-box! current-broadcast #f)
-        result)
+      (begin
+        (send broadcast set-state 'null)
+        (let-values ([(result current pending) (send broadcast get-state)])
+          (set-box! current-broadcast #f)
+          result))
       (error "Could not stop broadcast")))
 
 (define (kill-broadcast)
