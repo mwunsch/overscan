@@ -83,10 +83,24 @@
        (let-values ([(oldstate newstate pending)
                      (parse-message:state-changed msg)])
          (println (format "State-Changed (~a): ~a -> ~a" owner-name oldstate newstate)))]
+      ['(new-clock)
+       (let-values ([(gclock)
+                     (parse-message:new-clock msg)])
+         (println (format "New Clock (~a): The time is ~a" owner-name (gobject-send gclock 'get_time))))]
+      ['(stream-status)
+       (let-values ([(status owner)
+                     (parse-message:stream-status msg)])
+         (println (format "Stream Status (~a): ~a" owner-name status)))]
+      ['(stream-start)
+       (println (format "Stream Start (~a)" owner-name))]
       ['(async-done)
        (let-values ([(running-time)
-              (parse-message:async-done msg)])
-         (println (format "Async Done (~a): ~a" owner-name running-time)))]
+                     (parse-message:async-done msg)])
+         (println (format "Async Done (~a): ~a" owner-name (if (equal? clock-time-none running-time) "CLOCK-TIME-NONE" running-time))))]
+      ['(qos)
+       (let-values ([(format processed dropped)
+                     (parse-message:qos-stats msg)])
+         (println (format "QoS (~a): Dropped ~a, Processed ~a" owner-name dropped processed)))]
       ['(need-context)
        (let-values ([(parsed? context-type)
                      (parse-message:context-type msg)])

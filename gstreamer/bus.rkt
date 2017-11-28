@@ -59,52 +59,70 @@
                        [message/c
                         (-> symbol? flat-contract?)]
                        [parse-message:error
-                        (-> message? any)]
+                        (-> error-message? any)]
                        [parse-message:warning
-                        (-> message? any)]
+                        (-> (message/c 'warning) any)]
                        [parse-message:info
-                        (-> message? any)]
+                        (-> (message/c 'info) any)]
                        [parse-message:tag
-                        (-> message? any)]
+                        (-> (message/c 'tag)
+                            (is-gtype?/c (gst 'TagList)))]
                        [parse-message:buffering
-                        (-> message? number?)]
+                        (-> (message/c 'buffering) exact-nonnegative-integer?)]
                        [parse-message:buffering-stats
-                        (-> message? any)]
+                        (-> (message/c 'buffering)
+                            (values (or/c (gi-enum-value/c (gst 'BufferingMode)) #f)
+                                    (or/c exact-integer? #f)
+                                    (or/c exact-integer? #f)
+                                    (or/c exact-nonnegative-integer? #f)))]
                        [parse-message:state-changed
-                        (-> message? (values symbol?
-                                             symbol?
-                                             symbol?))]
+                        (-> (message/c 'state-changed)
+                            (values (or/c (gi-enum-value/c (gst 'State)) #f)
+                                    (or/c (gi-enum-value/c (gst 'State)) #f)
+                                    (or/c (gi-enum-value/c (gst 'State)) #f)))]
                        [parse-message:step-done
-                        (-> message? (values symbol?
-                                             exact-integer?
-                                             number?
-                                             boolean?
-                                             boolean?
-                                             exact-integer?
-                                             boolean?))]
+                        (-> (message/c 'step-done)
+                            (values (gi-enum-value/c (gst 'Format))
+                                    exact-integer?
+                                    real?
+                                    boolean?
+                                    boolean?
+                                    exact-integer?
+                                    boolean?))]
                        [parse-message:new-clock
-                        (-> message? any/c)]
+                        (-> (message/c 'new-clock)
+                            (is-gtype?/c (gst 'Clock)))]
+                       [parse-message:stream-status
+                        (-> (message/c 'stream-status)
+                            (values (gi-enum-value/c (gst 'StreamStatusType))
+                                    (is-gtype?/c (gst 'Element))))]
                        [parse-message:async-done
-                        (-> message? clock-time?)]
+                        (-> (message/c 'async-done)
+                            clock-time?)]
                        [parse-message:qos
-                        (-> message? (values boolean?
-                                             exact-integer?
-                                             exact-integer?
-                                             exact-integer?
-                                             exact-integer?))]
+                        (-> (message/c 'qos)
+                            (values boolean?
+                                    exact-integer?
+                                    exact-integer?
+                                    exact-integer?
+                                    exact-integer?))]
                        [parse-message:qos-values
-                        (-> message? (values exact-integer?
-                                             number?
-                                             exact-integer?))]
+                        (-> (message/c 'qos)
+                            (values exact-integer?
+                                    real?
+                                    exact-integer?))]
                        [parse-message:qos-stats
-                        (-> message? (values symbol?
-                                             exact-integer?
-                                             exact-integer?))]
+                        (-> (message/c 'qos)
+                            (values (gi-enum-value/c (gst 'Format))
+                                    exact-integer?
+                                    exact-integer?))]
                        [parse-message:context-type
-                        (-> message? (values boolean?
-                                             any/c))]
+                        (-> (message/c 'need-context)
+                            (values boolean?
+                                    (or/c string? #f)))]
                        [parse-message:have-context
-                        (-> message? any/c)]))
+                        (-> (message/c 'have-context)
+                            (is-gtype?/c (gst 'Context)))]))
 
 (define gst-bus (gst 'Bus))
 
@@ -169,6 +187,33 @@
                        (and/c message?
                               (curryr message-of-type? type))))
 
+(define (make-bus-channel bus [filters '(any)]
+                          #:timeout [timeout clock-time-none])
+  (let* ([bus-pipe (spawn-bus-place)]
+         [bus-dead? (place-dead-evt bus-pipe)])
+    (place-channel-put bus-pipe (list (gi-instance-pointer (gobject-ptr bus))
+                                      timeout
+                                      filters))
+    (choice-evt (wrap-evt bus-pipe
+                          (lambda (ptr) (and ptr (gstruct-cast ptr gst-message))))
+                (handle-evt bus-dead?
+                            (lambda (ev) (wrap-evt ev (const (place-wait bus-pipe))))))))
+
+(define (spawn-bus-place)
+  (place chan
+         (let*-values ([(bus-ptr timeout filter)
+                        (apply values (place-channel-get chan))]
+                       [(bus-obj) (gobject-cast bus-ptr gst-bus)])
+           (let loop ()
+             (define msg
+               (gobject-send bus-obj 'timed_pop_filtered timeout filter))
+             (place-channel-put chan (and msg
+                                          (gi-instance-pointer msg)))
+             (when (fatal-message? msg)
+               (exit 0))
+             (loop)))))
+
+
 (define (make-parse-msg-proc parsefn)
   (lambda (msg) (call-with-values (thunk (gobject-send msg parsefn))
                              (compose1 (curry apply values)
@@ -202,6 +247,9 @@
 (define parse-message:new-clock
   (make-parse-msg-proc 'parse_new_clock))
 
+(define parse-message:stream-status
+  (make-parse-msg-proc 'parse_stream_status))
+
 (define parse-message:async-done
   (make-parse-msg-proc 'parse_async_done))
 
@@ -219,29 +267,3 @@
 
 (define parse-message:have-context
   (make-parse-msg-proc 'parse_have_context))
-
-(define (make-bus-channel bus [filters '(any)]
-                          #:timeout [timeout clock-time-none])
-  (let* ([bus-pipe (spawn-bus-place)]
-         [bus-dead? (place-dead-evt bus-pipe)])
-    (place-channel-put bus-pipe (list (gi-instance-pointer (gobject-ptr bus))
-                                      timeout
-                                      filters))
-    (choice-evt (wrap-evt bus-pipe
-                          (lambda (ptr) (and ptr (gstruct-cast ptr gst-message))))
-                (handle-evt bus-dead?
-                            (lambda (ev) (wrap-evt ev (const (place-wait bus-pipe))))))))
-
-(define (spawn-bus-place)
-  (place chan
-         (let*-values ([(bus-ptr timeout filter)
-                        (apply values (place-channel-get chan))]
-                       [(bus-obj) (gobject-cast bus-ptr gst-bus)])
-           (let loop ()
-             (define msg
-               (gobject-send bus-obj 'timed_pop_filtered timeout filter))
-             (place-channel-put chan (and msg
-                                          (gi-instance-pointer msg)))
-             (when (fatal-message? msg)
-               (exit 0))
-             (loop)))))
