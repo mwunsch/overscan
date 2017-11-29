@@ -75,16 +75,16 @@
                              [parent window]
                              [style '(gl no-autoclear)])])
     (define/public (expose!)
+      (unless (send window is-shown?)
+        (send window show #t))
+      (set-window-handle pointer (send canvas get-client-handle))
       (expose pointer))
     (define/public (set-render-rectangle x y width height)
       (set-render-rectangle pointer x y width height))
     (define/public (get-glcontext)
-      (gobject-get pointer "context" gst-glcontext))
-
-    (set-window-handle pointer (send canvas get-client-handle))))
+      (gobject-get pointer "context" gst-glcontext))))
 
 (define (make-gui-sink)
   (let* ([el (element-factory%-make "glimagesink")]
          [ptr (get-field pointer el)])
-    (parameterize ([current-eventspace (make-eventspace)])
-      (new video-overlay% [pointer ptr]))))
+    (new video-overlay% [pointer ptr])))
