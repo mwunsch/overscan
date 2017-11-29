@@ -69,6 +69,8 @@
                         (->> gi-registered-type? flat-contract?)]
                        [gobject-ptr
                         (->> gobject? gi-instance?)]
+                       [gobject=?
+                        (->> gobject? gobject? boolean?)]
                        [gobject-gtype
                         (->> gobject? gtype?)]
                        [struct (gobject-instance gi-instance)
@@ -938,6 +940,10 @@
 (define (gobject-ptr obj)
   ((gobject-ref obj) obj))
 
+(define (gobject=? obj1 obj2)
+  (ptr-equal? (gobject-ptr obj1)
+              (gobject-ptr obj2)))
+
 (define (gobject-gtype obj)
   (let ([instance (cast (gobject-ptr obj) _pointer _gtype-instance-pointer)])
     (gtype-class-gtype (gtype-instance-gclass instance))))
@@ -1211,7 +1217,7 @@
 (define-gobject signal-get-name (_fun _int -> _symbol)
   #:c-id g_signal_name)
 
-(define (_signal-handler info signal [_user-data _pointer])
+(define (_signal-handler info signal _user-data)
   (let* ([signal-name (signal-name signal)]
          [_params (for/list ([param-type (in-array (signal-params signal))])
                    (gtype->ctype param-type))]
@@ -1226,7 +1232,8 @@
 
 (define (connect obj signal-name handler
                  #:data [data #f]
-                 #:cast [_user-data #f])
+                 #:cast [_user-data #f]
+                 #:connect-flags [connect-flags null])
   (define ptr (gobject-ptr obj))
   (define gtype (gobject-gtype ptr))
   (define signal-id (signal-lookup signal-name gtype))
@@ -1236,14 +1243,15 @@
                    (gtype-name gtype))))
   (let* ([info (gi-instance-type ptr)]
          [signal (signal-query signal-id)]
+         [_data (cond
+                  [(ctype? _user-data) _user-data]
+                  [(gi-object? _user-data) (_gi-object _user-data)]
+                  [(gobject? data)
+                   (_gi-object (gi-instance-type (gobject-ptr data)))]
+                  [else _pointer])]
          [_handler (_signal-handler info
                                     signal
-                                    (cond
-                                      [(ctype? _user-data) _user-data]
-                                      [(gi-object? _user-data) (_gi-object _user-data)]
-                                      [(gobject? data)
-                                       (_gi-object (gi-instance-type (gobject-ptr data)))]
-                                      [else _pointer]))]
+                                    _data)]
          [connect-data (get-ffi-obj "g_signal_connect_data"
                                     libgobject
                                     (_fun (_gi-object info) _symbol _handler _pointer
@@ -1251,9 +1259,8 @@
                                           -> _ulong))])
     (connect-data ptr
                   signal-name
-                  handler
                   data
-                  null)))
+                  connect-flags)))
 
 ;;; Repositories
 (struct gi-repository (namespace version info-hash)

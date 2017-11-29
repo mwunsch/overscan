@@ -244,6 +244,10 @@ A @deftech{gobject} instance, like the introspected metadata entries provided by
   Returns the @racket[gi-instance] associated with @racket[obj].
 }
 
+@defproc[(gobject=? [obj1 gobject?] [obj2 gobject?]) boolean?]{
+  Compares the values of two GObjects. Two different gobjects can contain the same reference. This effectively does pointer comparison using @racket[ptr-equal?].
+}
+
 @defproc[(gobject-gtype [obj gobject?]) gtype?]{
   Returns the GType of @racket[obj].
 }
