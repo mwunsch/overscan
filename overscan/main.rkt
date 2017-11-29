@@ -98,7 +98,7 @@
                      (parse-message:async-done msg)])
          (println (format "Async Done (~a): ~a" owner-name (if (equal? clock-time-none running-time) "CLOCK-TIME-NONE" running-time))))]
       ['(qos)
-       (let-values ([(format processed dropped)
+       (let-values ([(fmt processed dropped)
                      (parse-message:qos-stats msg)])
          (println (format "QoS (~a): Dropped ~a, Processed ~a" owner-name dropped processed)))]
       ['(need-context)
