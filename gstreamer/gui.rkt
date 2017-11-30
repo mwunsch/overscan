@@ -19,12 +19,8 @@
                         (class/c
                          [expose!
                           (->m void?)]
-                         [set-render-rectangle
-                          (->m exact-integer?
-                               exact-integer?
-                               exact-integer?
-                               exact-integer?
-                               boolean?)])]
+                         [get-glcontext
+                          (->m (is-gtype?/c gst-glcontext))])]
                        [make-gui-sink
                         (->> (is-a?/c video-overlay%))]))
 
@@ -53,9 +49,6 @@
 (define-gst-video expose (_fun _pointer -> _void)
   #:c-id gst_video_overlay_expose)
 
-(define-gst-video set-render-rectangle (_fun _pointer _int _int _int _int -> _bool)
-  #:c-id gst_video_overlay_set_render_rectangle)
-
 (define-gst-video handle-events (_fun _pointer _bool -> _void)
   #:c-id gst_video_overlay_handle_events)
 
@@ -76,13 +69,13 @@
                              [style '(gl no-autoclear)])])
     (define/public (expose!)
       (unless (send window is-shown?)
-        (send window show #t))
-      (set-window-handle pointer (send canvas get-client-handle))
+        (send window show #t)
+        (set-window-handle!))
       (expose pointer))
-    (define/public (set-render-rectangle x y width height)
-      (set-render-rectangle pointer x y width height))
     (define/public (get-glcontext)
-      (gobject-get pointer "context" gst-glcontext))))
+      (gobject-get pointer "context" gst-glcontext))
+    (define/public (set-window-handle!)
+      (set-window-handle pointer (send canvas get-client-handle)))))
 
 (define (make-gui-sink)
   (let* ([el (element-factory%-make "glimagesink")]
