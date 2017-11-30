@@ -277,7 +277,7 @@ A @deftech{gobject} instance, like the introspected metadata entries provided by
 }
 
 @defproc[(connect [obj gobject?] [signal-name symbol?] [handler procedure?]
-          [#:data data cpointer? #f]
+          [#:data data any/c #f]
           [#:cast _user-data (or/c ctype? gi-object?) #f]) exact-integer?]{
   Register a callback @racket[handler] for the @deftech[#:key "signal"]{@hyperlink["https://developer.gnome.org/gobject/stable/signal.html"]{signal}} matching the name @racket[signal-name] for the @racket[obj]. The @racket[handler] will receive three arguments, @racket[obj], the name of the signal as a string, and @racket[data]. When both are present, @racket[data] will be cast to @racket[_user-data] before being passed to the @racket[handler].
 }
