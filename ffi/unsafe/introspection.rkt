@@ -92,7 +92,7 @@
                         (->> gobject? symbol? string?)]
                        [connect
                         (->* (gobject? symbol? procedure?)
-                             (#:data cpointer?
+                             (#:data any/c
                               #:cast (or/c ctype? gi-object?))
                              exact-integer?)]
                        [gobject-cast
@@ -1178,10 +1178,10 @@
 
 (define (make-signal-worker signal-name)
   (thread (thunk
-            (let loop ()
-              (let ([callback (thread-receive)])
-                (callback)
-                (loop))))))
+           (let loop ()
+             (let ([callback (thread-receive)])
+               (callback)
+               (loop))))))
 
 (define _signal-flags (_bitmask '(run-first
                                   run-last
@@ -1254,11 +1254,12 @@
                                     _data)]
          [connect-data (get-ffi-obj "g_signal_connect_data"
                                     libgobject
-                                    (_fun (_gi-object info) _symbol _handler _pointer
+                                    (_fun (_gi-object info) _symbol _handler _data
                                           (_pointer = #f) (_bitmask '(after swapped))
                                           -> _ulong))])
     (connect-data ptr
                   signal-name
+                  handler
                   data
                   connect-flags)))
 
