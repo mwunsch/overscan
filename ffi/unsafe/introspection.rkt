@@ -239,18 +239,18 @@
     [(15) _double]
     [(16) _string]
     [else (let ([info (gir-find-by-gtype gtype)])
-            (if info
-                (cond
-                  [(gi-struct? info)
-                   (_gi-struct info)]
-                  [(gi-enum? info)
-                   (_gi-enum info)]
-                  [(gi-object? info)
-                   (_gi-object info)]
-                  [(gi-registered-type? info)
-                   (gi-registered-type->ctype info)]
-                  [else (_cpointer/null (gi-base-name info))])
-                _pointer))]))
+            (cond
+              [(gi-struct? info)
+               (_gi-struct info)]
+              [(gi-enum? info)
+               (_gi-enum info)]
+              [(gi-object? info)
+               (_gi-object info)]
+              [(gi-registered-type? info)
+               (gi-registered-type->ctype info)]
+              [info
+               (_cpointer/null (gi-base-name info))]
+              [else _pointer]))]))
 
 (define (gtype? v)
   (and (exact-integer? v)
