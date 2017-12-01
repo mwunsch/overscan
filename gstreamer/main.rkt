@@ -15,7 +15,8 @@
          gstreamer/pipeline
          gstreamer/device
          gstreamer/factories
-         gstreamer/elements)
+         gstreamer/elements
+         gstreamer/appsink)
 
 (provide (all-from-out gstreamer/gst
                        gstreamer/caps
@@ -27,4 +28,5 @@
                        gstreamer/pipeline
                        gstreamer/device
                        gstreamer/factories
-                       gstreamer/elements))
+                       gstreamer/elements
+                       gstreamer/appsink))
