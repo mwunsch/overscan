@@ -1219,8 +1219,10 @@
 
 (define (_signal-handler info signal _user-data)
   (let* ([signal-name (signal-name signal)]
-         [_params (for/list ([param-type (in-array (signal-params signal))])
-                   (gtype->ctype param-type))]
+         [_params (if (signal-param-types signal)
+                      (for/list ([param-type (in-array (signal-params signal))])
+                        (gtype->ctype param-type))
+                      null)]
          [_returns (gtype->ctype (signal-return-type signal))]
          [worker (make-signal-worker signal-name)])
     (_cprocedure #:async-apply (lambda (thunk)
