@@ -15,6 +15,7 @@
                   string-join string-replace)
          (only-in racket/function
                   curry curryr thunk identity)
+         racket/async-channel
          (for-syntax racket/base
                      racket/syntax
                      syntax/parse
@@ -93,7 +94,8 @@
                        [connect
                         (->* (gobject? symbol? procedure?)
                              (#:data any/c
-                              #:cast (or/c ctype? gi-object?))
+                              #:cast (or/c ctype? gi-object?)
+                              #:channel async-channel?)
                              exact-integer?)]
                        [gobject-cast
                         (->> cpointer? gi-object? gobject?)]
@@ -1176,13 +1178,6 @@
 
 (struct gi-signal gi-callable ())
 
-(define (make-signal-worker signal-name)
-  (thread (thunk
-           (let loop ()
-             (let ([callback (thread-receive)])
-               (callback)
-               (loop))))))
-
 (define _signal-flags (_bitmask '(run-first
                                   run-last
                                   run-cleanup
@@ -1217,14 +1212,20 @@
 (define-gobject signal-get-name (_fun _int -> _symbol)
   #:c-id g_signal_name)
 
-(define (_signal-handler info signal _user-data)
+(define (make-signal-worker channel)
+  (thread (thunk
+           (let loop ()
+             (let ([callback (thread-receive)])
+               (async-channel-put channel (callback))
+               (loop))))))
+
+(define (_signal-handler info signal _user-data worker)
   (let* ([signal-name (signal-name signal)]
          [_params (if (signal-param-types signal)
                       (for/list ([param-type (in-array (signal-params signal))])
                         (gtype->ctype param-type))
                       null)]
-         [_returns (gtype->ctype (signal-return-type signal))]
-         [worker (make-signal-worker signal-name)])
+         [_returns (gtype->ctype (signal-return-type signal))])
     (_cprocedure #:async-apply (lambda (thunk)
                                  (thread-send worker thunk))
                  (append (list (_gi-object info))
@@ -1235,7 +1236,8 @@
 (define (connect obj signal-name handler
                  #:data [data #f]
                  #:cast [_user-data #f]
-                 #:connect-flags [connect-flags null])
+                 #:connect-flags [connect-flags null]
+                 #:channel [channel (make-async-channel)])
   (define ptr (gobject-ptr obj))
   (define gtype (gobject-gtype ptr))
   (define signal-id (signal-lookup signal-name gtype))
@@ -1251,9 +1253,11 @@
                   [(gobject? data)
                    (_gi-object (gi-instance-type (gobject-ptr data)))]
                   [else _pointer])]
+         [worker (make-signal-worker channel)]
          [_handler (_signal-handler info
                                     signal
-                                    _data)]
+                                    _data
+                                    worker)]
          [connect-data (get-ffi-obj "g_signal_connect_data"
                                     libgobject
                                     (_fun (_gi-object info) _symbol _handler _data

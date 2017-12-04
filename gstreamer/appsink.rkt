@@ -3,7 +3,8 @@
 (require ffi/unsafe/introspection
          racket/class
          racket/contract
-         (only-in racket/function thunk)
+         racket/async-channel
+         (only-in racket/function thunk const)
          gstreamer/gst
          gstreamer/clock
          gstreamer/caps
@@ -34,19 +35,24 @@
     (define appsink-ptr
       (gobject-cast pointer gst-appsink))
 
+    (define eos-channel
+      (make-async-channel))
+
     (define worker
       (thread (thunk
                (let loop ()
-                 (let-values ([(sample) (gobject-send appsink-ptr 'pull_sample)]
-                              [(statechange current pending) (get-state)])
-                   (if (eq? current 'playing)
-                       (if (eos?)
-                           (begin
-                             (on-eos)
-                             (kill-thread (current-thread)))
-                           (on-sample sample))
-                       (sleep 1/30))    ; poll 30 fps while waiting for state change
-                   (loop))))))
+                 (if (async-channel-try-get eos-channel)
+                     (on-eos)
+                     (let ([sample (gobject-send appsink-ptr 'pull_sample)])
+                       (if sample
+                           (on-sample sample)
+                           (sleep 1/30))    ; poll 30 fps while waiting for state change
+                       (loop)))))))
+
+    (connect appsink-ptr
+             'eos
+             (const (void))
+             #:channel eos-channel)
 
     (define/public-final (eos?)
       (gobject-send appsink-ptr 'is_eos))
