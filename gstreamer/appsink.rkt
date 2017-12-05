@@ -13,12 +13,13 @@
          gstreamer/factories)
 
 (provide (contract-out [appsink%
-                        (subclass?/c element%)]
-                       [appsink
+                        (and/c (subclass?/c element%)
+                               appsink%/c)]
+                       [make-appsink
                         (->* ()
                              ((or/c string? false/c)
                               (subclass?/c appsink%))
-                             (is-a?/c appsink%))]))
+                             (instanceof/c appsink%/c))]))
 
 (define gst-app
   (introspection 'GstApp))
@@ -49,9 +50,7 @@
                            (sleep 1/30))    ; poll 30 fps while waiting for state change
                        (loop)))))))
 
-    (connect appsink-ptr
-             'eos
-             (const (void))
+    (connect appsink-ptr 'eos void
              #:channel eos-channel)
 
     (define/public-final (eos?)
@@ -63,13 +62,29 @@
     (define/public-final (get-eos-evt)
       (thread-dead-evt worker))
     (define/pubment (on-sample sample)
-      (inner (println (format "got a sample ~a" sample))
+      (inner void
              on-sample sample))
     (define/pubment (on-eos)
-      (inner (println "!!! eos !!!")
+      (inner void
              on-eos))))
 
-(define (appsink [name #f] [class% appsink%])
+(define appsink%/c
+  (class/c
+   [eos?
+    (->m boolean?)]
+   [dropping?
+    (->m boolean?)]
+   [get-max-buffers
+    (->m exact-nonnegative-integer?)]
+   [get-eos-evt
+    (->m evt?)]
+   (inner [on-sample
+           (->m (is-gtype?/c (gst 'Sample))
+                any)])
+   (inner [on-eos
+           (->m any)])))
+
+(define (make-appsink [name #f] [class% appsink%])
   (let* ([obj (element-factory%-make "appsink" name)]
          [ptr (get-field pointer obj)])
     (new class% [pointer ptr])))
