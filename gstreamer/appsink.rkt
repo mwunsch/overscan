@@ -8,6 +8,7 @@
          gstreamer/gst
          gstreamer/clock
          gstreamer/caps
+         gstreamer/buffer
          gstreamer/event
          gstreamer/element
          gstreamer/factories)
@@ -79,7 +80,7 @@
    [get-eos-evt
     (->m evt?)]
    (inner [on-sample
-           (->m (is-gtype?/c (gst 'Sample))
+           (->m sample?
                 any)])
    (inner [on-eos
            (->m any)])))
