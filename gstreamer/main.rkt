@@ -8,6 +8,7 @@
          gstreamer/gst
          gstreamer/caps
          gstreamer/buffer
+         gstreamer/video
          gstreamer/clock
          gstreamer/bus
          gstreamer/event
@@ -22,6 +23,7 @@
 (provide (all-from-out gstreamer/gst
                        gstreamer/caps
                        gstreamer/buffer
+                       gstreamer/video
                        gstreamer/clock
                        gstreamer/bus
                        gstreamer/event

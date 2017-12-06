@@ -50,6 +50,8 @@
                         (->> any/c boolean?)]
                        [_gi-object
                         (->> gi-object? ctype?)]
+                       [_gi-struct
+                        (->> gi-struct? ctype?)]
                        [struct gi-instance
                                ((type gi-registered-type?) (pointer cpointer?))
                                #:omit-constructor]
