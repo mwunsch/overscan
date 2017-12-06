@@ -1,7 +1,6 @@
 #lang racket/base
 
 (require ffi/unsafe/introspection
-         (only-in ffi/unsafe malloc)
          racket/class
          racket/contract
          gstreamer/gst
@@ -21,7 +20,9 @@
                                     exact-nonnegative-integer?))]
                        [video-meta-format
                         (-> video-meta?
-                            (gi-enum-value/c gst-video-format))]))
+                            (gi-enum-value/c gst-video-format))]
+                       [caps->video-info
+                        (-> caps? (or/c video-info? false/c))]))
 
 (define gst-video
   (introspection 'GstVideo))
@@ -50,3 +51,8 @@
 
 (define (video-meta-format meta)
   (gobject-get-field 'format meta))
+
+(define (caps->video-info caps)
+  (let ([info (gst-video-info 'new)])
+    (and (gst-video-info 'from_caps info caps)
+         info)))
