@@ -5,7 +5,8 @@
 (require ffi/unsafe/introspection
          racket/class
          racket/contract
-         (only-in racket/function thunk)
+         (only-in racket/function curry thunk)
+         sgl/gl
          gstreamer/gst
          gstreamer/caps
          gstreamer/event
@@ -28,6 +29,9 @@
 (define (gl-memory? mem)
   ((gst-gl 'is_gl_memory) mem))
 
+(define gl-memory
+  (gst-gl 'GLMemory))
+
 (define canvas-sink%
   (class appsink%
     (super-new)
@@ -49,22 +53,27 @@
         (let ([height-delta (- window-height client-height)])
           (send window resize width (+ height-delta height)))))
 
-    (define/augment (on-sample sample)
-      (define buffer (sample-buffer sample))
-      (when buffer
-        (buffer-ref! buffer)
-        (let* ([video-meta (buffer-video-meta buffer)]
-               [caps (sample-caps sample)]
-               [info (caps->video-info caps)])
+    (define (draw-gl-texture memory)
+      (let ([txid (gl-memory 'get_texture_id (first memory))])
+        (send canvas with-gl-context
+              (thunk
+               (glClearColor 0 0 0 0)
+               (glClear GL_COLOR_BUFFER_BIT)))
+        (send canvas swap-gl-buffers)))
 
+    (define/augment (on-sample sample)
+      (let* ([buffer (sample-buffer sample)]
+             [video-meta (buffer-video-meta buffer)]
+             [memory (buffer-memory buffer)])
+        (when (andmap gl-memory? memory)
           (unless (send window is-shown?)
             (send window show #t))
+
           (let-values ([(vid-width vid-height)
                         (video-meta-dimensions video-meta)])
             (resize-area vid-width vid-height))
 
-          (video-frame-map info buffer '(read write)))
-        (buffer-unref! buffer)))
+          (draw-gl-texture memory))))
 
     (define/augment (on-eos)
       (send window show #f))))
@@ -72,6 +81,7 @@
 (define (make-gui-sink [name #f])
   (let ([sink (make-appsink #f canvas-sink%)])
     (bin%-compose name
+                  (capsfilter (string->caps "video/x-raw,format=UYVY"))
                   (element-factory%-make "glupload")
                   sink)))
 
