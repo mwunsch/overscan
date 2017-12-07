@@ -1,6 +1,8 @@
 #lang racket/base
 
-(require ffi/unsafe/introspection
+(require (rename-in ffi/unsafe [-> ->>])
+         ffi/unsafe/define
+         ffi/unsafe/introspection
          racket/class
          racket/contract
          (only-in racket/function
@@ -28,9 +30,24 @@
                        [gst-initialized?
                         (-> boolean?)]
                        [gst-initialize
-                        (-> boolean?)]))
+                        (-> boolean?)]
+                       [mini-object?
+                        (-> any/c
+                            boolean?)]
+                       [gst-mini-object
+                        gi-struct?]
+                       [_mini-object
+                        ctype?]
+                       [mini-object-ref!
+                        (-> mini-object? mini-object?)]
+                       [mini-object-unref!
+                        (-> mini-object? void?)]))
 
 (define gst (introspection 'Gst))
+
+(define libgstreamer (gi-repository->ffi-lib gst))
+
+(define-ffi-definer define-gst libgstreamer)
 
 (define gst-object-mixin
   (make-gobject-delegate get-name
@@ -59,3 +76,18 @@
   (define-values (initialized? argc argv)
     ((gst 'init_check) 0 #f))
   initialized?)
+
+(define gst-mini-object
+  (gst 'MiniObject))
+
+(define (mini-object? v)
+  (is-gtype? v gst-mini-object))
+
+(define _mini-object
+  (_gi-struct gst-mini-object))
+
+(define-gst mini-object-ref! (_fun _mini-object ->> _mini-object)
+  #:c-id gst_mini_object_ref)
+
+(define-gst mini-object-unref! (_fun _mini-object ->> _void)
+  #:c-id gst_mini_object_unref)
