@@ -2,82 +2,91 @@
 
 ;;; Experimental AF
 
-(require ffi/unsafe
-         ffi/unsafe/define
-         ffi/unsafe/introspection
+(require ffi/unsafe/introspection
          racket/class
+         racket/contract
          (only-in racket/function thunk)
-         (rename-in racket/contract [-> ->>])
          gstreamer/gst
+         gstreamer/caps
+         gstreamer/event
+         gstreamer/buffer
+         gstreamer/video
          gstreamer/element
          gstreamer/bus
-         gstreamer/factories)
+         gstreamer/factories
+         gstreamer/elements
+         gstreamer/appsink)
 
-(provide (contract-out [prepare-window-handle-msg?
-                        (->> message? boolean?)]
-                       [video-overlay%
-                        (class/c
-                         [expose!
-                          (->m void?)]
-                         [get-glcontext
-                          (->m (is-gtype?/c gst-glcontext))])]
-                       [make-gui-sink
-                        (->> (is-a?/c video-overlay%))]))
-
-(define gst-video
-  (introspection 'GstVideo))
+(provide (contract-out [make-gui-sink
+                        (->* ()
+                             ((or/c string? false/c))
+                             (is-a?/c element%))]))
 
 (define gst-gl
   (introspection 'GstGL))
 
-(define video-overlay-interface
-  (gst-video 'VideoOverlayInterface))
+(define (gl-memory? mem)
+  ((gst-gl 'is_gl_memory) mem))
 
-(define gst-glcontext
-  (gst-gl 'GLContext))
-
-;;; VideoOverlayInterface is a gi-struct that defines its members as
-;;; virtual functions, which ffi/unsafe/introspection does not yet
-;;; support. They are defined explicitly with ffi here.
-
-(define-ffi-definer define-gst-video
-  (gi-repository->ffi-lib gst-video))
-
-(define-gst-video set-window-handle (_fun _pointer _pointer -> _void)
-  #:c-id gst_video_overlay_set_window_handle)
-
-(define-gst-video expose (_fun _pointer -> _void)
-  #:c-id gst_video_overlay_expose)
-
-(define-gst-video handle-events (_fun _pointer _bool -> _void)
-  #:c-id gst_video_overlay_handle_events)
-
-(define-gst-video prepare-window-handle-msg? (_fun _pointer -> _bool)
-  #:c-id gst_is_video_overlay_prepare_window_handle_message)
-
-(define video-overlay%
-  (class* element% ()
+(define canvas-sink%
+  (class appsink%
     (super-new)
     (inherit-field pointer)
     (init-field [label (gobject-send pointer 'get_name)]
                 [window (new frame%
-                              [label label]
-                              [width 640]
-                              [height 480])]
+                              [label label])]
                 [canvas (new canvas%
                              [parent window]
                              [style '(gl no-autoclear)])])
-    (define/public (expose!)
-      (unless (send window is-shown?)
-        (send window show #t)
-        (set-window-handle!))
-      (expose pointer))
-    (define/public (get-glcontext)
-      (gobject-get pointer "context" gst-glcontext))
-    (define/public (set-window-handle!)
-      (set-window-handle pointer (send canvas get-client-handle)))))
 
-(define (make-gui-sink)
-  (let* ([el (element-factory%-make "glimagesink")]
-         [ptr (get-field pointer el)])
-    (new video-overlay% [pointer ptr])))
+    (define/public (resize-area width height)
+      (define-values (client-width client-height)
+        (send window get-client-size))
+      (define-values (window-width window-height)
+        (send window get-size))
+      (unless (and (eq? width client-width)
+                   (eq? height client-height))
+        (let ([height-delta (- window-height client-height)])
+          (send window resize width (+ height-delta height)))))
+
+    (define/augment (on-sample sample)
+      (define buffer (sample-buffer sample))
+      (when buffer
+        (buffer-ref! buffer)
+        (let* ([video-meta (buffer-video-meta buffer)]
+               [caps (sample-caps sample)]
+               [info (caps->video-info caps)])
+
+          (unless (send window is-shown?)
+            (send window show #t))
+          (let-values ([(vid-width vid-height)
+                        (video-meta-dimensions video-meta)])
+            (resize-area vid-width vid-height))
+
+          (video-frame-map info buffer '(read write)))
+        (buffer-unref! buffer)))
+
+    (define/augment (on-eos)
+      (send window show #f))))
+
+(define (make-gui-sink [name #f])
+  (let ([sink (make-appsink #f canvas-sink%)])
+    (bin%-compose name
+                  (element-factory%-make "glupload")
+                  sink)))
+
+
+(module+ main
+  (gst-initialize)
+
+  (define sinky (make-gui-sink))
+
+  (define pipe (pipeline%-compose #f
+                                  (videotestsrc #:live? #t #:pattern 'ball)
+                                  sinky))
+
+  (define (start)
+    (send pipe set-state 'playing))
+
+  (define (stop)
+    (send pipe send-event (make-eos-event))))
