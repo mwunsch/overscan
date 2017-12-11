@@ -139,7 +139,10 @@
                        [gtype-name
                         (->> gtype? symbol?)]
                        [gtype?
-                        (->> any/c boolean?)])
+                        (->> any/c boolean?)]
+                       [_gtype ctype?]
+                       [gtype->ctype
+                        (->> gtype? ctype?)])
          describe-gi-function
          make-gobject-delegate)
 
@@ -1321,9 +1324,6 @@
 
 (define-gir gir-find-by-gtype (_fun (_pointer = #f) _gtype -> _gi-base-info)
   #:c-id g_irepository_find_by_gtype)
-
-(define (gi-repository-find-gtype repo gtype)
-  (gir-find-by-gtype (gi-repository-namespace repo) gtype))
 
 (define (gi-repository->ffi-lib repo)
   (let ([libpath (gir-get-shared-library (gi-repository-namespace repo))])

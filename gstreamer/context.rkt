@@ -2,7 +2,8 @@
 
 (require ffi/unsafe/introspection
          racket/contract
-         gstreamer/gst)
+         gstreamer/gst
+         "private/structure.rkt")
 
 (provide (contract-out [context?
                         (-> any/c boolean?)]
@@ -13,9 +14,9 @@
                        [context-persistent?
                         (-> context? boolean?)]
                        [context-structure
-                        (-> context? gstruct?)]
+                        (-> context? gst-structure?)]
                        [context-writable-structure
-                        (-> context? gstruct?)]))
+                        (-> context? gst-structure?)]))
 
 (define gst-context (gst 'Context))
 
