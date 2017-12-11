@@ -101,6 +101,8 @@
                              exact-integer?)]
                        [gobject-cast
                         (->> cpointer? gi-object? gobject?)]
+                       [gobject-malloc
+                        (->> gi-object? gobject?)]
                        [gstruct-cast
                         (->> cpointer? gi-struct? gstruct?)]
                        [gobject-get
@@ -1041,6 +1043,10 @@
 
 (define (gobject-cast pointer obj)
   (cast pointer _pointer (_gi-object obj)))
+
+(define (gobject-malloc obj)
+  (let ([ptr (malloc (_gi-object obj))])
+    (gobject-cast ptr obj)))
 
 (define-gobject gobject-get (_fun _pointer _string (ctype : _?)
                                   [ret : (_ptr o (cond
