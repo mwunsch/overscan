@@ -5,9 +5,11 @@
          racket/contract
          (only-in racket/function curryr)
          gstreamer/gst
+         gstreamer/context
          gstreamer/caps
          gstreamer/clock
-         gstreamer/event)
+         gstreamer/event
+         gstreamer/bus)
 
 (provide (contract-out [element-factory%
                         element-factory%/c]
@@ -70,9 +72,14 @@
                          link-pads
                          link-pads-filtered
                          link-filtered
+                         set-context
+                         get-context
+                         get-contexts
                          get-factory
                          set-state
                          get-state
+                         sync-state-with-parent
+                         post-message
                          send-event))
 
 (define gst-element (gst 'Element))
@@ -256,6 +263,12 @@
          boolean?)]
    [link-filtered
     (->m (is-a?/c element%) (or/c caps? false/c) boolean?)]
+   [set-context
+    (->m context? void?)]
+   [get-context
+    (->m string? (or/c context? false/c))]
+   [get-contexts
+    (->m (listof context?))]
    [get-factory
     (->m (is-a?/c element-factory%))]
    [set-state
@@ -266,6 +279,10 @@
           (values (gi-enum-value/c state-change-return)
                   (gi-enum-value/c state)
                   (gi-enum-value/c state)))]
+   [sync-state-with-parent
+    (->m boolean?)]
+   [post-message
+    (-> message? boolean?)]
    [send-event
     (->m event? boolean?)]))
 

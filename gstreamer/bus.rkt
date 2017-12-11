@@ -54,6 +54,8 @@
                         (-> any/c boolean?)]
                        [fatal-message?
                         (-> any/c boolean?)]
+                       [make-message:need-context
+                        (-> (is-a?/c gst-object%) string? message?)]
                        [message-type/c
                         list-contract?]
                        [message/c
@@ -181,6 +183,9 @@
 (define (fatal-message? v)
   (or (eos-message? v)
       (error-message? v)))
+
+(define (make-message:need-context src context-type)
+  (gst-message 'new_need_context src context-type))
 
 (define (message/c type)
   (flat-named-contract `(message/c ',type)
