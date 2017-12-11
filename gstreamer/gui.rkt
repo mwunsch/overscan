@@ -4,6 +4,7 @@
 
 (require ffi/unsafe/introspection
          (only-in ffi/unsafe cast _pointer _uintptr)
+         (prefix-in objc: ffi/unsafe/objc)
          racket/class
          racket/contract
          (only-in racket/function curry thunk)
@@ -61,9 +62,9 @@
       #f)
 
     (define/public (get-gl-context-handle)
-      (let ([context (send (get-dc) get-gl-context)])
-        (and context
-             (send context get-handle))))
+      (let* ([context (send (get-dc) get-gl-context)]
+             [handle (send context get-handle)])
+        (objc:tell handle CGLContextObj)))
 
     (define/override (on-size width height)
       (with-gl-context
@@ -166,13 +167,14 @@
                            _pointer
                            _uintptr)])
         (and gldisplay
-             (println "The next call to 'new_wrapped will crash...")
+             (println (format "The next call to 'new_wrapped will crash. Handle is ~a. Display is ~a"
+                              handle
+                              (gobject-send gldisplay 'get_name)))
              (gst-glcontext 'new_wrapped
                             gldisplay
                             handle
                             '(cgl)
-                            '(opengl3)))
-        ))
+                            '(opengl3)))))
 
     (define (get-gl-context-from-memory memory)
       (let* ([plane (first memory)]
