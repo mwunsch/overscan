@@ -3,12 +3,15 @@
 ;;; Experimental AF
 
 (require ffi/unsafe/introspection
+         (only-in ffi/unsafe cast _pointer _uintptr)
          racket/class
          racket/contract
          (only-in racket/function curry thunk)
          sgl/gl
          gstreamer/gst
+         "private/structure.rkt"
          gstreamer/caps
+         gstreamer/context
          gstreamer/event
          gstreamer/buffer
          gstreamer/video
@@ -26,14 +29,23 @@
 (define gst-gl
   (introspection 'GstGL))
 
-(define (gl-memory? mem)
-  ((gst-gl 'is_gl_memory) mem))
-
 (define gst-glmemory
   (gst-gl 'GLMemory))
 
+(define gst-glbasememory
+  (gst-gl 'GLBaseMemory))
+
 (define gst-glcontext
   (gst-gl 'GLContext))
+
+(define gst-gldisplay
+  (gst-gl 'GLDisplay))
+
+(define gl-memory?
+  (gst-gl 'is_gl_memory))
+
+(define GL-DISPLAY-CONTEXT-TYPE
+  ((gst-gl 'GL_DISPLAY_CONTEXT_TYPE)))
 
 (define gst-glcontext%
   (class gst-object%
@@ -42,13 +54,16 @@
 
 (define glcanvas%
   (class canvas%
-    (inherit refresh with-gl-context swap-gl-buffers)
+    (inherit refresh get-dc with-gl-context swap-gl-buffers)
     (super-new [style '(gl no-autoclear)])
 
+    (define gst-gl-context
+      #f)
+
     (define/public (get-gl-context-handle)
-      (with-gl-context
-        (thunk
-         (send (get-current-gl-context) get-handle))))
+      (let ([context (send (get-dc) get-gl-context)])
+        (and context
+             (send context get-handle))))
 
     (define/override (on-size width height)
       (with-gl-context
@@ -64,12 +79,19 @@
   (class appsink%
     (super-new)
     (inherit-field pointer)
+    (inherit get-context get-contexts post-message)
     (init-field [label (gobject-send pointer 'get_name)]
                 [window (new frame%
                              [label label])])
 
     (field [canvas (new glcanvas%
                         [parent window])])
+
+    (define gst-gl-context
+      #f)
+
+    (define gl-app-context
+      #f)
 
     (define/public (resize-area width height)
       (define-values (client-width client-height)
@@ -113,16 +135,49 @@
     (define/augment (on-sample sample)
       (let* ([buffer (sample-buffer sample)]
              [video-meta (buffer-video-meta buffer)]
-             [memory (buffer-memory buffer)])
-        (when (andmap gl-memory? memory)
-          (unless (send window is-shown?)
-            (send window show #t))
+             [memory (buffer-memory buffer)]
+             [context:gldisplay (get-context GL-DISPLAY-CONTEXT-TYPE)])
 
-          (let-values ([(vid-width vid-height)
-                        (video-meta-dimensions video-meta)])
-            (resize-area vid-width vid-height))
+        (if context:gldisplay
+            (begin
+              (unless gl-app-context
+                (make-wrapped-gl-context context:gldisplay))
 
-          (draw-gl-texture memory))))
+              (when (andmap gl-memory? memory)
+                (unless gst-gl-context
+                  (set! gst-gl-context (get-gl-context-from-memory memory)))
+
+                (unless (send window is-shown?)
+                  (send window show #t))
+
+                (let-values ([(vid-width vid-height)
+                              (video-meta-dimensions video-meta)])
+                  (resize-area vid-width vid-height))
+
+                (draw-gl-texture memory)))
+            (post-message
+             (make-message:need-context this GL-DISPLAY-CONTEXT-TYPE)))))
+
+    (define (make-wrapped-gl-context gldisplay)
+      (let* ([structure (context-structure gldisplay)]
+             [gldisplay (gst-structure-ref structure
+                                           (string->symbol GL-DISPLAY-CONTEXT-TYPE))]
+             [handle (cast (send canvas get-gl-context-handle)
+                           _pointer
+                           _uintptr)])
+        (and gldisplay
+             (println "The next call to 'new_wrapped will crash...")
+             (gst-glcontext 'new_wrapped
+                            gldisplay
+                            handle
+                            '(cgl)
+                            '(opengl3)))
+        ))
+
+    (define (get-gl-context-from-memory memory)
+      (let* ([plane (first memory)]
+             [glbasememory (gstruct-cast plane gst-glbasememory)])
+        (gobject-get-field 'context glbasememory)))
 
     (define/augment (on-eos)
       (send window show #f))))
