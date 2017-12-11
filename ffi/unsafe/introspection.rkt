@@ -375,7 +375,7 @@
   (let* ([typetag (gi-type-tag type)]
          [tagsym (string->symbol (g_type_tag_to_string typetag))])
     (case typetag
-      ['GI_TYPE_TAG_VOID _void]
+      ['GI_TYPE_TAG_VOID (if (gi-type-pointer? type) _pointer _void)]
       ['GI_TYPE_TAG_BOOLEAN _bool]
       ['GI_TYPE_TAG_INT8 _int8]
       ['GI_TYPE_TAG_UINT8 _uint8]
