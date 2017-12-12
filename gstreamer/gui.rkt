@@ -61,11 +61,6 @@
     (define gst-gl-context
       #f)
 
-    (define/public (get-gl-context-handle)
-      (let* ([context (send (get-dc) get-gl-context)]
-             [handle (send context get-handle)])
-        (objc:tell handle CGLContextObj)))
-
     (define/override (on-size width height)
       (with-gl-context
         (thunk
@@ -159,22 +154,26 @@
             (post-message
              (make-message:need-context this GL-DISPLAY-CONTEXT-TYPE)))))
 
-    (define (make-wrapped-gl-context gldisplay)
-      (let* ([structure (context-structure gldisplay)]
-             [gldisplay (gst-structure-ref structure
-                                           (string->symbol GL-DISPLAY-CONTEXT-TYPE))]
-             [handle (cast (send canvas get-gl-context-handle)
-                           _pointer
-                           _uintptr)])
-        (and gldisplay
-             (println (format "The next call to 'new_wrapped will crash. Handle is ~a. Display is ~a"
-                              handle
-                              (gobject-send gldisplay 'get_name)))
-             (gst-glcontext 'new_wrapped
-                            gldisplay
-                            handle
-                            '(cgl)
-                            '(opengl3)))))
+    (define (make-wrapped-gl-context display-context)
+      (send canvas with-gl-context
+            (thunk
+             (let* ([structure (context-structure display-context)]
+                    [gldisplay (gst-structure-ref structure
+                                                  (string->symbol GL-DISPLAY-CONTEXT-TYPE))]
+                    [nsopenglcontext (send (get-current-gl-context) get-handle)]
+                    [cglcontextobj (objc:tell nsopenglcontext CGLContextObj)]
+                    [handle (cast cglcontextobj
+                                  _pointer
+                                  _uintptr)])
+               (and gldisplay
+                    (println (format "The next call to 'new_wrapped will crash. Handle is ~a. Display is ~a"
+                                     handle
+                                     (gobject-send gldisplay 'get_name)))
+                    (gst-glcontext 'new_wrapped
+                                   gldisplay
+                                   handle
+                                   '(cgl)
+                                   (gobject-send gldisplay 'get_gl_api)))))))
 
     (define (get-gl-context-from-memory memory)
       (let* ([plane (first memory)]
@@ -186,8 +185,7 @@
 
 (define (make-gui-sink [name #f])
   (let* ([sink (make-appsink #f canvas-sink%)]
-         [canvas (get-field canvas sink)]
-         [canvas-handle (send canvas get-gl-context-handle)])
+         [canvas (get-field canvas sink)])
     (bin%-compose name
                   (capsfilter (string->caps "video/x-raw,format=UYVY"))
                   (element-factory%-make "glupload")
