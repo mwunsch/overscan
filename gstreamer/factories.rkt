@@ -17,7 +17,8 @@
                                           (is-a?/c element-factory%)))]
                        [element-factory%-make
                         (->* (string?)
-                             ((or/c string? false/c))
+                             ((or/c string? false/c)
+                              #:class (subclass?/c element%))
                              (or/c false/c
                                    (is-a?/c element%)))]
                        [pad%-new-from-template
@@ -63,10 +64,11 @@
     (and factory
          (new element-factory% [pointer factory]))))
 
-(define (element-factory%-make factory-name [name #f])
+(define (element-factory%-make factory-name [name #f]
+                               #:class [factory% element%])
   (let ([el (gst-element-factory 'make factory-name name)])
     (and el
-         (new element% [pointer el]))))
+         (new factory% [pointer el]))))
 
 (define gst-pad (gst 'Pad))
 
