@@ -5,7 +5,6 @@
          racket/contract
          gstreamer/gst
          gstreamer/clock
-         gstreamer/element
          gstreamer/bin
          gstreamer/bus)
 

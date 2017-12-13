@@ -2,7 +2,7 @@
 
 (require ffi/unsafe/introspection
          racket/contract
-         gstreamer/gst
+         "private/core.rkt"
          "private/structure.rkt")
 
 (provide (contract-out [context?
@@ -17,8 +17,6 @@
                         (-> context? gst-structure?)]
                        [context-writable-structure
                         (-> context? gst-structure?)]))
-
-(define gst-context (gst 'Context))
 
 (define (context? v)
   (is-gtype? v gst-context))

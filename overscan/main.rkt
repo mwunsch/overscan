@@ -16,7 +16,7 @@
                        [stop
                         (->* ()
                              (#:timeout exact-nonnegative-integer?)
-                             (gi-enum-value/c state-change-return))]
+                             state-change-return?)]
                        [kill-broadcast
                         (-> void?)]
                        [add-listener

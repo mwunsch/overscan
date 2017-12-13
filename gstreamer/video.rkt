@@ -31,7 +31,7 @@
                        [video-frame-map
                         (-> video-info?
                             buffer?
-                            (gi-bitmask-value/c (gst 'MapFlags))
+                            map-flags?
                             (or/c video-frame? false/c))]))
 
 (define gst-video

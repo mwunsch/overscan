@@ -5,32 +5,33 @@
          ffi/unsafe/introspection
          racket/class
          racket/contract
+         "private/core.rkt"
          gstreamer/gst
-         gstreamer/caps
+         gstreamer/bin
          gstreamer/buffer
-         gstreamer/video
-         gstreamer/clock
          gstreamer/bus
+         gstreamer/caps
+         gstreamer/clock
+         gstreamer/context
+         gstreamer/device
          gstreamer/event
          gstreamer/element
-         gstreamer/bin
-         gstreamer/pipeline
-         gstreamer/device
-         gstreamer/factories
          gstreamer/elements
-         gstreamer/appsink)
+         gstreamer/factories
+         gstreamer/message
+         gstreamer/pipeline)
 
 (provide (all-from-out gstreamer/gst
-                       gstreamer/caps
+                       gstreamer/bin
                        gstreamer/buffer
-                       gstreamer/video
-                       gstreamer/clock
                        gstreamer/bus
+                       gstreamer/caps
+                       gstreamer/clock
+                       gstreamer/context
+                       gstreamer/device
                        gstreamer/event
                        gstreamer/element
-                       gstreamer/bin
-                       gstreamer/pipeline
-                       gstreamer/device
-                       gstreamer/factories
                        gstreamer/elements
-                       gstreamer/appsink))
+                       gstreamer/factories
+                       gstreamer/message
+                       gstreamer/pipeline))

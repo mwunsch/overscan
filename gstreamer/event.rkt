@@ -2,7 +2,7 @@
 
 (require ffi/unsafe/introspection
          racket/contract
-         gstreamer/gst)
+         "private/core.rkt")
 
 (provide (contract-out [event?
                         (-> any/c boolean?)]
@@ -12,10 +12,6 @@
                         (-> event? exact-integer?)]
                        [make-eos-event
                         (-> event?)]))
-
-(define gst-event (gst 'Event))
-
-(define gst-event-type (gst 'EventType))
 
 (define (event? v)
   (is-gtype? v gst-event))

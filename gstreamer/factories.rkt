@@ -4,8 +4,7 @@
          racket/class
          racket/contract
          (only-in racket/list first last)
-         gstreamer/gst
-         gstreamer/caps
+         "private/core.rkt"
          gstreamer/clock
          gstreamer/element
          gstreamer/bin
@@ -31,7 +30,7 @@
                             (or/c (is-a?/c ghost-pad%)
                                   false/c))]
                        [ghost-pad%-new-no-target
-                        (-> (or/c string? false/c) (gi-enum-value/c pad-direction)
+                        (-> (or/c string? false/c) pad-direction?
                             (or/c (is-a?/c ghost-pad%)
                                   false/c))]
                        [bin%-new
@@ -57,8 +56,6 @@
                        [device-monitor%-new
                         (-> (is-a?/c device-monitor%))]))
 
-(define gst-element-factory (gst 'ElementFactory))
-
 (define (element-factory%-find name)
   (let ([factory (gst-element-factory 'find name)])
     (and factory
@@ -70,14 +67,10 @@
     (and el
          (new factory% [pointer el]))))
 
-(define gst-pad (gst 'Pad))
-
 (define (pad%-new-from-template templ [name #f])
   (let ([pad (gst-pad 'new_from_template templ name)])
     (and pad
          (new pad% [pointer pad]))))
-
-(define gst-ghost-pad (gst 'GhostPad))
 
 (define (ghost-pad%-new name target)
   (let ([ghost (gst-ghost-pad 'new name target)])
@@ -88,8 +81,6 @@
   (let ([ghost (gst-ghost-pad 'new_no_target name dir)])
     (and ghost
          (new ghost-pad% [pointer ghost]))))
-
-(define gst-bin (gst 'Bin))
 
 (define (bin%-new [name #f])
   (new bin% [pointer (gst-bin 'new name)]))
@@ -108,8 +99,6 @@
            (when source-pad
              (send bin add-pad (ghost-pad%-new "src" source-pad))))
          bin)))
-
-(define gst-pipeline (gst 'Pipeline))
 
 (define (pipeline%-new [name #f])
   (new pipeline% [pointer (gst-pipeline 'new name)]))

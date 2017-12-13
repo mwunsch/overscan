@@ -17,7 +17,7 @@
                          [add-many
                           (->m (is-a?/c element%) (is-a?/c element%) ... boolean?)]
                          [find-unlinked-pad
-                          (->m (gi-enum-value/c pad-direction) (or/c (is-a?/c pad%) false/c))]
+                          (->m pad-direction? (or/c (is-a?/c pad%) false/c))]
                          [sync-children-states
                           (->m boolean?)])]
                        [bin->dot

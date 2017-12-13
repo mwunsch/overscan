@@ -1,9 +1,11 @@
 #lang racket/base
 
-(require ffi/unsafe/introspection
+(require (rename-in ffi/unsafe [-> ~>])
+         ffi/unsafe/define
+         ffi/unsafe/introspection
          racket/class
          racket/contract
-         gstreamer/gst
+         "private/core.rkt"
          gstreamer/caps)
 
 (provide (contract-out [sample?
@@ -12,6 +14,8 @@
                         (-> any/c boolean?)]
                        [memory?
                         (-> any/c boolean?)]
+                       [map-flags?
+                        flat-contract?]
                        [sample-buffer
                         (-> sample?
                             (or/c buffer? false/c))]
@@ -23,7 +27,7 @@
                             exact-nonnegative-integer?)]
                        [buffer-flags
                         (-> buffer?
-                            any/c)]
+                            (gi-bitmask-value/c gst-buffer-flags))]
                        [buffer-n-memory
                         (-> buffer?
                             exact-nonnegative-integer?)]
@@ -35,19 +39,7 @@
                             (listof memory?))]
                        [buffer-all-memory
                         (-> buffer?
-                            memory?)]
-                       [buffer-ref!
-                        (-> buffer? mini-object?)]
-                       [buffer-unref!
-                        (-> buffer? void?)]))
-
-(define gst-sample (gst 'Sample))
-
-(define gst-buffer (gst 'Buffer))
-
-(define gst-memory (gst 'Memory))
-
-(define gst-buffer-flags (gst 'BufferFlags))
+                            memory?)]))
 
 (define (sample? v)
   (is-gtype? v gst-sample))
@@ -57,6 +49,9 @@
 
 (define (memory? v)
   (is-gtype? v gst-memory))
+
+(define map-flags?
+  (gi-bitmask-value/c gst-map-flags))
 
 (define (sample-buffer sample)
   (gobject-send sample 'get_buffer))
@@ -82,9 +77,3 @@
 
 (define (buffer-all-memory buffer)
   (gobject-send buffer 'get_all_memory))
-
-(define (buffer-ref! buffer)
-  (mini-object-ref! (gstruct-cast buffer gst-mini-object)))
-
-(define (buffer-unref! buffer)
-  (mini-object-unref! (gstruct-cast buffer gst-mini-object)))

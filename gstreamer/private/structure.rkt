@@ -4,7 +4,7 @@
          ffi/unsafe/define
          ffi/unsafe/introspection
          racket/contract
-         gstreamer/gst)
+         "core.rkt")
 
 (provide (contract-out [gst-structure?
                         (-> any/c boolean?)]
@@ -43,8 +43,6 @@
                         (->* (gst-structure? symbol? any/c)
                              (gtype?)
                              void?)]))
-
-(define gst-structure (gst 'Structure))
 
 (define (gst-structure? v)
   (is-gtype? v gst-structure))
@@ -92,9 +90,6 @@
 (define (gst-structure-get-field-type structure fieldname)
   (gobject-send structure 'get_field_type fieldname))
 
-(define libgstreamer (gi-repository->ffi-lib gst))
-
-(define-ffi-definer define-gst libgstreamer)
 
 (define-gst gst-structure-get (_fun (_gi-struct gst-structure)
                                     _symbol

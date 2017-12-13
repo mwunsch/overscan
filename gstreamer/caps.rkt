@@ -2,7 +2,7 @@
 
 (require ffi/unsafe/introspection
          racket/contract
-         gstreamer/gst)
+         "private/core.rkt")
 
 (provide (contract-out [caps?
                         (-> any/c boolean?)]
@@ -20,8 +20,6 @@
                         (-> caps? boolean?)]
                        [caps=?
                         (-> caps? caps? boolean?)]))
-
-(define gst-caps (gst 'Caps))
 
 (define (caps? v)
   (is-gtype? v gst-caps))

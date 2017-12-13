@@ -5,11 +5,7 @@
          racket/contract
          racket/async-channel
          (only-in racket/function thunk const)
-         gstreamer/gst
-         gstreamer/clock
-         gstreamer/caps
          gstreamer/buffer
-         gstreamer/event
          gstreamer/element
          gstreamer/factories)
 
@@ -86,6 +82,5 @@
            (->m any)])))
 
 (define (make-appsink [name #f] [class% appsink%])
-  (let* ([obj (element-factory%-make "appsink" name)]
-         [ptr (get-field pointer obj)])
-    (new class% [pointer ptr])))
+  (element-factory%-make "appsink" name
+                         #:class class%))

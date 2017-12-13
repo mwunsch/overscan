@@ -4,12 +4,13 @@
          racket/class
          racket/contract
          (only-in racket/function curryr)
+         "private/core.rkt"
          gstreamer/gst
-         gstreamer/context
          gstreamer/caps
          gstreamer/clock
+         gstreamer/context
          gstreamer/event
-         gstreamer/bus)
+         gstreamer/message)
 
 (provide (contract-out [element-factory%
                         element-factory%/c]
@@ -21,6 +22,8 @@
                         (-> any/c boolean?)]
                        [element/c
                         (-> string? flat-contract?)]
+                       [state-change-return?
+                        flat-contract?]
                        [pad%
                         pad%/c]
                        [ghost-pad%
@@ -31,22 +34,16 @@
                                             false/c))]
                                 [set-target
                                  (->m (is-a?/c pad%) boolean?)]))]
-                       [pad-direction
-                        gi-enum?]
-                       [pad-presence
-                        gi-enum?]
-                       [state
-                        gi-enum?]
-                       [state-change-return
-                        gi-enum?]
+                       [pad-direction?
+                        flat-contract?]
                        [pad-template?
                         (-> any/c boolean?)]
                        [pad-template-caps
                         (-> pad-template? caps?)]
                        [make-pad-template
                         (-> string?
-                            (gi-enum-value/c pad-direction)
-                            (gi-enum-value/c pad-presence)
+                            pad-direction?
+                            (gi-enum-value/c gst-pad-presence)
                             caps?
                             pad-template?)]))
 
@@ -81,8 +78,6 @@
                          sync-state-with-parent
                          post-message
                          send-event))
-
-(define gst-element (gst 'Element))
 
 (define element%
   (class (element-mixin gst-object%)
@@ -175,23 +170,11 @@
         (and target
              (new pad% [pointer target]))))))
 
-(define pad-link-return
-  (gst 'PadLinkReturn))
+(define state-change-return?
+  (gi-enum-value/c gst-state-change-return))
 
-(define pad-direction
-  (gst 'PadDirection))
-
-(define pad-presence
-  (gst 'PadPresence))
-
-(define state
-  (gst 'State))
-
-(define state-change-return
-  (gst 'StateChangeReturn))
-
-(define gst-pad-template
-  (gst 'PadTemplate))
+(define pad-direction?
+  (gi-enum-value/c gst-pad-direction))
 
 (define (pad-template? v)
   (is-gtype? v gst-pad-template))
@@ -205,13 +188,13 @@
 (define pad%/c
   (class/c
    [get-direction
-    (->m (gi-enum-value/c pad-direction))]
+    (->m pad-direction?)]
    [get-parent-element
     (->m (is-a?/c element%))]
    [get-pad-template
     (->m (or/c pad-template? false/c))]
    [link
-    (->m (is-a?/c pad%) (gi-enum-value/c pad-link-return))]
+    (->m (is-a?/c pad%) (gi-enum-value/c gst-pad-link-return))]
    [link-maybe-ghosting
     (->m (is-a?/c pad%) boolean?)]
    [unlink
@@ -272,13 +255,14 @@
    [get-factory
     (->m (is-a?/c element-factory%))]
    [set-state
-    (->m (gi-enum-value/c state) (gi-enum-value/c state-change-return))]
+    (->m (gi-enum-value/c gst-state)
+         state-change-return?)]
    [get-state
     (->*m ()
           (clock-time?)
-          (values (gi-enum-value/c state-change-return)
-                  (gi-enum-value/c state)
-                  (gi-enum-value/c state)))]
+          (values state-change-return?
+                  (gi-enum-value/c gst-state)
+                  (gi-enum-value/c gst-state)))]
    [sync-state-with-parent
     (->m boolean?)]
    [post-message
