@@ -32,6 +32,8 @@
                         (->> any/c boolean?)]
                        [gi-registered-type?
                         (->> any/c boolean?)]
+                       [gi-registered-type-gtype
+                        (->> gi-registered-type? gtype?)]
                        [gi-enum?
                         (->> any/c boolean?)]
                        [gi-bitmask?
@@ -129,6 +131,8 @@
                         (->> gi-repository? ffi-lib?)]
                        [gir-member/c
                         (->> symbol? flat-contract?)]
+                       [gir-find-by-gtype
+                        (->> gtype? gi-base?)]
                        [gi-repository-member/c
                         (->> gi-repository? flat-contract?)]
                        [gobject<%>
@@ -228,6 +232,18 @@
                                   -> _void
                                   -> query)
   #:c-id g_type_query)
+
+(define-gobject gtype-from-name (_fun _symbol -> _gtype)
+  #:c-id g_type_from_name)
+
+(define-gobject gtype-parent (_fun _gtype -> _gtype)
+  #:c-id g_type_parent)
+
+(define-gobject gtype-init (_fun -> _void)
+  #:c-id g_type_init)
+
+(define-gobject gtype-ensure (_fun _gtype -> _void)
+  #:c-id g_type_ensure)
 
 (define (gtype->ctype gtype)
   (define gtype-fundamental-shift 2)
