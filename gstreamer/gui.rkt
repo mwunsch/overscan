@@ -7,7 +7,7 @@
          (prefix-in objc: ffi/unsafe/objc)
          racket/class
          racket/contract
-         (only-in racket/function curry thunk)
+         (only-in racket/function const curry thunk)
          sgl/gl
          gstreamer/gst
          gstreamer/appsink
@@ -27,16 +27,10 @@
 (define gst-gl
   (introspection 'GstGL))
 
-(define gst-glmemory
-  (gst-gl 'GLMemory))
-
-(define gst-glbasememory
-  (gst-gl 'GLBaseMemory))
-
-(define gst-glcontext
+(define gst-gl-context
   (gst-gl 'GLContext))
 
-(define gst-gldisplay
+(define gst-gl-display
   (gst-gl 'GLDisplay))
 
 (define gl-memory?
@@ -55,8 +49,17 @@
     (inherit refresh get-dc with-gl-context swap-gl-buffers)
     (super-new [style '(gl no-autoclear)])
 
-    (define gst-gl-context
-      #f)
+    (define/public (get-gl-context-handle)
+      (with-gl-context
+        (thunk
+         (let ([handle (send (get-current-gl-context) get-handle)])
+           (with-handlers ([exn:fail:contract? (const handle)])
+             (objc:tell handle CGLContextObj))))))
+
+    (define/public (get-gl-context-intptr)
+      (cast (get-gl-context-handle)
+            _pointer
+            _uintptr))
 
     (define/override (on-size width height)
       (with-gl-context
@@ -80,6 +83,9 @@
     (field [canvas (new glcanvas%
                         [parent window])])
 
+    (define gldisplay
+      (gst-gl-display 'new))
+
     (define/public (resize-area width height)
       (define-values (client-width client-height)
         (send window get-client-size))
@@ -95,12 +101,17 @@
       (let* ([buffer (sample-buffer sample)]
              [caps (sample-caps sample)]
              [video-info (caps->video-info caps)])
-
-        (println (buffer-n-memory buffer))
-
         ;; (unless (send window is-shown?)
         ;;   (send window show #t))
+        buffer
         ))
+
+    (define/public (new-context)
+      (gst-gl-context 'new_wrapped
+                      (gst-gl-display 'new)
+                      (send canvas get-gl-context-intptr)
+                      'cgl
+                      'opengl3))
 
     (define/augment (on-eos)
       (send window show #f))))
@@ -108,9 +119,7 @@
 (define (make-gui-sink [name #f])
   (let* ([sink (make-appsink #f canvas-sink%)]
          [canvas (get-field canvas sink)])
-    (bin%-compose name
-                  (capsfilter (string->caps "video/x-raw,format=UYVY"))
-                  sink)))
+    sink))
 
 
 (module+ main
@@ -126,4 +135,6 @@
     (send pipe set-state 'playing))
 
   (define (stop)
-    (send pipe send-event (make-eos-event))))
+    (send pipe send-event (make-eos-event)))
+
+  (send sinky new-context))
