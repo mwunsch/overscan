@@ -40,6 +40,8 @@
                         gi-object?]
                        [gst-map-flags
                         gi-bitmask?]
+                       [gst-map-info
+                        gi-struct?]
                        [gst-memory
                         gi-struct?]
                        [gst-message
@@ -139,6 +141,9 @@
 
 (define gst-map-flags
   (gst 'MapFlags))
+
+(define gst-map-info
+  (gst 'MapInfo))
 
 (define gst-memory
   (gst 'Memory))

@@ -1,8 +1,6 @@
 #lang racket/base
 
-(require (rename-in ffi/unsafe [-> ~>])
-         ffi/unsafe/define
-         ffi/unsafe/introspection
+(require ffi/unsafe/introspection
          racket/class
          racket/contract
          "private/core.rkt"
@@ -16,6 +14,10 @@
                         (-> any/c boolean?)]
                        [map-flags?
                         flat-contract?]
+                       [map-info?
+                        (-> any/c boolean?)]
+                       [map-info-memory
+                        (-> map-info? memory?)]
                        [sample-buffer
                         (-> sample?
                             (or/c buffer? false/c))]
@@ -39,7 +41,11 @@
                             (listof memory?))]
                        [buffer-all-memory
                         (-> buffer?
-                            memory?)]))
+                            memory?)]
+                       [buffer-map
+                        (-> buffer?
+                            map-flags?
+                            (or/c map-info? false/c))]))
 
 (define (sample? v)
   (is-gtype? v gst-sample))
@@ -49,6 +55,15 @@
 
 (define (memory? v)
   (is-gtype? v gst-memory))
+
+(define (memory-sizes mem)
+  (gobject-send mem 'get_sizes))
+
+(define (map-info? v)
+  (is-gtype? v gst-map-info))
+
+(define (map-info-memory info)
+  (gobject-get-field 'memory info))
 
 (define map-flags?
   (gi-bitmask-value/c gst-map-flags))
@@ -77,3 +92,9 @@
 
 (define (buffer-all-memory buffer)
   (gobject-send buffer 'get_all_memory))
+
+(define (buffer-map buffer flags)
+  (let-values ([(success? info)
+                (gobject-send buffer 'map flags)])
+    (and success?
+         info)))
