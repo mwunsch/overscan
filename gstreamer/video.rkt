@@ -26,6 +26,8 @@
                             (gi-enum-value/c gst-video-format))]
                        [caps->video-info
                         (-> caps? (or/c video-info? false/c))]
+                       [video-info->caps
+                        (-> video-info? caps?)]
                        [video-frame-map
                         (-> video-info?
                             buffer?
@@ -68,8 +70,11 @@
 
 (define (caps->video-info caps)
   (let ([info (gst-video-info 'new)])
-    (and (gst-video-info 'from_caps info caps)
+    (and (gobject-send info 'from_caps caps)
          info)))
+
+(define (video-info->caps info)
+  (gobject-send info 'to_caps))
 
 (define (video-frame-map info buffer flags)
   (let* ([_videoframe (_gi-struct gst-video-frame)]
