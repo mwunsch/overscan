@@ -1050,7 +1050,7 @@
                       (and ptr
                            (gobject-instance obj (if (gi-instance? ptr)
                                                      (gi-instance-pointer ptr)
-                                                   ptr)))))))
+                                                     ptr)))))))
 
 (define-gobject gobject-unref! (_fun _pointer -> _void)
   #:wrap (deallocator)
