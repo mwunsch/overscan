@@ -3,12 +3,14 @@
 ;;; Experimental AF
 
 (require ffi/unsafe/introspection
-         (only-in ffi/unsafe cast _pointer _uintptr)
+         (rename-in ffi/unsafe [-> ~>])
          (prefix-in objc: ffi/unsafe/objc)
+         ffi/unsafe/define
          racket/class
          racket/contract
          (only-in racket/function const curry thunk)
          sgl/gl
+         "private/core.rkt"
          gstreamer/gst
          gstreamer/appsink
          gstreamer/caps
@@ -33,11 +35,28 @@
 (define gst-gl-display
   (gst-gl 'GLDisplay))
 
+(define gst-gl-platform
+  (gst-gl 'GLPlatform))
+
+(define gst-gl-api
+  (gst-gl 'GLAPI))
+
 (define gl-memory?
   (gst-gl 'is_gl_memory))
 
 (define GL-DISPLAY-CONTEXT-TYPE
   ((gst-gl 'GL_DISPLAY_CONTEXT_TYPE)))
+
+(define-ffi-definer define-gstgl (gi-repository->ffi-lib gst-gl))
+
+;;; This function works (eg. does not crash) when called outside
+(define-gstgl gst-gl-context-new-wrapped
+  (_fun (_gi-object gst-gl-display)
+        _uintptr
+        (_gi-enum gst-gl-platform)
+        (_gi-enum gst-gl-api)
+        ~> (_gi-object gst-gl-context))
+  #:c-id gst_gl_context_new_wrapped)
 
 (define gst-glcontext%
   (class gst-object%
@@ -81,10 +100,8 @@
                              [label label])])
 
     (field [canvas (new glcanvas%
-                        [parent window])])
-
-    (define gldisplay
-      (gst-gl-display 'new))
+                        [parent window])]
+           [gldisplay (gst-gl-display 'new)])
 
     (define/public (resize-area width height)
       (define-values (client-width client-height)
@@ -100,25 +117,29 @@
     (define/augment (on-sample sample)
       (let* ([buffer (sample-buffer sample)]
              [caps (sample-caps sample)]
-             [video-info (caps->video-info caps)])
+             [vidinfo (caps->video-info caps)]
+             [frame (video-frame-map vidinfo
+                                     buffer
+                                     '(read))])
+        (println frame)
         ;; (unless (send window is-shown?)
         ;;   (send window show #t))
-        buffer
+        ;; (video-frame-unmap! frame)
         ))
 
     (define/public (new-context)
-      (gst-gl-context 'new_wrapped
-                      (gst-gl-display 'new)
-                      (send canvas get-gl-context-intptr)
-                      'cgl
-                      'opengl3))
+      ;; This crashes
+      (gst-gl-context-new-wrapped
+       (gi-instance-pointer gldisplay)
+       (send canvas get-gl-context-intptr)
+       '(cgl)
+       '(opengl3)))
 
     (define/augment (on-eos)
       (send window show #f))))
 
 (define (make-gui-sink [name #f])
-  (let* ([sink (make-appsink #f canvas-sink%)]
-         [canvas (get-field canvas sink)])
+  (let ([sink (make-appsink #f canvas-sink%)])
     sink))
 
 
@@ -135,6 +156,4 @@
     (send pipe set-state 'playing))
 
   (define (stop)
-    (send pipe send-event (make-eos-event)))
-
-  (send sinky new-context))
+    (send pipe send-event (make-eos-event))))
