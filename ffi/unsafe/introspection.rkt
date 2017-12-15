@@ -50,10 +50,16 @@
                         (->> any/c boolean?)]
                        [gi-struct?
                         (->> any/c boolean?)]
+                       [gi-struct-size
+                        (->> gi-struct? exact-nonnegative-integer?)]
                        [_gi-object
                         (->> gi-object? ctype?)]
                        [_gi-struct
                         (->> gi-struct? ctype?)]
+                       [_gstruct-type
+                        (->> gi-struct? ctype?)]
+                       [_gi-enum
+                        (->> gi-enum? ctype?)]
                        [struct gi-instance
                                ((type gi-registered-type?) (pointer cpointer?))
                                #:omit-constructor]
@@ -107,6 +113,8 @@
                         (->> gi-object? gobject?)]
                        [gstruct-cast
                         (->> cpointer? gi-struct? gstruct?)]
+                       [gstruct-malloc
+                        (->> gi-struct? gstruct?)]
                        [gobject-get
                         (->> gobject? string? (or/c ctype? gi-registered-type? (listof symbol?)) any)]
                        [gobject-set!
@@ -228,6 +236,9 @@
 (define-gobject gtype-name (_fun _gtype -> _symbol)
   #:c-id g_type_name)
 
+(define-gobject gtype-qname (_fun _gtype -> _uint)
+  #:c-id g_type_qname)
+
 (define-gobject query-gtype (_fun _gtype [query :  (_ptr o _gtype-query)]
                                   -> _void
                                   -> query)
@@ -279,8 +290,7 @@
 
 (define (gtype? v)
   (and (exact-integer? v)
-       (let ([query (query-gtype v)])
-         (not (zero? (gtype-query-type query))))))
+       (not (zero? (gtype-qname v)))))
 
 
 ;;; BaseInfo
@@ -774,6 +784,17 @@
 (define (gstruct-cast pointer structure)
   (cast pointer _pointer (_gi-struct structure)))
 
+(define (gstruct-malloc structure)
+  (let ([ptr (malloc (gi-struct-size structure))])
+    (gstruct-cast ptr structure)))
+
+(define (_gstruct-type structure)
+  (make-cstruct-type (map (compose1 gi-type->ctype
+                                    gi-field-type)
+                          (gi-struct-fields structure))
+                     #f
+                     (gi-struct-alignment structure)))
+
 (define-gir gi-struct-alignment (_fun _gi-base-info -> _size)
   #:c-id g_struct_info_get_alignment)
 
@@ -1060,11 +1081,16 @@
   #:wrap (allocator gobject-unref!)
   #:c-id g_object_ref_sink)
 
+(define (gi-object-size obj)
+  (let* ([gtype (gi-registered-type-gtype obj)]
+         [query (query-gtype gtype)])
+    (gtype-query-instance-size query)))
+
 (define (gobject-cast pointer obj)
   (cast pointer _pointer (_gi-object obj)))
 
 (define (gobject-malloc obj)
-  (let ([ptr (malloc (_gi-object obj))])
+  (let ([ptr (malloc (gi-object-size obj))])
     (gobject-cast ptr obj)))
 
 (define-gobject gobject-get (_fun _pointer _string (ctype : _?)
