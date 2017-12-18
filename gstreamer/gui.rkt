@@ -41,6 +41,9 @@
 (define gst-gl-api
   (gst-gl 'GLAPI))
 
+(define gst-gl-upload
+  (gst-gl 'GLUpload))
+
 (define gl-memory?
   (gst-gl 'is_gl_memory))
 
@@ -58,27 +61,40 @@
         ~> (_gi-object gst-gl-context))
   #:c-id gst_gl_context_new_wrapped)
 
-(define gst-glcontext%
-  (class gst-object%
-    (super-new)
-    (inherit-field pointer)))
-
 (define glcanvas%
   (class canvas%
     (inherit refresh get-dc with-gl-context swap-gl-buffers)
     (super-new [style '(gl no-autoclear)])
 
-    (define/public (get-gl-context-handle)
+    (define gst-gldisplay
+      (gst-gl-display 'new))
+
+    (define gl-context-handle
       (with-gl-context
         (thunk
          (let ([handle (send (get-current-gl-context) get-handle)])
            (with-handlers ([exn:fail:contract? (const handle)])
              (objc:tell handle CGLContextObj))))))
 
-    (define/public (get-gl-context-intptr)
-      (cast (get-gl-context-handle)
-            _pointer
-            _uintptr))
+    (define/public (get-gl-context-handle)
+      gl-context-handle)
+
+    (define gst-glcontext
+      (gst-gl-context-new-wrapped (gi-instance-pointer gst-gldisplay)
+                                  (cast (get-gl-context-handle) _pointer _uintptr)
+                                  '(any)
+                                  '(opengl3)))
+
+    (define gst-glupload
+      (gst-gl-upload 'new gst-glcontext))
+
+    (gobject-send gst-glcontext 'activate #t)
+
+    (define/public (get-gst-glcontext)
+      gst-glcontext)
+
+    (define/public (get-gst-glupload)
+      gst-glupload)
 
     (define/override (on-size width height)
       (with-gl-context
@@ -100,8 +116,7 @@
                              [label label])])
 
     (field [canvas (new glcanvas%
-                        [parent window])]
-           [gldisplay (gst-gl-display 'new)])
+                        [parent window])])
 
     (define/public (resize-area width height)
       (define-values (client-width client-height)
@@ -118,29 +133,25 @@
       (let* ([buffer (sample-buffer sample)]
              [caps (sample-caps sample)]
              [vidinfo (caps->video-info caps)]
-             [frame (video-frame-map vidinfo
-                                     buffer
-                                     '(read))])
-        (println frame)
-        ;; (unless (send window is-shown?)
-        ;;   (send window show #t))
-        ;; (video-frame-unmap! frame)
-        ))
+             [glcontext (send canvas get-gst-glcontext)])
+        (if glcontext
+            (begin
+              (resize-area (gobject-get-field 'width vidinfo)
+                           (gobject-get-field 'height vidinfo))
 
-    (define/public (new-context)
-      ;; This crashes
-      (gst-gl-context-new-wrapped
-       (gi-instance-pointer gldisplay)
-       (send canvas get-gl-context-intptr)
-       '(cgl)
-       '(opengl3)))
+              ;upload buffer to glcontext
+              ;draw to canvas
+              (unless (send window is-shown?)
+                (send window show #t)))
+            (error "no context"))))
 
     (define/augment (on-eos)
       (send window show #f))))
 
 (define (make-gui-sink [name #f])
-  (let ([sink (make-appsink #f canvas-sink%)])
-    sink))
+  (bin%-compose name
+                (element-factory%-make "glupload")
+                (make-appsink #f canvas-sink%)))
 
 
 (module+ main
