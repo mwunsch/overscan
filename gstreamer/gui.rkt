@@ -14,6 +14,7 @@
          gstreamer/gst
          gstreamer/appsink
          gstreamer/caps
+         gstreamer/context
          gstreamer/event
          gstreamer/buffer
          gstreamer/element
@@ -38,6 +39,12 @@
 (define gst-gl-platform
   (gst-gl 'GLPlatform))
 
+(define gst-gl-memory
+  (gst-gl 'GLMemory))
+
+(define gst-gl-basememory
+  (gst-gl 'GLBaseMemory))
+
 (define gst-gl-api
   (gst-gl 'GLAPI))
 
@@ -60,6 +67,13 @@
         (_gi-enum gst-gl-api)
         ~> (_gi-object gst-gl-context))
   #:c-id gst_gl_context_new_wrapped)
+
+(define-gstgl gst-gl-upload-perform
+  (_fun (_gi-object gst-gl-upload)
+        (_gi-struct gst-buffer)
+        (_ptr o (_gi-struct gst-buffer))
+        ~> (_gi-enum (gst-gl 'GLUploadReturn)))
+  #:c-id gst_gl_upload_perform_with_buffer)
 
 (define glcanvas%
   (class canvas%
@@ -85,16 +99,24 @@
                                   '(any)
                                   '(opengl3)))
 
+    (define gst-glcontext-active?
+      #f)
+
     (define gst-glupload
       (gst-gl-upload 'new gst-glcontext))
-
-    (gobject-send gst-glcontext 'activate #t)
 
     (define/public (get-gst-glcontext)
       gst-glcontext)
 
-    (define/public (get-gst-glupload)
-      gst-glupload)
+    (define/public (get-gst-gldisplay)
+      gst-gldisplay)
+
+    (define/public (activate-glcontext!)
+      (set! gst-glcontext-active?
+            (gobject-send gst-glcontext 'activate #t)))
+
+    (define/public (active-glcontext?)
+      gst-glcontext-active?)
 
     (define/override (on-size width height)
       (with-gl-context
@@ -110,7 +132,7 @@
   (class appsink%
     (super-new)
     (inherit-field pointer)
-    (inherit get-context get-contexts post-message)
+    (inherit get-context set-context get-contexts post-message)
     (init-field [label (gobject-send pointer 'get_name)]
                 [window (new frame%
                              [label label])])
@@ -128,30 +150,66 @@
         (let ([height-delta (- window-height client-height)])
           (send window resize width (+ height-delta height)))))
 
-
     (define/augment (on-sample sample)
       (let* ([buffer (sample-buffer sample)]
              [caps (sample-caps sample)]
              [vidinfo (caps->video-info caps)]
+             [memory (buffer-memory buffer)]
              [glcontext (send canvas get-gst-glcontext)])
-        (if glcontext
-            (begin
-              (resize-area (gobject-get-field 'width vidinfo)
-                           (gobject-get-field 'height vidinfo))
+        (begin
+          (resize-area (gobject-get-field 'width vidinfo)
+                       (gobject-get-field 'height vidinfo))
 
-              ;upload buffer to glcontext
-              ;draw to canvas
-              (unless (send window is-shown?)
-                (send window show #t)))
-            (error "no context"))))
+          (when (andmap gl-memory? memory)
+            (let ([memory-context (get-gl-context-from-memory memory)])
+              (println (gobject-send memory-context 'can_share glcontext)))
+
+            (draw-gl-memory memory))
+
+          (unless (send window is-shown?)
+            (send window show #t)))))
 
     (define/augment (on-eos)
-      (send window show #f))))
+      (send window show #f))
+
+    (define (draw-gl-memory memory)
+      (let* ([plane (first memory)]
+             [txid (gst-gl-memory 'get_texture_id plane)])
+        (send canvas with-gl-context
+              (thunk
+               (glClearColor 0 0 0 0)
+               (glClear GL_COLOR_BUFFER_BIT)
+
+               (glMatrixMode GL_PROJECTION)
+               (glLoadIdentity)
+
+               (glEnable GL_TEXTURE_2D)
+               (glBindTexture GL_TEXTURE_2D txid)
+
+               (glBegin GL_QUADS)
+               (glTexCoord2f 0.0 0.0)
+               (glVertex2f -1.0 -1.0)
+
+               (glTexCoord2f 0.0 1.0)
+               (glVertex2f -1.0 1.0)
+
+               (glTexCoord2f 1.0 1.0)
+               (glVertex2f 1.0 1.0)
+
+               (glTexCoord2f 1.0 0.0)
+               (glVertex2f 1.0 -1.0)
+               (glEnd)))
+        (send canvas swap-gl-buffers)))
+
+    (define (get-gl-context-from-memory memory)
+      (let* ([plane (first memory)]
+             [glbasememory (gstruct-cast plane gst-gl-basememory)])
+        (gobject-get-field 'context glbasememory)))))
 
 (define (make-gui-sink [name #f])
-  (bin%-compose name
-                (element-factory%-make "glupload")
-                (make-appsink #f canvas-sink%)))
+  (let ([sink (make-appsink #f canvas-sink%)])
+    (gobject-with-properties (element-factory%-make "glsinkbin" name)
+                             (hash 'sink sink))))
 
 
 (module+ main
