@@ -18,10 +18,13 @@
                        [context-writable-structure
                         (-> context? gst-structure?)]
                        [make-context
-                        (->* (string? symbol? any/c)
+                        (->* (string? string? any/c)
                              (boolean?
                               #:type gtype?)
-                             context?)]))
+                             context?)]
+                       [context-ref
+                        (-> context? string?
+                            (or/c any/c false/c))]))
 
 (define (context? v)
   (is-gtype? v gst-context))
@@ -47,5 +50,9 @@
                                        0)])
   (let* ([context (gst-context 'new context-type persistent?)]
          [structure (context-writable-structure context)])
-    (gst-structure-set! structure key value type)
+    (gst-structure-set! structure key value)
     context))
+
+(define (context-ref context key)
+  (let* ([structure (context-structure context)])
+    (gst-structure-ref structure key)))

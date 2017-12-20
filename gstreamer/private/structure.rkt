@@ -37,12 +37,11 @@
                        [gst-structure-get-field-type
                         (-> gst-structure? string? (or/c gtype? zero?))]
                        [gst-structure-ref
-                        (-> gst-structure? symbol?
+                        (-> gst-structure? string?
                             (or/c false/c any/c))]
                        [gst-structure-set!
-                        (->* (gst-structure? symbol? any/c)
-                             (gtype?)
-                             void?)]))
+                        (-> gst-structure? string? any/c
+                            void?)]))
 
 (define (gst-structure? v)
   (is-gtype? v gst-structure))
@@ -92,7 +91,7 @@
 
 
 (define-gst gst-structure-get (_fun (_gi-struct gst-structure)
-                                    _symbol
+                                    _string
                                     [type :  _gtype]
                                     [r : (_ptr o (gtype->ctype type))]
                                     (_pointer = #f)
@@ -101,23 +100,14 @@
                                              r))
   #:c-id gst_structure_get)
 
-(define-gst gst-structure-set (_fun (_gi-struct gst-structure)
-                                    _symbol
-                                    [type : _gtype]
-                                    (_ptr i (gtype->ctype type))
-                                    (_pointer = #f)
+(define-gst gst-structure-set! (_fun (_gi-struct gst-structure)
+                                    _string
+                                    _pointer
                                     ->> _void)
-  #:c-id gst_structure_set)
+  #:c-id gst_structure_set_value)
 
 
 (define (gst-structure-ref structure key)
-  (let* ([string-key (symbol->string key)]
-         [type (gst-structure-get-field-type structure string-key)])
+  (let* ([type (gst-structure-get-field-type structure key)])
     (and (not (zero? type))
          (gst-structure-get structure key type))))
-
-(define (gst-structure-set! structure key v
-                            [type (if (gobject? v)
-                                      (gobject-gtype v)
-                                      0)])
-  (gst-structure-set structure key type v))
