@@ -1,6 +1,8 @@
 #lang racket/base
 
-(require ffi/unsafe/introspection
+(require (rename-in ffi/unsafe [-> ~>])
+         ffi/vector
+         ffi/unsafe/introspection
          racket/class
          racket/contract
          "private/core.rkt"
@@ -14,10 +16,18 @@
                         (-> any/c boolean?)]
                        [map-flags?
                         flat-contract?]
+                       [_map-info-pointer
+                        ctype?]
                        [map-info?
                         (-> any/c boolean?)]
                        [map-info-memory
                         (-> map-info? memory?)]
+                       [map-info-size
+                        (-> map-info? exact-nonnegative-integer?)]
+                       [map-info-maxsize
+                        (-> map-info? exact-nonnegative-integer?)]
+                       [map-info-data
+                        (-> map-info? u8vector?)]
                        [sample-buffer
                         (-> sample?
                             (or/c buffer? false/c))]
@@ -45,7 +55,11 @@
                        [buffer-map
                         (-> buffer?
                             map-flags?
-                            (or/c map-info? false/c))]))
+                            (or/c map-info? false/c))]
+                       [buffer-unmap!
+                        (-> buffer?
+                            map-info?
+                            void?)]))
 
 (define (sample? v)
   (is-gtype? v gst-sample))
@@ -58,12 +72,6 @@
 
 (define (memory-sizes mem)
   (gobject-send mem 'get_sizes))
-
-(define (map-info? v)
-  (is-gtype? v gst-map-info))
-
-(define (map-info-memory info)
-  (gobject-get-field 'memory info))
 
 (define map-flags?
   (gi-bitmask-value/c gst-map-flags))
@@ -93,8 +101,23 @@
 (define (buffer-all-memory buffer)
   (gobject-send buffer 'get_all_memory))
 
-(define (buffer-map buffer flags)
-  (let-values ([(success? info)
-                (gobject-send buffer 'map flags)])
-    (and success?
-         info)))
+(define-cstruct _map-info ([memory (_gi-struct gst-memory)]
+                           [flags (_gi-enum gst-map-flags)]
+                           [data _u8vector]
+                           [size _size]
+                           [maxsize _size]))
+
+(define-gst buffer-map
+  (_fun (_gi-struct gst-buffer)
+        [info : (_ptr o _map-info)]
+        (_gi-enum gst-map-flags)
+        ~> [success? : _bool]
+        ~> (and success?
+                info))
+  #:c-id gst_buffer_map)
+
+(define-gst buffer-unmap!
+  (_fun (_gi-struct gst-buffer)
+        _map-info-pointer
+        ~> _void)
+  #:c-id gst_buffer_unmap)
