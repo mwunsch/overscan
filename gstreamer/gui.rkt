@@ -167,28 +167,28 @@
       (let* ([buffer (sample-buffer sample)]
              [caps (sample-caps sample)]
              [vidinfo (caps->video-info caps)]
-             [memory (buffer-memory buffer)]
-             [width (gobject-get-field 'width vidinfo)]
-             [height (gobject-get-field 'height vidinfo)])
+             [memory (buffer-memory buffer)])
 
-        (begin
-          (unless (active-glcontext?)
-            (activate-glcontext!))
+        ;; (begin
+        ;;   (unless (active-glcontext?)
+        ;;     (activate-glcontext!))
 
-          (resize-area width height)
+        ;;   (resize-area width height)
 
-          (when (andmap gl-memory? memory)
-            (unless (send window is-shown?)
-              (send window show #t))
-            (draw-gl-memory memory))
+        ;;   (when (andmap gl-memory? memory)
+        ;;     (unless (send window is-shown?)
+        ;;       (send window show #t))
+        ;;     (draw-gl-memory memory))
 
-          (let* ([mapinfo (buffer-map buffer '(read))]
-                 [bitmap (send canvas make-bitmap width height)])
-            (send bitmap set-argb-pixels 0 0 width height (map-info-data mapinfo))
-            (buffer-unmap! buffer mapinfo))
+        (let* ([frame (video-frame-map vidinfo buffer '(read))]
+               [data (video-frame-data frame)])
+          (println (array-ref data 1))
+          ;; (send bitmap set-argb-pixels 0 0 width height (map-info-data mapinfo))
+          (video-frame-unmap! frame))
 
-          (unless (send window is-shown?)
-            (send window show #t)))))
+        ;;   (unless (send window is-shown?)
+        ;;     (send window show #t)))
+        ))
 
     (define/augment (on-eos)
       (send window show #f))

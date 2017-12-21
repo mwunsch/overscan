@@ -16,6 +16,8 @@
                         (-> any/c boolean?)]
                        [map-flags?
                         flat-contract?]
+                       [_map-info
+                        ctype?]
                        [_map-info-pointer
                         ctype?]
                        [map-info?
