@@ -154,7 +154,19 @@
                         (->> any/c boolean?)]
                        [_gtype ctype?]
                        [gtype->ctype
-                        (->> gtype? ctype?)])
+                        (->> gtype? ctype?)]
+                       [gvalue?
+                        (->> any/c boolean?)]
+                       [_gvalue
+                        ctype?]
+                       [_gvalue-pointer
+                        ctype?]
+                       [gvalue-from-instance
+                        (->> cpointer? gvalue?)]
+                       [gvalue-peek
+                        (->> gvalue? cpointer?)]
+                       [gvalue-type
+                        (->> gvalue? gtype?)])
          describe-gi-function
          make-gobject-delegate)
 
@@ -232,6 +244,45 @@
 (define-cstruct _gerror ([domain _uint32] [code _int] [message _string]))
 
 (define-cstruct _gtype-query ([type _gtype] [type-name _symbol] [class-size _uint] [instance-size _uint]))
+
+(define _gvalue-data
+  (_union _int
+          _uint
+          _long
+          _ulong
+          _int64
+          _uint64
+          _float
+          _double
+          _pointer))
+
+(define-cstruct _gvalue ([type _gtype]
+                         [data _gvalue-data]))
+
+(define (make-empty-gvalue [gtype 0])
+  (let* ([union-ptr (malloc _gvalue-data)]
+         [union-val (ptr-ref union-ptr _gvalue-data)])
+    (union-set! union-val 0 0)
+    (make-gvalue gtype union-val)))
+
+
+(define-gobject gvalue-init
+  (_fun (_gvalue-pointer = (make-empty-gvalue))
+        _gtype
+        -> _gvalue-pointer)
+  #:c-id g_value_init)
+
+(define-gobject gvalue-from-instance
+  (_fun [value : (_ptr io _gvalue) = (make-empty-gvalue)]
+        _pointer
+        -> _void
+        -> value)
+  #:c-id g_value_init_from_instance)
+
+(define-gobject gvalue-peek
+  (_fun _gvalue-pointer
+        -> _pointer)
+  #:c-id g_value_peek_pointer)
 
 (define-gobject gtype-name (_fun _gtype -> _symbol)
   #:c-id g_type_name)

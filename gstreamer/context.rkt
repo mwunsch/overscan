@@ -19,8 +19,7 @@
                         (-> context? gst-structure?)]
                        [make-context
                         (->* (string? string? any/c)
-                             (boolean?
-                              #:type gtype?)
+                             (boolean?)
                              context?)]
                        [context-ref
                         (-> context? string?
@@ -44,10 +43,7 @@
 (define (context-writable-structure context)
   (gobject-send context 'writable_structure))
 
-(define (make-context context-type key value [persistent? #f]
-                      #:type [type (if (gobject? value)
-                                       (gobject-gtype value)
-                                       0)])
+(define (make-context context-type key value [persistent? #f])
   (let* ([context (gst-context 'new context-type persistent?)]
          [structure (context-writable-structure context)])
     (gst-structure-set! structure key value)

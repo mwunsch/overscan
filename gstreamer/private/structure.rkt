@@ -40,7 +40,7 @@
                         (-> gst-structure? string?
                             (or/c false/c any/c))]
                        [gst-structure-set!
-                        (-> gst-structure? string? any/c
+                        (-> gst-structure? string? cpointer?
                             void?)]))
 
 (define (gst-structure? v)
@@ -100,10 +100,10 @@
                                              r))
   #:c-id gst_structure_get)
 
-(define-gst gst-structure-set! (_fun (_gi-struct gst-structure)
-                                    _string
-                                    _pointer
-                                    ->> _void)
+(define-gst gst-structure-set-value (_fun (_gi-struct gst-structure)
+                                          _string
+                                          _gvalue-pointer
+                                          ->> _void)
   #:c-id gst_structure_set_value)
 
 
@@ -111,3 +111,8 @@
   (let* ([type (gst-structure-get-field-type structure key)])
     (and (not (zero? type))
          (gst-structure-get structure key type))))
+
+(define (gst-structure-set! structure key value)
+  (gst-structure-set-value structure
+                           key
+                           (gvalue-from-instance value)))
