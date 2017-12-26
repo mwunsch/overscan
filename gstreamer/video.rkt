@@ -252,10 +252,11 @@
   (let* ([data (video-frame-data frame)]
          [info (video-frame-info frame)]
          [finfo (video-info-finfo info)]
-         [poffset (video-format-info-poffset finfo )])
-    (for/vector ([p (in-range (video-format-info-n-planes finfo))])
-      (let ([offset (vector-ref poffset p)])
-        (array-ref data offset)))))
+         [poffset (video-format-info-poffset finfo)]
+         [component-in-plane (video-format-info-plane finfo)])
+    (for/vector ([p (in-range (video-format-info-n-components finfo))])
+      (let ([plane (vector-ref component-in-plane p)])
+        (array-ref data plane)))))
 
 (define (video-frame-plane-data frame plane)
   (array-ref (video-frame-data frame) plane))
