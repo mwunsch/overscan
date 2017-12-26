@@ -181,8 +181,8 @@
         ;;     (draw-gl-memory memory))
 
         (let* ([frame (video-frame-map vidinfo buffer '(read))]
-               [data (video-frame-data frame)])
-          (println (array-ref data 1))
+               [finfo (video-info-finfo vidinfo)])
+          (displayln (video-frame-planes frame))
           ;; (send bitmap set-argb-pixels 0 0 width height (map-info-data mapinfo))
           (video-frame-unmap! frame))
 
@@ -233,8 +233,7 @@
     ;;                          (hash 'sink sink))
     (bin%-compose name
                   (capsfilter (string->caps "video/x-raw,format=ARGB"))
-                  sink)
-    ))
+                  sink)))
 
 
 (module+ main

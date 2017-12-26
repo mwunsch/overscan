@@ -100,7 +100,7 @@
                        [video-frame-unmap!
                         (-> video-frame? void?)]
                        [video-frame-planes
-                        (-> video-frame? (vectorof cpointer?))]))
+                        (-> video-frame? vector?)]))
 
 (define gst-video
   (introspection 'GstVideo))
@@ -250,13 +250,17 @@
 
 (define (video-frame-planes frame)
   (let* ([data (video-frame-data frame)]
+         [mapping (video-frame-mapping frame)]
          [info (video-frame-info frame)]
          [finfo (video-info-finfo info)]
          [poffset (video-format-info-poffset finfo)]
          [component-in-plane (video-format-info-plane finfo)])
-    (for/vector ([p (in-range (video-format-info-n-components finfo))])
-      (let ([plane (vector-ref component-in-plane p)])
-        (array-ref data plane)))))
+    (for/vector ([c (in-range (video-format-info-n-components finfo))])
+      (let* ([p (vector-ref component-in-plane c)]
+             [mapinfo (array-ref mapping p)]
+             [offset (vector-ref poffset c)]
+             [plane (array-ref data p)])
+        (array-ref (map-info-get-data mapinfo) offset)))))
 
 (define (video-frame-plane-data frame plane)
   (array-ref (video-frame-data frame) plane))
