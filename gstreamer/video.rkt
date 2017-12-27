@@ -260,7 +260,7 @@
              [mapinfo (array-ref mapping p)]
              [offset (vector-ref poffset c)]
              [plane (array-ref data p)])
-        (array-ref (map-info-get-data mapinfo) offset)))))
+        (array-ref (map-info-data mapinfo) offset)))))
 
 (define (video-frame-plane-data frame plane)
   (array-ref (video-frame-data frame) plane))

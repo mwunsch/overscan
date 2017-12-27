@@ -169,22 +169,12 @@
              [vidinfo (caps->video-info caps)]
              [memory (buffer-memory buffer)])
 
-        ;; (begin
-        ;;   (unless (active-glcontext?)
-        ;;     (activate-glcontext!))
+        ;; (resize-area width height)
 
-        ;;   (resize-area width height)
-
-        ;;   (when (andmap gl-memory? memory)
-        ;;     (unless (send window is-shown?)
-        ;;       (send window show #t))
-        ;;     (draw-gl-memory memory))
-
-        (let* ([frame (video-frame-map vidinfo buffer '(read))]
-               [finfo (video-info-finfo vidinfo)])
-          (displayln (video-frame-planes frame))
-          ;; (send bitmap set-argb-pixels 0 0 width height (map-info-data mapinfo))
-          (video-frame-unmap! frame))
+        (let* ([mapinfo (buffer-map buffer '(read))]
+               [data (map-info-data mapinfo)])
+          (list->bytes (sequence->list (in-array data)))
+          (buffer-unmap! buffer mapinfo))
 
         ;;   (unless (send window is-shown?)
         ;;     (send window show #t)))
@@ -242,7 +232,7 @@
   (define sinky (make-gui-sink))
 
   (define pipe (pipeline%-compose #f
-                                  (videotestsrc #:live? #t #:pattern 'ball)
+                                  (videotestsrc #:live? #t)
                                   sinky))
 
   (define (start)

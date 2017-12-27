@@ -29,9 +29,7 @@
                        [map-info-maxsize
                         (-> map-info? exact-nonnegative-integer?)]
                        [map-info-data
-                        (-> map-info? cpointer?)]
-                       [map-info-get-data
-                        (-> map-info? any/c)]
+                        (-> map-info? array?)]
                        [sample-buffer
                         (-> sample?
                             (or/c buffer? false/c))]
@@ -107,12 +105,12 @@
 
 (define-cstruct _map-info ([memory (_gi-struct gst-memory)]
                            [flags (_gi-enum gst-map-flags)]
-                           [data _pointer]
+                           [data-pointer _pointer]
                            [size _size]
                            [maxsize _size]))
 
-(define (map-info-get-data info)
-  (let* ([data (map-info-data info)]
+(define (map-info-data info)
+  (let* ([data (map-info-data-pointer info)]
          [size (map-info-size info)]
          [array (_array _uint8 size)])
     (ptr-ref data array)))
