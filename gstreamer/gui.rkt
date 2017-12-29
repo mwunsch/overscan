@@ -29,13 +29,15 @@
   (class appsink%
     (super-new)
     (inherit-field pointer)
-    (inherit get-context set-context get-contexts post-message)
+    (inherit set-caps!)
     (init-field [label (gobject-send pointer 'get_name)]
                 [window (new frame%
                              [label label])])
 
     (field [canvas (new canvas%
                         [parent window])])
+
+    (set-caps! (string->caps "video/x-raw,format=ARGB"))
 
     (define dc
       (send canvas get-dc))
@@ -74,10 +76,7 @@
       (send window show #f))))
 
 (define (make-gui-sink [name #f])
-  (let ([sink (make-appsink #f canvas-sink%)])
-    (bin%-compose name
-                  (capsfilter (string->caps "video/x-raw,format=ARGB"))
-                  sink)))
+  (make-appsink name canvas-sink%))
 
 
 (module+ main

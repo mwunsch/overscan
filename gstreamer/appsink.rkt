@@ -6,6 +6,7 @@
          racket/async-channel
          (only-in racket/function thunk const)
          gstreamer/buffer
+         gstreamer/caps
          gstreamer/element
          gstreamer/factories)
 
@@ -56,6 +57,10 @@
       (gobject-send appsink-ptr 'get_drop))
     (define/public-final (get-max-buffers)
       (gobject-send appsink-ptr 'get_max_buffers))
+    (define/public-final (get-caps)
+      (gobject-send appsink-ptr 'get_caps))
+    (define/public-final (set-caps! caps)
+      (gobject-send appsink-ptr 'set_caps caps))
     (define/public-final (get-eos-evt)
       (thread-dead-evt worker))
     (define/pubment (on-sample sample)
@@ -73,6 +78,10 @@
     (->m boolean?)]
    [get-max-buffers
     (->m exact-nonnegative-integer?)]
+   [get-caps
+    (->m (or/c caps? false/c))]
+   [set-caps!
+    (->m caps? void?)]
    [get-eos-evt
     (->m evt?)]
    (inner [on-sample
