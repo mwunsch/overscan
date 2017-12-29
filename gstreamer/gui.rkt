@@ -63,7 +63,7 @@
 
         (let* ([mapinfo (buffer-map buffer '(read))]
                [data (map-info-data mapinfo)])
-          (send bitmap set-argb-pixels 0 0 width height (list->bytes data))
+          (send bitmap set-argb-pixels 0 0 width height data)
           (send dc draw-bitmap bitmap 0 0)
           (buffer-unmap! buffer mapinfo))
 

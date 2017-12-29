@@ -29,7 +29,7 @@
                        [map-info-maxsize
                         (-> map-info? exact-nonnegative-integer?)]
                        [map-info-data
-                        (-> map-info? (listof byte?))]
+                        (-> map-info? bytes?)]
                        [sample-buffer
                         (-> sample?
                             (or/c buffer? false/c))]
@@ -112,8 +112,13 @@
 (define (map-info-data info)
   (let* ([data (map-info-data-pointer info)]
          [size (map-info-size info)]
-         [array (_array/list _uint8 size)])
-    (ptr-ref data array)))
+         [ctype (_array _uint8 size)]
+         [byte-array (ptr-ref data ctype)])
+    (for/fold ([pixels (make-bytes size)])
+              ([val (in-array byte-array)]
+               [i (in-naturals)])
+      (bytes-set! pixels i val)
+      pixels)))
 
 (define-gst buffer-map
   (_fun (_gi-struct gst-buffer)
