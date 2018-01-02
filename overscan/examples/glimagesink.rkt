@@ -9,6 +9,8 @@
 
 (define pipe (pipeline%-compose #f
                                 (videotestsrc #:live? #t #:pattern 'ball)
+                                (draw-overlay)
+                                (element-factory%-make "videoconvert")
                                 sinky))
 
 ; (with-handlers ([exn:break? (lambda (ex)
