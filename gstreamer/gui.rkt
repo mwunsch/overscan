@@ -11,8 +11,6 @@
          gstreamer/gst
          gstreamer/appsink
          gstreamer/caps
-         gstreamer/context
-         gstreamer/event
          gstreamer/buffer
          gstreamer/element
          gstreamer/elements
@@ -77,19 +75,3 @@
 
 (define (make-gui-sink [name #f])
   (make-appsink name canvas-sink%))
-
-
-(module+ main
-  (gst-initialize)
-
-  (define sinky (make-gui-sink))
-
-  (define pipe (pipeline%-compose #f
-                                  (videotestsrc #:live? #t #:pattern 'ball)
-                                  sinky))
-
-  (define (start)
-    (send pipe set-state 'playing))
-
-  (define (stop)
-    (send pipe send-event (make-eos-event))))

@@ -3,7 +3,6 @@
 (require gstreamer/gui
          ffi/unsafe/introspection
          racket/gui
-         (only-in ffi/unsafe _racket)
          (only-in racket/function thunk))
 
 (define sinky (make-gui-sink))
