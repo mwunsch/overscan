@@ -9,7 +9,7 @@
          (only-in racket/string string-join)
          racket/async-channel
          racket/draw/unsafe/brush
-         racket/draw/unsafe/cairo-lib
+         racket/draw/unsafe/cairo
          "private/core.rkt"
          gstreamer/gst
          gstreamer/appsink
@@ -83,15 +83,8 @@
   (make-appsink name canvas-sink%))
 
 (define (draw-overlay [name #f])
-  (let* ([el (element-factory%-make "cairooverlay" name)]
-         [target (make-bitmap 100 100)]
-         [dc (new bitmap-dc% [bitmap target])])
+  (let ([el (element-factory%-make "cairooverlay" name)])
     (connect el 'draw (lambda (overlay cr timestamp duration data)
-                        (let ([surface (get-cairo-surface cr)])
-                          (println surface))))
+                        (let ([surface (cairo_get_target (cast cr _pointer _cairo_t))])
+                          surface)))
     el))
-
-(define get-cairo-surface
-  (get-ffi-obj "cairo_get_target"
-               cairo-lib
-               (_fun _pointer ~> _pointer)))
