@@ -8,7 +8,6 @@
          racket/contract
          (only-in racket/string string-join)
          racket/async-channel
-         racket/draw/unsafe/brush
          racket/draw/unsafe/cairo
          "private/core.rkt"
          gstreamer/gst
@@ -83,8 +82,36 @@
   (make-appsink name canvas-sink%))
 
 (define (draw-overlay [name #f])
-  (let ([el (element-factory%-make "cairooverlay" name)])
-    (connect el 'draw (lambda (overlay cr timestamp duration data)
-                        (let ([surface (cairo_get_target (cast cr _pointer _cairo_t))])
-                          surface)))
-    el))
+  (let* ([target (make-bitmap 100 100)]
+         [dc (new bitmap-dc% [bitmap target])]
+         [el (element-factory%-make "cairooverlay" name)]
+         [surface (send target get-handle)])
+    (connect el 'draw (lambda (overlay ptr timestamp duration data)
+                        (let ([cr (cast ptr _pointer _cairo_t)])
+                          (cairo_set_source_surface cr data 0.0 0.0)
+                          (cairo_paint cr)))
+             #:data surface
+             #:cast _cairo_surface_t)
+    (values dc el)))
+
+(module+ main
+  (require gstreamer/event)
+  (gst-initialize)
+
+  (define-values (dc overlay)
+    (draw-overlay))
+
+  (send dc set-brush "green" 'solid)
+  (send dc draw-ellipse 5 5 90 90)
+
+  (define pipe (pipeline%-compose #f
+                                  (videotestsrc #:live? #t #:pattern 'ball)
+                                  overlay
+                                  (element-factory%-make "videoconvert")
+                                  (make-gui-sink)))
+
+  (define (start)
+    (send pipe set-state 'playing))
+
+  (define (stop)
+    (send pipe send-event (make-eos-event))))
