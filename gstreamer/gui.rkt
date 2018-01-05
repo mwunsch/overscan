@@ -24,10 +24,12 @@
                         (->* ()
                              ((or/c string? false/c))
                              (is-a?/c element%))]
+                       [cairo-overlay%
+                        (subclass?/c element%)]
                        [make-cairo-overlay
                         (->* ((is-a?/c bitmap-dc%))
                              ((or/c string? false/c))
-                             (is-a?/c element%))]))
+                             (is-a?/c cairo-overlay%))]))
 
 (define canvas-sink%
   (class appsink%
@@ -98,35 +100,6 @@
     (define surface
       (and target
            (send target get-handle)))
-
-    ;; Why is the below commented out? Because atomic execution is causing deadlock.
-    ;; (define overlay
-    ;;   (let ([target (send dc get-bitmap)])
-    ;;     (make-overlay-state (and target
-    ;;                              (send target get-handle))
-    ;;                         #f)))
-
-    ;; (define caps-changed
-    ;;   (make-async-channel))
-
-    ;; (define caps-worker
-    ;;   (thread (thunk
-    ;;            (let loop ()
-    ;;              (let ([changed? (async-channel-get caps-changed)]
-    ;;                    [vidinfo (overlay-state-video-info overlay)])
-    ;;                (when vidinfo
-    ;;                  (let* ([width (video-info-width vidinfo)]
-    ;;                         [height (video-info-height vidinfo)]
-    ;;                         [target (make-bitmap width height)])
-    ;;                    (send dc set-bitmap target)
-    ;;                    (set-overlay-state-surface! overlay (send target get-handle))))
-    ;;                (loop))))))
-
-    ;; (define caps-changed-signal
-    ;;   (connect pointer 'caps-changed (lambda (overlay caps data)
-    ;;                                    (let ([vidinfo (caps->video-info caps)])
-    ;;                                      (set-overlay-state-video-info! data vidinfo)))
-    ;;            #:channel caps-changed))
 
     (define draw-signal
       (connect pointer 'draw (lambda (overlay ptr timestamp duration data)
