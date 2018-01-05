@@ -22,6 +22,8 @@
                         ctype?]
                        [_video-info-pointer
                         ctype?]
+                       [_video-info-pointer/null
+                        ctype?]
                        [_video-format-info
                         ctype?]
                        [_video-format-info-pointer
