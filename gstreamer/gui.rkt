@@ -29,7 +29,14 @@
                        [make-cairo-overlay
                         (->* ((is-a?/c bitmap-dc%))
                              ((or/c string? false/c))
-                             (is-a?/c cairo-overlay%))]))
+                             (is-a?/c cairo-overlay%))]
+                       [video-overlay%
+                        (and/c (subclass?/c element%)
+                               (class/c
+                                (init-field
+                                 [window (is-a?/c window<%>)])
+                                [get-window
+                                 (->m (is-a?/c window<%>))]))]))
 
 (define canvas-sink%
   (class appsink%
@@ -117,6 +124,22 @@
   (let ([el (gst-element-factory 'make "cairooverlay" name)])
     (and el
          (new cairo-overlay% [pointer el] [dc dc]))))
+
+(define video-overlay%
+  (class element%
+    (super-new)
+    (inherit-field pointer)
+    (init-field [window (new frame%
+                             [label (gobject-send pointer 'get_name)]
+                             [width 640]
+                             [height 480])])
+
+    (define/public (get-window)
+      window)
+
+    (when window
+      (video-overlay-set-window-handle! pointer
+                                        (send window get-client-handle)))))
 
 (module+ main
   (require gstreamer/event)
