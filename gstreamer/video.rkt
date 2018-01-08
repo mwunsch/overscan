@@ -7,7 +7,7 @@
          ffi/vector
          racket/class
          racket/contract
-         (only-in "private/core.rkt" gst-caps gst-buffer gst-map-flags)
+         (only-in "private/core.rkt" gst-caps gst-element gst-buffer gst-map-flags)
          gstreamer/gst
          gstreamer/buffer
          gstreamer/caps)
@@ -102,7 +102,11 @@
                        [video-frame-unmap!
                         (-> video-frame? void?)]
                        [video-frame-planes
-                        (-> video-frame? vector?)]))
+                        (-> video-frame? vector?)]
+                       [video-overlay-set-window-handle!
+                        (-> (is-gtype?/c gst-element)
+                            cpointer?
+                            void?)]))
 
 (define gst-video
   (introspection 'GstVideo))
@@ -266,3 +270,7 @@
 
 (define (video-frame-plane-data frame plane)
   (array-ref (video-frame-data frame) plane))
+
+(define-gst-video video-overlay-set-window-handle!
+  (_fun (_gi-object gst-element) _pointer ~> _void)
+  #:c-id gst_video_overlay_set_window_handle)
