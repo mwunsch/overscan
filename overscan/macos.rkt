@@ -19,7 +19,11 @@
                         (->* (exact-nonnegative-integer?)
                              (#:capture-cursor boolean?
                               #:capture-clicks boolean?)
-                             source?)]))
+                             source?)]
+                       [osxvideosink
+                        (->* ()
+                             ((or/c string? false/c))
+                             (element/c "osxvideosink"))]))
 
 (unless (gst-initialized?)
   (error "GStreamer must be initialized"))
@@ -82,3 +86,6 @@
     (gobject-with-properties (device)
                              (hash 'capture-screen-cursor cursor?
                                    'capture-screen-mouse-clicks clicks?))))
+
+(define (osxvideosink [name #f])
+  (element-factory%-make "osxvideosink" name))
