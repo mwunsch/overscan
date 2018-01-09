@@ -8,8 +8,6 @@
          racket/class
          racket/contract
          (only-in racket/string string-join)
-         racket/async-channel
-         racket/draw/unsafe/cairo
          "private/core.rkt"
          gstreamer/gst
          gstreamer/appsink
@@ -24,12 +22,6 @@
                         (->* ()
                              ((or/c string? false/c))
                              (is-a?/c element%))]
-                       [cairo-overlay%
-                        (subclass?/c element%)]
-                       [make-cairo-overlay
-                        (->* ((is-a?/c bitmap-dc%))
-                             ((or/c string? false/c))
-                             (is-a?/c cairo-overlay%))]
                        [video-overlay%
                         (and/c (subclass?/c element%)
                                (class/c
@@ -91,40 +83,6 @@
 (define (make-gui-sink [name #f])
   (make-appsink name canvas-sink%))
 
-(define-cstruct _overlay-state ([surface (_or-null _cairo_surface_t)]
-                                [video-info _video-info-pointer/null])
-  #:malloc-mode 'atomic-interior)
-
-(define cairo-overlay%
-  (class element%
-    (super-new)
-    (inherit-field pointer)
-    (init-field dc)
-
-    (define target
-      (send dc get-bitmap))
-
-    (define surface
-      (and target
-           (send target get-handle)))
-
-    (define draw-signal
-      (connect pointer 'draw (lambda (overlay ptr timestamp duration data)
-                               (let ([cr (cast ptr _pointer _cairo_t)])
-                                 (cairo_set_source_surface cr data 0.0 0.0)
-                                 (cairo_paint cr)))
-               #:data surface
-               #:cast _cairo_surface_t))
-
-    (define/public (get-dc)
-      dc)))
-
-(define (make-cairo-overlay dc
-                            [name #f])
-  (let ([el (gst-element-factory 'make "cairooverlay" name)])
-    (and el
-         (new cairo-overlay% [pointer el] [dc dc]))))
-
 (define video-overlay%
   (class element%
     (super-new)
@@ -140,22 +98,3 @@
     (when window
       (video-overlay-set-window-handle! pointer
                                         (send window get-client-handle)))))
-
-(module+ main
-  (require gstreamer/event)
-  (gst-initialize)
-
-  (define overlay
-    (make-cairo-overlay (new bitmap-dc% [bitmap (make-bitmap 320 240)])))
-
-  (define pipe (pipeline%-compose #f
-                                  (videotestsrc #:live? #t #:pattern 'ball)
-                                  overlay
-                                  (element-factory%-make "videoconvert")
-                                  (make-gui-sink)))
-
-  (define (start)
-    (send pipe set-state 'playing))
-
-  (define (stop)
-    (send pipe send-event (make-eos-event))))
