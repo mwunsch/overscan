@@ -1,8 +1,12 @@
 #lang racket/base
 
 (require ffi/unsafe/introspection
+         (rename-in ffi/unsafe [-> ~>])
+         ffi/unsafe/objc
+         ffi/unsafe/nsalloc
          racket/class
          racket/contract
+         racket/gui/base
          gstreamer)
 
 (provide (contract-out [audio-sources
@@ -23,7 +27,9 @@
                        [osxvideosink
                         (->* ()
                              ((or/c string? false/c))
-                             (element/c "osxvideosink"))]))
+                             (element/c "osxvideosink"))]
+                       [call-atomically-in-run-loop
+                        (-> (-> any) any)]))
 
 (unless (gst-initialized?)
   (error "GStreamer must be initialized"))
@@ -89,3 +95,29 @@
 
 (define (osxvideosink [name #f])
   (element-factory%-make "osxvideosink" name))
+
+(import-class NSObject NSArray NSRunLoop)
+(define NSDefaultRunLoopMode (get-ffi-obj 'NSDefaultRunLoopMode #f _id))
+
+(define-objc-class CallerContainer NSObject
+  [proc]
+  (-a _void (call) (proc)))
+
+(define (call-atomically-in-run-loop proc)
+  (define result #f)
+  (define s (make-semaphore))
+  (call-with-autorelease
+   (lambda ()
+     (define obj (tell CallerContainer alloc))
+     (set-ivar! obj proc (lambda ()
+                           (set! result (proc))
+                           (semaphore-post s)))
+     (tellv (tell NSRunLoop mainRunLoop)
+            performSelector: #:type _SEL (selector call)
+            target: obj
+            argument: #f
+            order: #:type _uint 0
+            modes: (tell (tell NSArray alloc)
+                         initWithObject: NSDefaultRunLoopMode))))
+  (yield s)
+  result)
