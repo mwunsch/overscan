@@ -95,6 +95,12 @@
     (define/public (get-window)
       window)
 
+    (define/public (expose!)
+      (video-overlay-expose! pointer))
+
+    (define/public (set-render-rectangle! x y width height)
+      (video-overlay-set-render-rectangle pointer x y width height))
+
     (when window
       (video-overlay-set-window-handle! pointer
                                         (send window get-client-handle)))))

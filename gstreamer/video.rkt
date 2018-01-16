@@ -106,7 +106,17 @@
                        [video-overlay-set-window-handle!
                         (-> (is-gtype?/c gst-element)
                             cpointer?
-                            void?)]))
+                            void?)]
+                       [video-overlay-expose!
+                        (-> (is-gtype?/c gst-element)
+                            void?)]
+                       [video-overlay-set-render-rectangle
+                        (-> (is-gtype?/c gst-element)
+                            exact-nonnegative-integer?
+                            exact-nonnegative-integer?
+                            exact-nonnegative-integer?
+                            exact-nonnegative-integer?
+                            boolean?)]))
 
 (define gst-video
   (introspection 'GstVideo))
@@ -274,3 +284,13 @@
 (define-gst-video video-overlay-set-window-handle!
   (_fun (_gi-object gst-element) _pointer ~> _void)
   #:c-id gst_video_overlay_set_window_handle)
+
+(define-gst-video video-overlay-expose!
+  (_fun (_gi-object gst-element) ~> _void)
+  #:c-id gst_video_overlay_expose)
+
+(define-gst-video video-overlay-set-render-rectangle
+  (_fun (_gi-object gst-element)
+        _int _int _int _int
+        ~> _bool)
+  #:c-id gst_video_overlay_set_render_rectangle)
