@@ -9,6 +9,12 @@
 @defclass/title[element% gst-object% ()]{
   The basic building block for any GStreamer media pipeline. @deftech{Elements} are like a black box: something goes in, and something else will come out the other side. For example, a @emph{decoder} element would take in encoded data and would output decoded data. A @emph{muxer} element would take in several different media streams and combine them into one. Elements are linked via @tech{pads}.
 
+  @defmethod[(add-pad [pad (is-a?/c pad%)]) boolean?]{
+  }
+
+  @defmethod[(get-compatible-pad [pad (is-a?/c pad%)] [caps (or/c caps? #f) #f]) (or/c (is-a?/c pad%) #f)]{
+  }
+
   @defmethod[(get-request-pad [name string?]) (or/c (is-a?/c pad%) #f)]{
     Retrieves a pad from @this-obj[] by name. This version only retrieves request pads. Returns @racket[#f] if a pad could not be found.
   }
@@ -72,6 +78,9 @@
     The third return value is the pending state of the element, i.e. what the next state will be when the result of the state change is @racket['async].
   }
 
+  @defmethod[(post-message [message message?]) boolean?]{
+  }
+
   @defmethod[(send-event [event event?]) boolean?]{
     Sends an @tech{event} to @this-obj[]. Returns @racket[#t] if the event was handled, @racket[#f] otherwise.
   }
@@ -90,14 +99,6 @@
 
   @defproc[(element/c [factoryname string?]) flat-contract?]{
     Accepts a string @racket[factoryname] and returns a flat contract that recognizes elements created by a factory of that name.
-  }
-
-  @defproc[(source? [v any/c]) boolean?]{
-    Returns @racket[#t] if @racket[v] is an element with no sink pads and at least one source pad, @racket[#f] otherwise. Implies @racket[(is-a? v element%)].
-  }
-
-  @defproc[(sink? [v any/c]) boolean?]{
-    Returns @racket[#t] if @racket[v] is an element with no source pads and at least one sink pad, @racket[#f] otherwise. Implies @racket[(is-a? v element%)]. The opposite of @racket[source?].
   }
 
   @defproc[(parse/launch [description string?]) (or/c (is-a?/c element%) #f)]{
