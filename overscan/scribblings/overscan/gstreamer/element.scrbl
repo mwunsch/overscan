@@ -162,3 +162,24 @@ An @deftech{event} in GStreamer is a small structure to describe notification si
 
   The EOS event itself will not cause any state transitions of the pipeline.
 }
+
+@section{Contexts}
+
+@defproc[(context? [v any/c]) boolean?]{
+}
+
+@defproc[(context-type [context context?]) string?]{
+}
+
+@defproc[(context-has-type? [context context?] [type string?]) boolean?]{
+}
+
+@defproc[(context-persistent? [context context?]) boolean?]{
+}
+
+@defproc[(make-context [type string?] [key string?] [value any/c] [persistent? boolean? #f])
+         context?]{
+}
+
+@defproc[(context-ref [context context?] [key string?]) (or/c any/c #f)]{
+}
