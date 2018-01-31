@@ -54,6 +54,15 @@
     Equivalent to @method[element% link], but if @racket[filter] is present and not @racket[#f], the link will be constrained by the specified set of @tech{caps}.
   }
 
+  @defmethod[(set-context [context context?]) void?]{
+  }
+
+  @defmethod[(get-context [type string?]) (or/c context? #f)]{
+  }
+
+  @defmethod[(get-contexts) (listof context?)]{
+  }
+
   @defmethod[(get-factory) (is-a?/c element-factory%)]{
     Retrieves the factory that was used to create @this-obj[].
   }
