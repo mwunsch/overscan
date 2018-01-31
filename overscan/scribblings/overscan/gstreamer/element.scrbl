@@ -133,9 +133,12 @@
   Search for an element factory of @racket[name]. Returns @racket[#f] if the factory could not be found.
 }
 
-@defproc[(element-factory%-make [factoryname string?] [name (or/c string? #f) #f])
+@defproc[(element-factory%-make [factoryname string?] [name (or/c string? #f) #f]
+         [#:class factory% (subclass?/c element%) element%])
          (or/c (is-a?/c element%) #f)]{
-  Create a new element of the type defined by the given @racket[factoryname]. The element's name will be given the @racket[name] if supplied, otherwise the element will receive a unique name. Returns @racket[#f] if an element was unable to be created.
+  Create a new element of the type defined by the given @racket[factoryname]. The element's name will be given the @racket[name] if supplied, otherwise the element will receive a unique name. The returned element will be an instance of @racket[factory%] if provided.
+
+  Returns @racket[#f] if an element was unable to be created.
 }
 
 @section{Events}
