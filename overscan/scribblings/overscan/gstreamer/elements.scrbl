@@ -101,3 +101,14 @@ Sink elements are the end points in a media pipeline. They accept data but do no
 @defproc[(rtmpsink-location [element rtmpsink?]) string?]{
   Returns the RTMP URL of the @racket[element].
 }
+
+@subsection{@racket[appsink%]}
+
+@defmodule[gstreamer/appsink]
+
+@defclass[appsink% element% ()]{
+
+}
+
+@defproc[(make-appsink [name (or/c string? #f) #f] [class% (subclass?/c appsink%) appsink%]) (is-a?/c appsink%)]{
+}
