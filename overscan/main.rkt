@@ -5,6 +5,7 @@
          racket/contract
          (only-in racket/function thunk)
          gstreamer
+         "video.rkt"
          overscan/twitch)
 
 (provide (contract-out [broadcast
@@ -41,6 +42,7 @@
          (all-from-out racket/base
                        racket/class
                        gstreamer
+                       "video.rkt"
                        overscan/twitch))
 
 
