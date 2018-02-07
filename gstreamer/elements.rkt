@@ -88,7 +88,7 @@
 
 (define (videotestsrc [name #f]
                       #:pattern [pattern 'smpte]
-                      #:live? [live? #f])
+                      #:live? [live? #t])
   (let ([el (element-factory%-make "videotestsrc" name)])
     (gobject-set! el "pattern" pattern videotest-patterns)
     (gobject-set! el "is-live" live? _bool)

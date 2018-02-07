@@ -19,7 +19,7 @@ Examples of source elements are those that generate video or audio signal, or th
 
 @defproc[(videotestsrc [name (or/c string? #f) #f]
                        [#:pattern pattern videotest-pattern/c  'smpte]
-                       [#:live? is-live? boolean? #f]) videotestsrc?]{
+                       [#:live? is-live? boolean? #t]) videotestsrc?]{
   Creates a @deftech{videotestsrc} element with the given @racket[name] (or a generated name if @racket[#f]). A videotestsrc element produces a @racket[pattern] on its src pad.
 }
 
