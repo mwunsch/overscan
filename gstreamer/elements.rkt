@@ -48,7 +48,13 @@
                        [videotestsrc-live?
                         (-> videotestsrc? boolean?)]
                        [videotest-pattern/c
-                        flat-contract?]))
+                        flat-contract?]
+                       [videomixer
+                        (->* ()
+                             ((or/c string? false/c))
+                             videomixer?)]
+                       [videomixer?
+                        (-> any/c boolean?)]))
 
 (define (capsfilter caps [name #f])
   (gobject-with-properties (element-factory%-make "capsfilter" name)
@@ -102,3 +108,9 @@
 
 (define (videotestsrc-live? element)
   (gobject-get element "is-live" _bool))
+
+(define (videomixer [name #f])
+  (element-factory%-make "videomixer" name))
+
+(define videomixer?
+  (element/c "videomixer"))
