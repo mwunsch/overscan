@@ -54,7 +54,11 @@
                              ((or/c string? false/c))
                              videomixer?)]
                        [videomixer?
-                        (-> any/c boolean?)]))
+                        (-> any/c boolean?)]
+                       [videomixer-background
+                        (-> videomixer? symbol?)]
+                       [set-videomixer-background!
+                        (-> videomixer? symbol? void?)]))
 
 (define (capsfilter caps [name #f])
   (gobject-with-properties (element-factory%-make "capsfilter" name)
@@ -114,3 +118,7 @@
 
 (define videomixer?
   (element/c "videomixer"))
+
+(define-values (videomixer-background set-videomixer-background!)
+  (make-gobject-property-procedures "background"
+                                    '(checker black white transparent)))
