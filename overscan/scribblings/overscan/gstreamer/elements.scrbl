@@ -73,6 +73,14 @@ Examples include an h.264 encoder, an mp4 muxer, or a tee element --- used to ta
   Sets the allowed @tech{caps} of @racket[element] to @racket[caps].
 }
 
+@subsection{@racket[videomixer]}
+
+@defproc[(videomixer [name (or/c string? #f)]) videomixer?]{
+}
+
+@defproc[(videomixer? [v any/c]) boolean?]{
+}
+
 @subsection{@racket[tee]}
 
 @defproc[(tee [name (or/c string? #f) #f]) tee?]{
