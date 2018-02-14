@@ -58,7 +58,12 @@
                        [videomixer-background
                         (-> videomixer? symbol?)]
                        [set-videomixer-background!
-                        (-> videomixer? symbol? void?)]))
+                        (-> videomixer? symbol? void?)]
+                       [videomixer-ref
+                        (-> videomixer?
+                            exact-nonnegative-integer?
+                            (or/c (is-a?/c pad%)
+                                  false/c))]))
 
 (define (capsfilter caps [name #f])
   (gobject-with-properties (element-factory%-make "capsfilter" name)
@@ -122,3 +127,7 @@
 (define-values (videomixer-background set-videomixer-background!)
   (make-gobject-property-procedures "background"
                                     '(checker black white transparent)))
+
+(define (videomixer-ref mixer pos)
+  (let ([pad (format "sink_~a" pos)])
+    (send mixer get-static-pad pad)))
