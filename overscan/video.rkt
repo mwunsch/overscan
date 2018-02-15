@@ -16,3 +16,7 @@
     (send video1 link mixer)
     (send video2 link mixer)
     bin))
+
+(define (picture-in-picture-reposition pad xpos ypos)
+  (gobject-set! pad "xpos" xpos _int)
+  (gobject-set! pad "ypos" ypos _int))
