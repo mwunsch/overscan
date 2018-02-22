@@ -76,9 +76,16 @@ Examples include an h.264 encoder, an mp4 muxer, or a tee element --- used to ta
 @subsection{@racket[videomixer]}
 
 @defproc[(videomixer [name (or/c string? #f)]) videomixer?]{
+  Create a @deftech{videomixer} element with the given @racket[name] (or use a generated name if @racket[#f]). A videomixer element composites/mixes multiple video streams into one.
 }
 
 @defproc[(videomixer? [v any/c]) boolean?]{
+  Returns @racket[t] if @racket[v] is an element of the @racket["videomixer"] factory, @racket[#f] otherwise.
+}
+
+@defproc[(videomixer-ref [mixer videomixer?] [pos exact-nonnegative-integer?])
+         (or/c (is-a?/c pad%) #f)]{
+  Gets the @tech{pad} at @racket[pos] from @racket[mixer], or @racket[#f] if there is none present.
 }
 
 @subsection{@racket[tee]}
