@@ -123,6 +123,10 @@ Sink elements are the end points in a media pipeline. They accept data but do no
 
 @defclass[appsink% element% ()]{
 
+  @defmethod[#:mode pubment
+             (on-sample [sample sample?]) any?]{
+  }
+
 }
 
 @defproc[(make-appsink [name (or/c string? #f) #f] [class% (subclass?/c appsink%) appsink%]) (is-a?/c appsink%)]{
