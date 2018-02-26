@@ -123,8 +123,36 @@ Sink elements are the end points in a media pipeline. They accept data but do no
 
 @defclass[appsink% element% ()]{
 
+  @defmethod[#:mode public-final
+             (eos?) boolean?]{
+  }
+
+  @defmethod[#:mode public-final
+             (dropping?) boolean?]{
+  }
+
+  @defmethod[#:mode public-final
+             (get-max-buffers) exact-nonnegative-integer?]{
+  }
+
+  @defmethod[#:mode public-final
+             (get-caps) (or/c caps? #f)]{
+  }
+
+  @defmethod[#:mode public-final
+             (set-caps! [caps caps?]) void?]{
+  }
+
+  @defmethod[#:mode public-final
+             (get-eos-evt) evt?]{
+  }
+
   @defmethod[#:mode pubment
              (on-sample [sample sample?]) any?]{
+  }
+
+  @defmethod[#:mode pubment
+             (on-eos) any?]{
   }
 
 }
