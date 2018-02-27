@@ -121,6 +121,8 @@ Sink elements are the end points in a media pipeline. They accept data but do no
 
 @defmodule[gstreamer/appsink]
 
+An @deftech{appsink} is a @tech{sink} element that is designed to extract sample data out of the pipeline into the application.
+
 @defclass[appsink% element% ()]{
 
   @defmethod[#:mode public-final
