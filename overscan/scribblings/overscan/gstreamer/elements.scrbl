@@ -160,4 +160,5 @@ An @deftech{appsink} is a @tech{sink} element that is designed to extract sample
 }
 
 @defproc[(make-appsink [name (or/c string? #f) #f] [class% (subclass?/c appsink%) appsink%]) (is-a?/c appsink%)]{
+  Create an appsink element with the name @racket[name] or a generated name if @racket[#f]. If @racket[class%] is provided and a subclass of @racket[appsink%], the returned element will be an instance of @racket[class%].
 }
