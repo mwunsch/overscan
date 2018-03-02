@@ -2,6 +2,8 @@
 
 (require racket/class
          racket/contract
+         ffi/unsafe/introspection
+         (only-in ffi/unsafe _int)
          gstreamer)
 
 (provide (contract-out [picture-in-picture
@@ -16,3 +18,8 @@
     (send video1 link mixer)
     (send video2 link mixer)
     bin))
+
+(define (picture-in-picture-reposition pip x y)
+  (let ([src (videomixer-ref pip 1)])
+    (gobject-set! src "xpos" x _int)
+    (gobject-set! src "ypos" y _int)))
