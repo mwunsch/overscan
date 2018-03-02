@@ -12,7 +12,7 @@
                              (is-a?/c bin%))]))
 
 (define (picture-in-picture video1 video2 [name #f])
-  (let ([mixer (videomixer)]
+  (let ([mixer (videomixer "mixer")]
         [bin (bin%-new name)])
     (send bin add-many video1 video2 mixer)
     (send video1 link mixer)
@@ -20,6 +20,7 @@
     bin))
 
 (define (picture-in-picture-reposition pip x y)
-  (let ([src (videomixer-ref pip 1)])
+  (let* ([mixer (send pip get-by-name "mixer")]
+         [src (videomixer-ref mixer 1)])
     (gobject-set! src "xpos" x _int)
     (gobject-set! src "ypos" y _int)))
