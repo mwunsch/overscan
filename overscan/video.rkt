@@ -7,7 +7,7 @@
          gstreamer)
 
 (provide (contract-out [picture-in-picture
-                        (->* ()
+                        (->* ((is-a?/c element%) (is-a?/c element%))
                              ((or/c string? #f))
                              (is-a?/c bin%))]))
 
