@@ -9,7 +9,12 @@
 (provide (contract-out [picture-in-picture
                         (->* ((is-a?/c element%) (is-a?/c element%))
                              ((or/c string? #f))
-                             (is-a?/c bin%))]))
+                             (is-a?/c bin%))]
+                       [picture-in-picture-reposition
+                        (-> (is-a?/c bin%)
+                            exact-nonnegative-integer?
+                            exact-nonnegative-integer?
+                            void?)]))
 
 (define (picture-in-picture video1 video2 [name #f])
   (let ([mixer (videomixer "mixer")]
