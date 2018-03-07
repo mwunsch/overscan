@@ -16,6 +16,9 @@
                             exact-nonnegative-integer?
                             void?)]))
 
+(define (video-caps width height)
+  (string->caps (format "video/x-raw,width=~a,height=~a" width height)))
+
 (define (picture-in-picture video1 video2 [name #f])
   (let ([mixer (videomixer "mixer")]
         [bin (bin%-new name)])
