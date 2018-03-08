@@ -17,7 +17,9 @@
                             void?)]))
 
 (define (video-caps width height)
-  (string->caps (format "video/x-raw,width=~a,height=~a" width height)))
+  ;; crashes on Racket 6.12?
+  (let ([str (format "video/x-raw,width=~a,height=~a" width height)])
+    (string->caps str)))
 
 (define (picture-in-picture video1 video2 [name #f])
   (let ([mixer (videomixer "mixer")]
