@@ -63,7 +63,13 @@
                         (-> videomixer?
                             exact-nonnegative-integer?
                             (or/c (is-a?/c pad%)
-                                  false/c))]))
+                                  false/c))]
+                       [videobox
+                        (->* ()
+                             ((or/c string? false/c))
+                             videobox?)]
+                       [videobox?
+                        (-> any/c boolean?)]))
 
 (define (capsfilter caps [name #f])
   (gobject-with-properties (element-factory%-make "capsfilter" name)
@@ -131,3 +137,9 @@
 (define (videomixer-ref mixer pos)
   (let ([pad (format "sink_~a" pos)])
     (send mixer get-static-pad pad)))
+
+(define (videobox [name #f])
+  (element-factory%-make "videobox" name))
+
+(define videobox?
+  (element/c "videobox"))
