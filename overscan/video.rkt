@@ -17,7 +17,6 @@
                             void?)]))
 
 (define (video-caps width height)
-  ;; crashes on Racket 6.12?
   (let ([str (format "video/x-raw,width=~a,height=~a" width height)])
     (string->caps str)))
 
