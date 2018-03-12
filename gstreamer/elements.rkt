@@ -1,7 +1,7 @@
 #lang racket/base
 
 (require ffi/unsafe/introspection
-         (only-in ffi/unsafe _string _bool)
+         (only-in ffi/unsafe _string _bool _int)
          racket/class
          racket/contract
          gstreamer/gst
@@ -66,7 +66,12 @@
                                   false/c))]
                        [videobox
                         (->* ()
-                             ((or/c string? false/c))
+                             ((or/c string? false/c)
+                              #:autocrop? boolean?
+                              #:top exact-integer?
+                              #:bottom exact-integer?
+                              #:left exact-integer?
+                              #:right exact-integer?)
                              videobox?)]
                        [videobox?
                         (-> any/c boolean?)]))
@@ -138,8 +143,19 @@
   (let ([pad (format "sink_~a" pos)])
     (send mixer get-static-pad pad)))
 
-(define (videobox [name #f])
-  (element-factory%-make "videobox" name))
+(define (videobox [name #f]
+                  #:autocrop? [autocrop #f]
+                  #:top [top 0]
+                  #:right [right 0]
+                  #:bottom [bottom 0]
+                  #:left [left 0])
+  (let ([el (element-factory%-make "videobox" name)])
+    (gobject-set! el "top" top _int)
+    (gobject-set! el "right" right _int)
+    (gobject-set! el "bottom" bottom _int)
+    (gobject-set! el "left" left _int)
+    (gobject-set! el "autocrop" autocrop _bool)
+    el))
 
 (define videobox?
   (element/c "videobox"))
