@@ -22,10 +22,12 @@
 
 (define (picture-in-picture video1 video2 [name #f])
   (let ([mixer (videomixer "mixer")]
+        [vidbox (videobox "box")]
         [bin (bin%-new name)])
-    (send bin add-many video1 video2 mixer)
+    (send bin add-many video1 video2 vidbox mixer)
     (send video1 link mixer)
-    (send video2 link mixer)
+    (send video2 link vidbox)
+    (send vidbox link mixer)
     bin))
 
 (define (picture-in-picture-reposition pip x y)
