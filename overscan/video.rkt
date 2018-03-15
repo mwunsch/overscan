@@ -26,7 +26,7 @@
         [bin (bin%-new name)])
     (send bin add-many video1 video2 vidbox mixer)
     (send video1 link mixer)
-    (send video2 link vidbox)
+    (send video2 link-filtered vidbox (video-caps 320 240))
     (send vidbox link mixer)
     bin))
 
