@@ -8,7 +8,9 @@
 
 (provide (contract-out [picture-in-picture
                         (->* ((is-a?/c element%) (is-a?/c element%))
-                             ((or/c string? #f))
+                             ((or/c string? #f)
+                              #:width exact-nonnegative-integer?
+                              #:height exact-nonnegative-integer?)
                              (is-a?/c bin%))]
                        [picture-in-picture-reposition
                         (-> (is-a?/c bin%)
@@ -20,13 +22,15 @@
   (let ([str (format "video/x-raw,width=~a,height=~a" width height)])
     (string->caps str)))
 
-(define (picture-in-picture video1 video2 [name #f])
+(define (picture-in-picture video1 video2 [name #f]
+                            #:width [width 320]
+                            #:height [height 240])
   (let ([mixer (videomixer "mixer")]
         [vidbox (videobox "box")]
         [bin (bin%-new name)])
     (send bin add-many video1 video2 vidbox mixer)
     (send video1 link mixer)
-    (send video2 link-filtered vidbox (video-caps 320 240))
+    (send video2 link-filtered vidbox (video-caps width height))
     (send vidbox link mixer)
     bin))
 
