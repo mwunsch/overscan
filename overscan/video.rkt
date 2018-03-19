@@ -11,7 +11,7 @@
                              ((or/c string? #f)
                               #:width exact-nonnegative-integer?
                               #:height exact-nonnegative-integer?)
-                             (is-a?/c bin%))]
+                             (or/c (is-a?/c bin%) false/c))]
                        [picture-in-picture-reposition
                         (-> (is-a?/c bin%)
                             exact-nonnegative-integer?
@@ -28,11 +28,11 @@
   (let ([mixer (videomixer "mixer")]
         [vidbox (videobox "box")]
         [bin (bin%-new name)])
-    (send bin add-many video1 video2 vidbox mixer)
-    (send video1 link mixer)
-    (send video2 link-filtered vidbox (video-caps width height))
-    (send vidbox link mixer)
-    bin))
+    (and (send bin add-many video1 video2 vidbox mixer)
+         (send video1 link mixer)
+         (send video2 link-filtered vidbox (video-caps width height))
+         (send vidbox link mixer)
+         bin)))
 
 (define (picture-in-picture-reposition pip x y)
   (let* ([mixer (send pip get-by-name "mixer")]
