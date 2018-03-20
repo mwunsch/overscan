@@ -25,13 +25,15 @@
 (define (picture-in-picture video1 video2 [name #f]
                             #:width [width 320]
                             #:height [height 240])
-  (let ([mixer (videomixer "mixer")]
-        [vidbox (videobox "box")]
-        [bin (bin%-new name)])
+  (let* ([mixer (videomixer "mixer")]
+         [vidbox (videobox "box")]
+         [mixpad (send mixer get-static-pad "src")]
+         [bin (bin%-new name)])
     (and (send bin add-many video1 video2 vidbox mixer)
          (send video1 link mixer)
          (send video2 link-filtered vidbox (video-caps width height))
          (send vidbox link mixer)
+         (send bin add-pad (ghost-pad%-new "src" mixpad))
          bin)))
 
 (define (picture-in-picture-reposition pip x y)
