@@ -22,6 +22,9 @@
   (let ([str (format "video/x-raw,width=~a,height=~a" width height)])
     (string->caps str)))
 
+(define (video:720p)
+  (string->caps "video/x-raw,width=1280,height=720,pixel-aspect-ratio=1/1"))
+
 (define (picture-in-picture video1 video2 [name #f]
                             #:width [width 320]
                             #:height [height 240])
