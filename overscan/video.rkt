@@ -6,7 +6,12 @@
          (only-in ffi/unsafe _int)
          gstreamer)
 
-(provide (contract-out [picture-in-picture
+(provide (contract-out [video-caps
+                        (->* (exact-nonnegative-integer?
+                              exact-nonnegative-integer?)
+                             (#:pixel-aspect-ratio string?)
+                             (or/c caps? false/c))]
+                       [picture-in-picture
                         (->* ((is-a?/c element%) (is-a?/c element%))
                              ((or/c string? #f)
                               #:width exact-nonnegative-integer?
@@ -18,12 +23,13 @@
                             exact-nonnegative-integer?
                             void?)]))
 
-(define (video-caps width height)
-  (let ([str (format "video/x-raw,width=~a,height=~a" width height)])
+(define (video-caps width height
+                    #:pixel-aspect-ratio [par "1/1"])
+  (let ([str (format "video/x-raw,width=~a,height=~a,pixel-aspect-ratio=~a" width height par)])
     (string->caps str)))
 
 (define (video:720p)
-  (string->caps "video/x-raw,width=1280,height=720,pixel-aspect-ratio=1/1"))
+  (video-caps 1280 720))
 
 (define (picture-in-picture video1 video2 [name #f]
                             #:width [width 320]
