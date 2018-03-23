@@ -15,7 +15,10 @@
                         (->* ((is-a?/c element%) (is-a?/c element%))
                              ((or/c string? #f)
                               #:width exact-nonnegative-integer?
-                              #:height exact-nonnegative-integer?)
+                              #:height exact-nonnegative-integer?
+                              #:x exact-integer?
+                              #:y exact-integer?
+                              #:alpha (real-in 0 1))
                              (or/c (is-a?/c bin%) false/c))]
                        [picture-in-picture-reposition
                         (-> (is-a?/c bin%)
@@ -33,7 +36,10 @@
 
 (define (picture-in-picture video1 video2 [name #f]
                             #:width [width 320]
-                            #:height [height 240])
+                            #:height [height 240]
+                            #:x [xpos #f]
+                            #:y [ypos #f]
+                            #:alpha [alpha 1])
   (let* ([mixer (videomixer "mixer")]
          [vidbox (videobox "box")]
          [mixpad (send mixer get-static-pad "src")]
@@ -43,6 +49,10 @@
          (send video2 link-filtered vidbox (video-caps width height))
          (send vidbox link mixer)
          (send bin add-pad (ghost-pad%-new "src" mixpad))
+         (when (or xpos ypos)
+           (picture-in-picture-reposition bin
+                                          (or xpos 0)
+                                          (or ypos 0)))
          bin)))
 
 (define (picture-in-picture-reposition pip x y)
