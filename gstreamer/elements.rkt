@@ -1,7 +1,7 @@
 #lang racket/base
 
 (require ffi/unsafe/introspection
-         (only-in ffi/unsafe _string _bool _int)
+         (only-in ffi/unsafe _string _bool _int _double)
          racket/class
          racket/contract
          gstreamer/gst
@@ -73,6 +73,10 @@
                               #:left exact-integer?
                               #:right exact-integer?)
                              videobox?)]
+                       [videobox-alpha
+                        (-> videobox? (real-in 0 1))]
+                       [set-videobox-alpha!
+                        (-> videobox? (real-in 0 1) void?)]
                        [videobox?
                         (-> any/c boolean?)]))
 
@@ -156,6 +160,10 @@
     (gobject-set! el "left" left _int)
     (gobject-set! el "autocrop" autocrop _bool)
     el))
+
+(define-values (videobox-alpha set-videobox-alpha!)
+  (make-gobject-property-procedures "alpha"
+                                    _double))
 
 (define videobox?
   (element/c "videobox"))

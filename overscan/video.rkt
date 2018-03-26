@@ -49,6 +49,7 @@
          (send video2 link-filtered vidbox (video-caps width height))
          (send vidbox link mixer)
          (send bin add-pad (ghost-pad%-new "src" mixpad))
+         (set-videobox-alpha! vidbox alpha)
          (when (or xpos ypos)
            (picture-in-picture-reposition bin
                                           (or xpos 0)
