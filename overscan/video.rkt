@@ -12,6 +12,8 @@
                              (#:pixel-aspect-ratio string?
                               #:fps string?)
                              (or/c caps? false/c))]
+                       [video:720p
+                        caps?]
                        [picture-in-picture
                         (->* ((is-a?/c element%) (is-a?/c element%))
                              ((or/c string? #f)
