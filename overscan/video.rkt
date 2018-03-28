@@ -9,7 +9,8 @@
 (provide (contract-out [video-caps
                         (->* (exact-nonnegative-integer?
                               exact-nonnegative-integer?)
-                             (#:pixel-aspect-ratio string?)
+                             (#:pixel-aspect-ratio string?
+                              #:fps string?)
                              (or/c caps? false/c))]
                        [picture-in-picture
                         (->* ((is-a?/c element%) (is-a?/c element%))
@@ -27,8 +28,10 @@
                             void?)]))
 
 (define (video-caps width height
-                    #:pixel-aspect-ratio [par "1/1"])
-  (let ([str (format "video/x-raw,width=~a,height=~a,pixel-aspect-ratio=~a" width height par)])
+                    #:pixel-aspect-ratio [par "1/1"]
+                    #:fps [fps "30/1"])
+  (let ([str (format "video/x-raw,width=~a,height=~a,pixel-aspect-ratio=~a,framerate=~a"
+                     width height par fps)])
     (string->caps str)))
 
 (define (video:720p)
