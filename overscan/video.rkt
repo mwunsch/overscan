@@ -13,7 +13,7 @@
                               #:fps string?)
                              (or/c caps? false/c))]
                        [video:720p
-                        caps?]
+                        (-> caps?)]
                        [picture-in-picture
                         (->* ((is-a?/c element%) (is-a?/c element%))
                              ((or/c string? #f)
@@ -49,7 +49,7 @@
                             #:height [height 240]
                             #:x [xpos #f]
                             #:y [ypos #f]
-                            #:alpha [alpha 1])
+                            #:alpha [alpha 1.0])
   (let* ([mixer (videomixer "mixer")]
          [vidbox (videobox "box")]
          [mixpad (send mixer get-static-pad "src")]
