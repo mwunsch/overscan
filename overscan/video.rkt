@@ -27,6 +27,11 @@
                         (-> (is-a?/c bin%)
                             exact-nonnegative-integer?
                             exact-nonnegative-integer?
+                            void?)]
+                       [picture-in-picture-resize
+                        (-> (is-a?/c bin%)
+                            exact-nonnegative-integer?
+                            exact-nonnegative-integer?
                             void?)]))
 
 (define (video-caps width height
@@ -66,3 +71,7 @@
          [src (videomixer-ref mixer 1)])
     (gobject-set! src "xpos" x _int)
     (gobject-set! src "ypos" y _int)))
+
+(define (picture-in-picture-resize pip width height)
+  (let ([vidbox (send pip get-by-name "box")])
+    (void vidbox)))
