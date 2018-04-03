@@ -78,6 +78,12 @@
                        [set-videobox-alpha!
                         (-> videobox? (real-in 0 1) void?)]
                        [videobox?
+                        (-> any/c boolean?)]
+                       [videoscale
+                        (->* ()
+                             ((or/c string? false/c))
+                             videoscale?)]
+                       [videoscale?
                         (-> any/c boolean?)]))
 
 (define (capsfilter caps [name #f])
@@ -167,3 +173,9 @@
 
 (define videobox?
   (element/c "videobox"))
+
+(define (videoscale [name #f])
+  (element-factory%-make "videoscale" name))
+
+(define videoscale?
+  (element/c "videoscale"))
