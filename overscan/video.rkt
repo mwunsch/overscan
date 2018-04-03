@@ -6,14 +6,17 @@
          (only-in ffi/unsafe _int)
          gstreamer)
 
-(provide (contract-out [video-caps
+(provide (contract-out [video/x-raw
                         (->* (exact-nonnegative-integer?
                               exact-nonnegative-integer?)
-                             (#:pixel-aspect-ratio string?
+                             ((or/c string? false/c)
+                              #:pixel-aspect-ratio string?
                               #:fps string?)
-                             (or/c caps? false/c))]
+                             capsfilter?)]
                        [video:720p
-                        (-> caps?)]
+                        (->* ()
+                             (or/c string? false/c)
+                             capsfilter?)]
                        [picture-in-picture
                         (->* ((is-a?/c element%) (is-a?/c element%))
                              ((or/c string? #f)
@@ -34,15 +37,15 @@
                             exact-nonnegative-integer?
                             void?)]))
 
-(define (video-caps width height
-                    #:pixel-aspect-ratio [par "1/1"]
-                    #:fps [fps "30/1"])
+(define (video/x-raw width height [name #f]
+                     #:pixel-aspect-ratio [par "1/1"]
+                     #:fps [fps "30/1"])
   (let ([str (format "video/x-raw,width=~a,height=~a,pixel-aspect-ratio=~a,framerate=~a"
                      width height par fps)])
-    (string->caps str)))
+    (capsfilter (string->caps str) name)))
 
-(define (video:720p)
-  (video-caps 1280 720))
+(define (video:720p [name #f])
+  (video/x-raw 1280 720 name))
 
 (define (picture-in-picture video1 video2 [name #f]
                             #:width [width 320]
@@ -52,12 +55,14 @@
                             #:alpha [alpha 1.0])
   (let* ([mixer (videomixer "mixer")]
          [vidbox (videobox "box")]
+         [vidfilter (video/x-raw width height "filter")]
          [mixpad (send mixer get-static-pad "src")]
          [bin (bin%-new name)])
-    (and (send bin add-many video1 video2 vidbox mixer)
+    (and (send bin add-many video1 video2 vidbox vidfilter mixer)
          (send video1 link mixer)
          (send video2 link vidbox)
-         (send vidbox link-filtered mixer (video-caps width height))
+         (send vidbox link vidfilter)
+         (send vidfilter link mixer)
          (send bin add-pad (ghost-pad%-new "src" mixpad))
          (set-videobox-alpha! vidbox alpha)
          (when (or xpos ypos)
