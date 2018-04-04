@@ -15,7 +15,7 @@
                              capsfilter?)]
                        [video:720p
                         (->* ()
-                             (or/c string? false/c)
+                             ((or/c string? false/c))
                              capsfilter?)]
                        [picture-in-picture
                         (->* ((is-a?/c element%) (is-a?/c element%))
@@ -37,12 +37,15 @@
                             exact-nonnegative-integer?
                             void?)]))
 
+(define (video-caps width height [par "1/1"] [fps "30/1"])
+  (let ([str (format "video/x-raw,width=~a,height=~a,pixel-aspect-ratio=~a,framerate=~a"
+                     width height par fps)])
+    (string->caps str)))
+
 (define (video/x-raw width height [name #f]
                      #:pixel-aspect-ratio [par "1/1"]
                      #:fps [fps "30/1"])
-  (let ([str (format "video/x-raw,width=~a,height=~a,pixel-aspect-ratio=~a,framerate=~a"
-                     width height par fps)])
-    (capsfilter (string->caps str) name)))
+  (capsfilter (video-caps width height par fps) name))
 
 (define (video:720p [name #f])
   (video/x-raw 1280 720 name))
@@ -78,5 +81,6 @@
     (gobject-set! src "ypos" y _int)))
 
 (define (picture-in-picture-resize pip width height)
-  (let ([vidbox (send pip get-by-name "box")])
-    (void vidbox)))
+  (let ([vidfilter (send pip get-by-name "filter")])
+    ;; TODO: par and fps!
+    (set-capsfilter-caps! vidfilter (video-caps width height))))
