@@ -100,7 +100,7 @@ Examples include an h.264 encoder, an mp4 muxer, or a tee element --- used to ta
 
 @section{Sink Elements}
 
-Sink elements are the end points in a media pipeline. They accept data but do not produce anything. Writing to a disk or video or audio playback are implemented by sink elements.
+@deftech{Sink} elements are the end points in a media pipeline. They accept data but do not produce anything. Writing to a disk or video or audio playback are implemented by sink elements.
 
 @subsection{@racket[rtmpsink]}
 
