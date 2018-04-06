@@ -10,6 +10,8 @@
                         (-> string? (or/c caps? false/c))]
                        [caps->string
                         (-> caps? string?)]
+                       [caps-merge!
+                        (-> caps? caps? caps?)]
                        [caps-append!
                         (-> caps? caps? void?)]
                        [caps-any?
@@ -29,6 +31,9 @@
 
 (define (caps->string caps)
   (gobject-send caps 'to_string))
+
+(define (caps-merge! cap1 cap2)
+  (gobject-send cap1 'merge cap2))
 
 (define (caps-append! cap1 cap2)
   (gobject-send cap1 'append cap2))
