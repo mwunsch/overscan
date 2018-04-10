@@ -96,7 +96,9 @@
                                     (or/c string? #f)))]
                        [parse-message:have-context
                         (-> (message/c 'have-context)
-                            context?)]))
+                            context?)]
+                       [message->string
+                        (-> message? string?)]))
 
 (define message-type/c
   (gi-bitmask-value/c gst-message-type))
@@ -192,3 +194,40 @@
 
 (define parse-message:have-context
   (make-parse-msg-proc 'parse_have_context))
+
+(define (message->string msg)
+  (let* ([msg-type (message-type msg)]
+         [owner (message-src msg)]
+         [owner-name (send owner get-name)])
+    (case msg-type
+      ['(state-changed)
+       (let-values ([(oldstate newstate pending)
+                     (parse-message:state-changed msg)])
+         (format "State-Changed (~a): ~a -> ~a" owner-name oldstate newstate))]
+      ['(new-clock)
+       (let-values ([(gclock)
+                     (parse-message:new-clock msg)])
+         (format "New Clock (~a): The time is ~a" owner-name (gobject-send gclock 'get_time)))]
+      ['(stream-status)
+       (let-values ([(status owner)
+                     (parse-message:stream-status msg)])
+         (format "Stream Status (~a): ~a" owner-name status))]
+      ['(stream-start)
+       (format "Stream Start (~a)" owner-name)]
+      ['(async-done)
+       (let-values ([(running-time)
+                     (parse-message:async-done msg)])
+         (format "Async Done (~a): ~a" owner-name (if (equal? clock-time-none running-time) "CLOCK-TIME-NONE" running-time)))]
+      ['(qos)
+       (let-values ([(fmt processed dropped)
+                     (parse-message:qos-stats msg)])
+         (format "QoS (~a): Dropped ~a, Processed ~a" owner-name dropped processed))]
+      ['(need-context)
+       (let-values ([(parsed? context-type)
+                     (parse-message:context-type msg)])
+         (format "Need Context (~a): ~a" owner-name context-type))]
+      ['(have-context)
+       (let-values ([(context-type)
+                     (parse-message:have-context msg)])
+         (format "Have Context (~a): ~a" owner-name context-type))]
+      [else (format "Message ~a" msg-type)])))

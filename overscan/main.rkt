@@ -62,45 +62,12 @@
     (send broadcast set-state 'null)))
 
 (define (log-listener msg broadcast)
-  (let* ([msg-type (message-type msg)]
-         [owner (message-src msg)]
-         [owner-name (send owner get-name)])
-    (case msg-type
-      ['(state-changed)
-       (let-values ([(oldstate newstate pending)
-                     (parse-message:state-changed msg)])
-         (println (format "State-Changed (~a): ~a -> ~a" owner-name oldstate newstate)))]
-      ['(new-clock)
-       (let-values ([(gclock)
-                     (parse-message:new-clock msg)])
-         (println (format "New Clock (~a): The time is ~a" owner-name (gobject-send gclock 'get_time))))]
-      ['(stream-status)
-       (let-values ([(status owner)
-                     (parse-message:stream-status msg)])
-         (println (format "Stream Status (~a): ~a" owner-name status)))]
-      ['(stream-start)
-       (println (format "Stream Start (~a)" owner-name))]
-      ['(async-done)
-       (let-values ([(running-time)
-                     (parse-message:async-done msg)])
-         (println (format "Async Done (~a): ~a" owner-name (if (equal? clock-time-none running-time) "CLOCK-TIME-NONE" running-time))))]
-      ['(qos)
-       (let-values ([(fmt processed dropped)
-                     (parse-message:qos-stats msg)])
-         (println (format "QoS (~a): Dropped ~a, Processed ~a" owner-name dropped processed)))]
-      ['(need-context)
-       (let-values ([(parsed? context-type)
-                     (parse-message:context-type msg)])
-         (println (format "Need Context (~a): ~a" owner-name context-type)))]
-      ['(have-context)
-       (let-values ([(context-type)
-                     (parse-message:have-context msg)])
-         (println (format "Have Context (~a): ~a" owner-name context-type)))]
-      [else (println msg-type)])))
+  (displayln (message->string msg)))
 
 (define broadcast-listeners
   (make-hash (list (cons 0 default-broadcast-listener)
-                   (cons 1 log-listener))))
+                   (cons 1 log-listener)
+                   )))
 
 (define (add-listener proc)
   (let* ([stack broadcast-listeners]
