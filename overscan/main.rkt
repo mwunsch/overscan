@@ -78,14 +78,16 @@
 (define (remove-listener key)
   (hash-remove! broadcast-listeners key))
 
-
-
 (define (broadcast [source (videotestsrc #:live? #t)]
-                   [sink (element-factory%-make "fakesink")])
-  (let ([pipeline (pipeline%-new #f)])
+                   [sink (element-factory%-make "fakesink")]
+                   #:resolution [resolution '720p])
+  (let ([pipeline (pipeline%-new #f)]
+        [video-resolution (video:720p)])
     (and (send pipeline add source)
          (send pipeline add sink)
-         (send source link sink)
+         (send pipeline add video-resolution)
+         (send source link video-resolution)
+         (send video-resolution link sink)
          (start pipeline)
          pipeline)))
 
