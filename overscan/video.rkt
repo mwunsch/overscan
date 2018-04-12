@@ -50,6 +50,9 @@
 (define (video:720p [name #f])
   (video/x-raw 1280 720 name))
 
+(define resolutions
+  (hash '720p video:720p))
+
 (define (picture-in-picture video1 video2 [name #f]
                             #:width [width 320]
                             #:height [height 240]
