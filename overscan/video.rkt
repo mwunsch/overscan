@@ -2,6 +2,7 @@
 
 (require racket/class
          racket/contract
+         (only-in racket/function curry)
          ffi/unsafe/introspection
          (only-in ffi/unsafe _int)
          gstreamer)
@@ -51,7 +52,7 @@
   (video/x-raw 1280 720 name))
 
 (define resolutions
-  (hash '720p video:720p))
+  (hash '720p (curry video/x-raw 1280 720)))
 
 (define (picture-in-picture video1 video2 [name #f]
                             #:width [width 320]
