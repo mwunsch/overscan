@@ -14,6 +14,11 @@
                               #:pixel-aspect-ratio string?
                               #:fps string?)
                              capsfilter?)]
+                       [video-resolution-filters
+                        (hash/c symbol?
+                                (->* ()
+                                     ((or/c string? false/c))
+                                     capsfilter?))]
                        [video:720p
                         (->* ()
                              ((or/c string? false/c))
@@ -48,11 +53,12 @@
                      #:fps [fps "30/1"])
   (capsfilter (video-caps width height par fps) name))
 
-(define (video:720p [name #f])
-  (video/x-raw 1280 720 name))
-
-(define resolutions
+(define video-resolution-filters
   (hash '720p (curry video/x-raw 1280 720)))
+
+(define (video:720p [name #f])
+  (let ([f (hash-ref video-resolution-filters '720p)])
+    (f name)))
 
 (define (picture-in-picture video1 video2 [name #f]
                             #:width [width 320]
