@@ -82,12 +82,10 @@
                    [sink (element-factory%-make "fakesink")]
                    #:resolution [resolution '720p])
   (let ([pipeline (pipeline%-new #f)]
-        [video-resolution (video:720p)])
+        [resolution-caps (video-resolution resolution)])
     (and (send pipeline add source)
          (send pipeline add sink)
-         (send pipeline add video-resolution)
-         (send source link video-resolution)
-         (send video-resolution link sink)
+         (send source link-filtered sink resolution-caps)
          (start pipeline)
          pipeline)))
 
