@@ -10,15 +10,16 @@
 (provide (contract-out [video/x-raw
                         (->* (exact-nonnegative-integer?
                               exact-nonnegative-integer?)
-                             ((or/c string? false/c)
-                              #:pixel-aspect-ratio string?
+                             (#:pixel-aspect-ratio string?
                               #:fps string?)
-                             capsfilter?)]
-                       [video-resolution-filters
+                             caps?)]
+                       [video-resolutions
                         (hash/c symbol?
-                                (->* ()
-                                     ((or/c string? false/c))
-                                     capsfilter?))]
+                                (cons/c exact-nonnegative-integer?
+                                        exact-nonnegative-integer?))]
+                       [video-resolution
+                        (-> symbol?
+                            caps?)]
                        [video:720p
                         (->* ()
                              ((or/c string? false/c))
@@ -43,22 +44,24 @@
                             exact-nonnegative-integer?
                             void?)]))
 
-(define (video-caps width height [par "1/1"] [fps "30/1"])
+(define (video/x-raw width height
+                     #:pixel-aspect-ratio [par "1/1"]
+                     #:fps [fps "30/1"])
   (let ([str (format "video/x-raw,width=~a,height=~a,pixel-aspect-ratio=~a,framerate=~a"
                      width height par fps)])
     (string->caps str)))
 
-(define (video/x-raw width height [name #f]
-                     #:pixel-aspect-ratio [par "1/1"]
-                     #:fps [fps "30/1"])
-  (capsfilter (video-caps width height par fps) name))
+(define video-resolutions
+  (hash '720p '(1280 . 720)))
 
-(define video-resolution-filters
-  (hash '720p (curry video/x-raw 1280 720)))
+(define (video-resolution resolution)
+  (let* ([width+height (hash-ref video-resolutions resolution)]
+         [width (car width+height)]
+         [height (cdr width+height)])
+    (video/x-raw width height)))
 
 (define (video:720p [name #f])
-  (let ([f (hash-ref video-resolution-filters '720p)])
-    (f name)))
+  (capsfilter (video-resolution '720p) name))
 
 (define (picture-in-picture video1 video2 [name #f]
                             #:width [width 320]
@@ -68,7 +71,7 @@
                             #:alpha [alpha 1.0])
   (let* ([mixer (videomixer "mixer")]
          [vidbox (videobox "box")]
-         [vidfilter (video/x-raw width height "filter")]
+         [vidfilter (capsfilter (video/x-raw width height) "filter")]
          [mixpad (send mixer get-static-pad "src")]
          [bin (bin%-new name)])
     (and (send bin add-many video1 video2 vidbox vidfilter mixer)
@@ -93,4 +96,4 @@
 (define (picture-in-picture-resize pip width height)
   (let ([vidfilter (send pip get-by-name "filter")])
     ;; TODO: par and fps!
-    (set-capsfilter-caps! vidfilter (video-caps width height))))
+    (set-capsfilter-caps! vidfilter (video/x-raw width height))))
