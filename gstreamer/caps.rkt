@@ -2,7 +2,8 @@
 
 (require ffi/unsafe/introspection
          racket/contract
-         "private/core.rkt")
+         "private/core.rkt"
+         "private/structure.rkt")
 
 (provide (contract-out [caps?
                         (-> any/c boolean?)]
@@ -21,7 +22,14 @@
                        [caps-fixed?
                         (-> caps? boolean?)]
                        [caps=?
-                        (-> caps? caps? boolean?)]))
+                        (-> caps? caps? boolean?)]
+                       [caps-size
+                        (-> caps?
+                            exact-nonnegative-integer?)]
+                       [caps-structure
+                        (-> caps?
+                            exact-nonnegative-integer?
+                            gst-structure?)]))
 
 (define (caps? v)
   (is-gtype? v gst-caps))
@@ -49,3 +57,9 @@
 
 (define (caps=? caps1 caps2)
   (gobject-send caps1 'is_equal caps2))
+
+(define (caps-size caps)
+  (gobject-send caps 'get_size))
+
+(define (caps-structure caps index)
+  (gobject-send caps 'get_structure index))
