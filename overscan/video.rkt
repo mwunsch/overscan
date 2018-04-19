@@ -104,3 +104,9 @@
   (let ([vidfilter (send pip get-by-name "filter")])
     ;; TODO: par and fps!
     (set-capsfilter-caps! vidfilter (video/x-raw width height))))
+
+(define (make-video-box source width height [name #f])
+  (bin%-compose name
+                source
+                (videobox)
+                (capsfilter (video/x-raw width height))))
