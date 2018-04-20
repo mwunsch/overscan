@@ -109,4 +109,8 @@
   (bin%-compose name
                 source
                 (videobox)
-                (capsfilter (video/x-raw width height))))
+                (capsfilter (video/x-raw width height) "filter")))
+
+(define (video-box-resize bin width height)
+  (let ([vidfilter (send bin get-by-name "filter")])
+    (set-capsfilter-caps! vidfilter (video/x-raw width height))))
