@@ -108,6 +108,7 @@
 (define (make-video-box source width height [name #f])
   (bin%-compose name
                 source
+                (videoscale)
                 (videobox)
                 (capsfilter (video/x-raw width height) "filter")))
 
