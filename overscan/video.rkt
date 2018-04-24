@@ -77,15 +77,12 @@
                             #:y [ypos #f]
                             #:alpha [alpha 1.0])
   (let* ([mixer (videomixer "mixer")]
-         [vidbox (videobox "box")]
-         [vidfilter (capsfilter (video/x-raw width height) "filter")]
+         [vidbox (make-video-box video2 width height "box")]
          [mixpad (send mixer get-static-pad "src")]
          [bin (bin%-new name)])
-    (and (send bin add-many video1 video2 vidbox vidfilter mixer)
+    (and (send bin add-many video1 video2 vidbox mixer)
          (send video1 link mixer)
-         (send video2 link vidbox)
-         (send vidbox link vidfilter)
-         (send vidfilter link mixer)
+         (send vidbox link mixer)
          (send bin add-pad (ghost-pad%-new "src" mixpad))
          (set-videobox-alpha! vidbox alpha)
          (when (or xpos ypos)
@@ -101,9 +98,9 @@
     (gobject-set! src "ypos" y _int)))
 
 (define (picture-in-picture-resize pip width height)
-  (let ([vidfilter (send pip get-by-name "filter")])
+  (let ([vidbox (send pip get-by-name "box")])
     ;; TODO: par and fps!
-    (set-capsfilter-caps! vidfilter (video/x-raw width height))))
+    (video-box-resize vidbox width height)))
 
 (define (make-video-box source width height [name #f])
   (bin%-compose name
