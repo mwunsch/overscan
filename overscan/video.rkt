@@ -76,10 +76,11 @@
                             #:x [xpos #f]
                             #:y [ypos #f]
                             #:alpha [alpha 1.0])
-  (let* ([mixer (videomixer "mixer")]
-         [vidbox (make-video-box video2 width height "box")]
-         [mixpad (send mixer get-static-pad "src")]
-         [bin (bin%-new name)])
+  (let* ([bin (bin%-new name)]
+         [bin-name (send bin get-name)]
+         [mixer (videomixer (format "~a:mixer" bin-name))]
+         [vidbox (make-video-box video2 width height (format "~a:box" bin-name))]
+         [mixpad (send mixer get-static-pad "src")])
     (and (send bin add-many video1 video2 vidbox mixer)
          (send video1 link mixer)
          (send vidbox link mixer)
@@ -92,13 +93,15 @@
          bin)))
 
 (define (picture-in-picture-reposition pip x y)
-  (let* ([mixer (send pip get-by-name "mixer")]
+  (let* ([pip-name (send pip get-name)]
+         [mixer (send pip get-by-name (format "~a:mixer" pip-name))]
          [src (videomixer-ref mixer 1)])
     (gobject-set! src "xpos" x _int)
     (gobject-set! src "ypos" y _int)))
 
 (define (picture-in-picture-resize pip width height)
-  (let ([vidbox (send pip get-by-name "box")])
+  (let ([pip-name (send pip get-name)]
+        [vidbox (send pip get-by-name (format "~a:box" pip-name))])
     ;; TODO: par and fps!
     (video-box-resize vidbox width height)))
 
