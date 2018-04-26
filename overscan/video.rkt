@@ -61,10 +61,13 @@
         '4k '(3840 . 2160) ; tbh my computer would probably melt
         ))
 
+(define (pair-values pair)
+  (values (car pair)
+          (cdr pair)))
+
 (define (video-resolution resolution)
-  (let* ([width+height (hash-ref video-resolutions resolution)]
-         [width (car width+height)]
-         [height (cdr width+height)])
+  (let-values ([(width height)
+                (pair-values (hash-ref video-resolutions resolution))])
     (video/x-raw width height)))
 
 (define (video:720p [name #f])
@@ -100,8 +103,8 @@
     (gobject-set! src "ypos" y _int)))
 
 (define (picture-in-picture-resize pip width height)
-  (let ([pip-name (send pip get-name)]
-        [vidbox (send pip get-by-name (format "~a:box" pip-name))])
+  (let* ([pip-name (send pip get-name)]
+         [vidbox (send pip get-by-name (format "~a:box" pip-name))])
     ;; TODO: par and fps!
     (video-box-resize vidbox width height)))
 
