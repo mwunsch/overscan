@@ -105,7 +105,6 @@
 (define (picture-in-picture-resize pip width height)
   (let* ([pip-name (send pip get-name)]
          [vidbox (send pip get-by-name (format "~a:box" pip-name))])
-    ;; TODO: par and fps!
     (video-box-resize vidbox width height)))
 
 (define (make-video-box source width height [name #f])
@@ -115,6 +114,10 @@
                 (videobox)
                 (capsfilter (video/x-raw width height) "filter")))
 
-(define (video-box-resize bin width height)
+(define (video-box-resize bin width height
+                          #:pixel-aspect-ratio [par "1/1"]
+                          #:fps [fps "30/1"])
   (let ([vidfilter (send bin get-by-name "filter")])
-    (set-capsfilter-caps! vidfilter (video/x-raw width height))))
+    (set-capsfilter-caps! vidfilter (video/x-raw width height
+                                                 #:pixel-aspect-ratio par
+                                                 #:fps fps))))
