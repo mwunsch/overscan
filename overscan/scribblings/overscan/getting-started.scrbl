@@ -16,7 +16,8 @@ via @hyperlink["https://brew.sh"]{Homebrew}.
 @commandline{brew install gstreamer}
 
 This will install the core GStreamer framework, along with GObject
-Introspection libraries as a dependency.
+Introspection libraries as a dependency. Overscan has been tested with
+GStreamer version 1.14.0.
 
 From here, you have to install the different
 @hyperlink["https://gstreamer.freedesktop.org/documentation/splitup.html"]{GStreamer
