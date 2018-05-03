@@ -82,7 +82,9 @@
                    [sink (element-factory%-make "fakesink")]
                    #:resolution [resolution '720p])
   (let ([pipeline (pipeline%-new #f)]
-        [resolution-caps (video-resolution resolution)])
+        [resolution-caps (video-resolution resolution)]
+        [unsynced-sink (gobject-with-properties sink
+                                                (hash 'sync #f))])
     (and (send pipeline add source)
          (send pipeline add sink)
          (send source link-filtered sink resolution-caps)
