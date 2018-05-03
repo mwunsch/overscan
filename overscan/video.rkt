@@ -84,11 +84,11 @@
          [mixer (videomixer (format "~a:mixer" bin-name))]
          [vidbox (make-video-box video2 width height (format "~a:box" bin-name))]
          [mixpad (send mixer get-static-pad "src")])
-    (and (send bin add-many video1 video2 vidbox mixer)
+    (and (send bin add-many video1 vidbox mixer)
          (send video1 link mixer)
          (send vidbox link mixer)
          (send bin add-pad (ghost-pad%-new "src" mixpad))
-         (set-videobox-alpha! vidbox alpha)
+         (set-video-box-alpha! vidbox alpha)
          (when (or xpos ypos)
            (picture-in-picture-reposition bin
                                           (or xpos 0)
@@ -105,14 +105,20 @@
 (define (picture-in-picture-resize pip width height)
   (let* ([pip-name (send pip get-name)]
          [vidbox (send pip get-by-name (format "~a:box" pip-name))])
-    (video-box-resize vidbox width height)))
+    ;; TODO this is not ideal...
+    (video-box-resize pip width height)))
 
 (define (make-video-box source width height [name #f])
   (bin%-compose name
                 source
                 (videoscale)
-                (videobox)
+                (element-factory%-make "videorate")
+                (videobox "box")
                 (capsfilter (video/x-raw width height) "filter")))
+
+(define (set-video-box-alpha! bin alpha)
+  (let ([vidbox (send bin get-by-name "box")])
+    (set-videobox-alpha! vidbox alpha)))
 
 (define (video-box-resize bin width height
                           #:pixel-aspect-ratio [par "1/1"]
