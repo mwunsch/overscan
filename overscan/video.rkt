@@ -42,7 +42,9 @@
                         (-> (is-a?/c bin%)
                             exact-nonnegative-integer?
                             exact-nonnegative-integer?
-                            void?)]))
+                            void?)]
+                       [video-resolution/c
+                        flat-contract?]))
 
 (define (video/x-raw width height
                      #:pixel-aspect-ratio [par "1/1"]
@@ -60,6 +62,9 @@
         '1440p '(2560 . 1440)
         '4k '(3840 . 2160) ; tbh my computer would probably melt
         ))
+
+(define video-resolution/c
+  (apply symbols (hash-keys video-resolutions)))
 
 (define (pair-values pair)
   (values (car pair)
