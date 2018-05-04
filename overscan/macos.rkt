@@ -28,6 +28,10 @@
                         (->* ()
                              ((or/c string? false/c))
                              (element/c "osxvideosink"))]
+                       [osxaudiosink
+                        (->* ()
+                             ((or/c string? false/c))
+                             (element/c "osxaudiosink"))]
                        [call-atomically-in-run-loop
                         (-> (-> any) any)]))
 
@@ -95,6 +99,9 @@
 
 (define (osxvideosink [name #f])
   (element-factory%-make "osxvideosink" name))
+
+(define (osxaudiosink [name #f])
+  (element-factory%-make "osxaudiosink" name))
 
 (import-class NSObject NSArray NSRunLoop)
 (define NSDefaultRunLoopMode (get-ffi-obj 'NSDefaultRunLoopMode #f _id))
