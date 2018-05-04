@@ -51,6 +51,9 @@
       (displayln (gst-version-string))
       (error "Could not load GStreamer")))
 
+(define overscan-logger
+  (make-logger 'Overscan (current-logger)))
+
 (define current-broadcast
   (box #f))
 
@@ -62,7 +65,7 @@
     (send broadcast set-state 'null)))
 
 (define (log-listener msg broadcast)
-  (displayln (message->string msg)))
+  (log-info (message->string msg)))
 
 (define broadcast-listeners
   (make-hash (list (cons 0 default-broadcast-listener)
@@ -118,16 +121,19 @@
 
 (define (spawn-bus-worker broadcast)
   (let* ([bus (send broadcast get-bus)]
-         [chan (make-bus-channel bus)])
-    (thread (thunk
-             (let loop ()
-               (let ([ev (sync chan)])
-                 (if (evt? ev)
-                     (semaphore-post broadcast-complete-evt)
-                     (begin
-                       (for ([proc (in-hash-values broadcast-listeners)])
-                         (proc ev broadcast))
-                       (loop)))))))))
+         [chan (make-bus-channel bus)]
+         [logger (make-logger (string->symbol (send broadcast get-name))
+                              overscan-logger)])
+    (parameterize ([current-logger logger])
+        (thread (thunk
+              (let loop ()
+                (let ([ev (sync chan)])
+                  (if (evt? ev)
+                      (semaphore-post broadcast-complete-evt)
+                      (begin
+                        (for ([proc (in-hash-values broadcast-listeners)])
+                          (proc ev broadcast))
+                        (loop))))))))))
 
 (define (playing? [broadcast (get-current-broadcast)])
   (let-values ([(result current pending) (send broadcast get-state)])
