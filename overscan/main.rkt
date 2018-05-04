@@ -10,7 +10,11 @@
 
 (provide (contract-out [broadcast
                         (->* ()
-                             ((is-a?/c element%) (is-a?/c element%))
+                             ((is-a?/c element%)
+                              (is-a?/c element%)
+                              (is-a?/c element%)
+                              #:resolution video-resolution/c
+                              #:monitor (is-a?/c element%))
                              (is-a?/c pipeline%))]
                        [start
                         (-> (is-a?/c pipeline%) thread?)]
@@ -81,16 +85,22 @@
 (define (remove-listener key)
   (hash-remove! broadcast-listeners key))
 
-(define (broadcast [source (videotestsrc #:live? #t)]
+(define (broadcast [video-source (videotestsrc #:live? #t)]
+                   [audio-source (gobject-with-properties (element-factory%-make "audiotestsrc")
+                                                          (hash 'volume 0.5))]
                    [sink (element-factory%-make "fakesink")]
-                   #:resolution [resolution '720p])
+                   #:resolution [resolution '720p]
+                   #:monitor [audio-monitor (element-factory%-make "fakesink")])
   (let ([pipeline (pipeline%-new #f)]
         [resolution-caps (video-resolution resolution)]
         [unsynced-sink (gobject-with-properties sink
                                                 (hash 'sync #f))])
-    (and (send pipeline add source)
+    (and (send pipeline add video-source)
+         (send pipeline add audio-source)
          (send pipeline add sink)
-         (send source link-filtered sink resolution-caps)
+         (send pipeline add audio-monitor)
+         (send video-source link-filtered sink resolution-caps)
+         (send audio-source link audio-monitor)
          (start pipeline)
          pipeline)))
 
