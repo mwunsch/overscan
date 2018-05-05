@@ -90,17 +90,19 @@
                                                           (hash 'volume 0.5))]
                    [sink (element-factory%-make "fakesink")]
                    #:resolution [resolution '720p]
-                   #:monitor [audio-monitor (element-factory%-make "fakesink")])
+                   #:monitor [audio-monitor (element-factory%-make "fakesink")]
+                   #:h264-encoder [video-encoder (element-factory%-make "x264enc")]
+                   #:aac-encoder [audio-encoder (element-factory%-make "fdkaacenc")])
   (let ([pipeline (pipeline%-new #f)]
         [resolution-caps (video-resolution resolution)]
         [unsynced-sink (gobject-with-properties sink
                                                 (hash 'sync #f))])
-    (and (send pipeline add video-source)
-         (send pipeline add audio-source)
-         (send pipeline add sink)
-         (send pipeline add audio-monitor)
+    (and (send pipeline add-many video-source audio-source)
+         (send pipeline add-many video-encoder audio-encoder)
+         (send pipeline add-many audio-monitor sink)
          (send video-source link-filtered sink resolution-caps)
          (send audio-source link audio-monitor)
+
          (start pipeline)
          pipeline)))
 
