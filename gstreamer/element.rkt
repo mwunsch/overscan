@@ -47,17 +47,25 @@
                             caps?
                             pad-template?)]))
 
+(define element-factory-mixin
+  (make-gobject-delegate create
+                         get-num-pad-templates
+                         [can-sink-all-caps? 'can_sink_all_caps]
+                         [can-sink-any-caps? 'can_sink_any_caps]
+                         [can-src-all-caps? 'can_src_all_caps]
+                         [can-src-any-caps? 'can_src_any_caps]))
+
 (define element-factory%
-  (class gst-object%
-         (super-new)
-         (inherit-field pointer)
-         (define/public (create [name #f])
-           (let ([el (gobject-send pointer 'create name)])
-             (new element% [pointer el])))
-         (define/public (get-metadata)
-           (for/hash ([key (in-vector (gobject-send pointer 'get_metadata_keys))])
-                     (values (string->symbol key)
-                             (gobject-send pointer 'get_metadata key))))))
+  (class (element-factory-mixin gst-object%)
+    (super-new)
+    (inherit-field pointer)
+    (define/override (create [name #f])
+      (let ([el (gobject-send pointer 'create name)])
+        (new element% [pointer el])))
+    (define/public (get-metadata)
+      (for/hash ([key (in-vector (gobject-send pointer 'get_metadata_keys))])
+        (values (string->symbol key)
+                (gobject-send pointer 'get_metadata key))))))
 
 (define element-mixin
   (make-gobject-delegate add-pad
@@ -275,4 +283,14 @@
    [create
     (->*m () ((or/c string? false/c)) (instanceof/c element%/c))]
    [get-metadata
-    (->m (hash/c symbol? any/c))]))
+    (->m (hash/c symbol? any/c))]
+   [get-num-pad-templates
+    (->m exact-nonnegative-integer?)]
+   [can-sink-all-caps?
+    (->m caps? boolean?)]
+   [can-sink-any-caps?
+    (->m caps? boolean?)]
+   [can-src-all-caps?
+    (->m caps? boolean?)]
+   [can-src-any-caps?
+    (->m caps? boolean?)]))
