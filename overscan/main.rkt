@@ -137,10 +137,8 @@
 
 (define (spawn-bus-worker broadcast)
   (let* ([bus (send broadcast get-bus)]
-         [chan (make-bus-channel bus)]
-         [logger (make-logger (string->symbol (send broadcast get-name))
-                              overscan-logger)])
-    (parameterize ([current-logger logger])
+         [chan (make-bus-channel bus)])
+    (parameterize ([current-logger overscan-logger])
         (thread (thunk
               (let loop ()
                 (let ([ev (sync chan)])
