@@ -1,7 +1,7 @@
 #lang racket/base
 
 (require ffi/unsafe/introspection
-         (only-in ffi/unsafe _string _bool _int _double)
+         (only-in ffi/unsafe _string _path _bool _int _double)
          racket/class
          racket/contract
          gstreamer/gst
@@ -33,6 +33,14 @@
                         (-> any/c boolean?)]
                        [rtmpsink-location
                         (-> rtmpsink? string?)]
+                       [filesink
+                        (->* (path-string?)
+                             ((or/c string? false/c))
+                             filesink?)]
+                       [filesink?
+                        (-> any/c boolean?)]
+                       [filesink-location
+                        (-> filesink? path-string?)]
                        [videotestsrc
                         (->* ()
                              ((or/c string? false/c)
@@ -49,6 +57,15 @@
                         (-> videotestsrc? boolean?)]
                        [videotest-pattern/c
                         flat-contract?]
+                       [audiotestsrc
+                        (->* ()
+                             ((or/c string? false/c)
+                              #:live? boolean?)
+                             audiotestsrc?)]
+                       [audiotestsrc?
+                        (-> any/c boolean?)]
+                       [audiotestsrc-live?
+                        (-> audiotestsrc? boolean?)]
                        [videomixer
                         (->* ()
                              ((or/c string? false/c))
@@ -112,6 +129,16 @@
 (define (rtmpsink-location element)
   (gobject-get element "location" _string))
 
+(define (filesink location [name #f])
+  (gobject-with-properties (element-factory%-make "filesink" name)
+                           (hash 'location location)))
+
+(define filesink?
+  (element/c "filesink"))
+
+(define (filesink-location element)
+  (gobject-get element "location" _path))
+
 (define videotest-patterns
   '(smpte snow black white red green blue
           checkers-1 checkers-2 checkers-4 checkers-8
@@ -137,6 +164,18 @@
   (make-gobject-property-procedures "pattern" videotest-patterns))
 
 (define (videotestsrc-live? element)
+  (gobject-get element "is-live" _bool))
+
+(define (audiotestsrc [name #f]
+                      #:live? [live? #t])
+  (let ([el (element-factory%-make "audiotestsrc" name)])
+    (gobject-set! el "is-live" live? _bool)
+    el))
+
+(define audiotestsrc?
+  (element/c "audiotestsrc"))
+
+(define (audiotestsrc-live? element)
   (gobject-get element "is-live" _bool))
 
 (define (videomixer [name #f])
