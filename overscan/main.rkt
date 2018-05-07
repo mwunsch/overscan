@@ -3,19 +3,25 @@
 (require ffi/unsafe/introspection
          racket/class
          racket/contract
+         racket/list
+         racket/file
          (only-in racket/function thunk)
          gstreamer
          "video.rkt"
          overscan/twitch)
 
-(provide (contract-out [broadcast
-                        (->* ()
-                             ((is-a?/c element%)
+(provide broadcast
+         (contract-out [make-broadcast
+                        (->* ((is-a?/c element%)
                               (is-a?/c element%)
-                              (is-a?/c element%)
+                              (is-a?/c element%))
+                             (#:name (or/c string? false/c)
                               #:resolution video-resolution/c
-                              #:monitor (is-a?/c element%))
-                             (is-a?/c pipeline%))]
+                              #:preview (is-a?/c element%)
+                              #:monitor (is-a?/c element%)
+                              #:h264-encoder (is-a?/c element%)
+                              #:aac-encoder (is-a?/c element%))
+                             (or/c (is-a?/c pipeline%) false/c))]
                        [start
                         (-> (is-a?/c pipeline%) thread?)]
                        [stop
