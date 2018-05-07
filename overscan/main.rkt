@@ -69,12 +69,16 @@
     (send broadcast set-state 'null)))
 
 (define (log-listener msg broadcast)
-  (log-info (message->string msg)))
+  (let ([msg-type (message-type msg)]
+        [msg-description (message->string msg)])
+    (case msg-type
+      ['(warning) (log-warning msg-description)]
+      ['(error) (log-error msg-description)]
+      [else (log-info msg-description)])))
 
 (define broadcast-listeners
   (make-hash (list (cons 0 default-broadcast-listener)
-                   (cons 1 log-listener)
-                   )))
+                   (cons 1 log-listener))))
 
 (define (add-listener proc)
   (let* ([stack broadcast-listeners]
