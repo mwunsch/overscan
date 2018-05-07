@@ -89,26 +89,72 @@
 (define (remove-listener key)
   (hash-remove! broadcast-listeners key))
 
-(define (broadcast [video-source (videotestsrc #:live? #t)]
-                   [audio-source (gobject-with-properties (element-factory%-make "audiotestsrc")
-                                                          (hash 'volume 0.5))]
-                   [sink (element-factory%-make "fakesink")]
-                   #:resolution [resolution '720p]
-                   #:monitor [audio-monitor (element-factory%-make "fakesink")]
-                   #:h264-encoder [video-encoder (element-factory%-make "x264enc")]
-                   #:aac-encoder [audio-encoder (element-factory%-make "fdkaacenc")])
-  (let ([pipeline (pipeline%-new #f)]
-        [resolution-caps (video-resolution resolution)]
-        [unsynced-sink (gobject-with-properties sink
-                                                (hash 'sync #f))])
-    (and (send pipeline add-many video-source audio-source)
-         (send pipeline add-many video-encoder audio-encoder)
-         (send pipeline add-many audio-monitor sink)
-         (send video-source link-filtered sink resolution-caps)
-         (send audio-source link audio-monitor)
+(define broadcast
+  (make-keyword-procedure
+   (lambda (kws kw-args . rest)
+     (define defaults (list (videotestsrc #:live? #t)
+                            (audiotestsrc #:live? #t)
+                            (filesink (make-temporary-file))))
 
-         (start pipeline)
+     (let ([pipeline (keyword-apply make-broadcast kws kw-args
+                                    (take (append rest (list-tail defaults (length rest))) 3))])
+       (unless pipeline
+         (error "Could not construct pipeline"))
+       (start pipeline)
+       pipeline))))
+
+(define (make-broadcast video-source audio-source mux-sink
+                        #:name [name #f]
+                        #:resolution [resolution '720p]
+                        #:preview [video-preview (element-factory%-make "autovideosink")]
+                        #:monitor [audio-monitor (element-factory%-make "autoaudiosink")]
+                        #:h264-encoder [video-encoder (element-factory%-make "x264enc")]
+                        #:aac-encoder [audio-encoder (element-factory%-make "fdkaacenc")])
+  (let* ([pipeline (pipeline%-new name)]
+         [pipeline-name (send pipeline get-name)]
+         [multiqueue (element-factory%-make "multiqueue" (format "~a:buffer" pipeline-name))]
+         [video-tee (tee (format "~a:video:tee" pipeline-name))]
+         [audio-tee (tee (format "~a:audio:tee" pipeline-name))]
+         [preview-bin (make-video-preview pipeline-name video-preview)]
+         [monitor-bin (make-audio-monitor pipeline-name audio-monitor)]
+         [muxer (element-factory%-make "flvmux"
+                                       (format "~a:muxer" pipeline-name))])
+    (gobject-set! muxer "streamable" #t)
+    (and (send pipeline add-many video-source audio-source)
+         (send pipeline add-many video-tee audio-tee)
+         (send pipeline add multiqueue)
+         (send pipeline add-many video-encoder audio-encoder muxer)
+         (send pipeline add mux-sink)
+         (send pipeline add-many preview-bin monitor-bin)
+         (send video-source link-filtered multiqueue (video-resolution resolution))
+         (send audio-source link multiqueue)
+         (send multiqueue link video-tee)
+         (send multiqueue link audio-tee)
+         (send video-tee link video-encoder)
+         (send video-encoder link muxer)
+         (send audio-tee link audio-encoder)
+         (send audio-encoder link muxer)
+         (send muxer link mux-sink)
+         (send video-tee link preview-bin)
+         (send audio-tee link monitor-bin)
          pipeline)))
+
+(define (make-video-preview pipeline-name preview)
+  (let ([queue (element-factory%-make "queue")])
+    (gobject-set! queue "leaky" 'upstream '(no upstream downstream))
+    (gobject-set! preview "sync" #f)
+    (bin%-compose (format "~a:video:preview" pipeline-name)
+                  queue
+                  (element-factory%-make "videoconvert")
+                  preview)))
+
+(define (make-audio-monitor pipeline-name monitor)
+  (let ([queue (element-factory%-make "queue")])
+    (gobject-set! queue "leaky" 'upstream '(no upstream downstream))
+    (gobject-set! monitor "sync" #f)
+    (bin%-compose (format "~a:audio:monitor" pipeline-name)
+                  queue
+                  monitor)))
 
 (define (start pipeline)
   (when (unbox current-broadcast)
