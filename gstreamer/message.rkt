@@ -230,4 +230,12 @@
        (let-values ([(context-type)
                      (parse-message:have-context msg)])
          (format "Have Context (~a): ~a" owner-name context-type))]
+      ['(error)
+       (let-values ([(gerror debug)
+                     (parse-message:error msg)])
+         (format "Error (~a): ~a" owner-name debug))]
+      ['(warning)
+       (let-values ([(gerror debug)
+                     (parse-message:warning msg)])
+         (format "Warning (~a): ~a" owner-name debug))]
       [else (format "Message ~a" msg-type)])))
