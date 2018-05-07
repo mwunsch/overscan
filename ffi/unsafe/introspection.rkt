@@ -1168,7 +1168,7 @@
                    [(gstruct? value) (_gi-struct (gi-instance-type value))]
                    [(gobject? value) (_gi-object (gi-instance-type (gobject-ptr value)))]
                    [(boolean? value) _bool]
-                   [(string? value) _string]
+                   [(path-string? value) _string]
                    [(exact-integer? value) _int]
                    [(flonum? value) _double]
                    [else _pointer])]
