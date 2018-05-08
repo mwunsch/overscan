@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require ffi/unsafe/introspection
+(require (only-in ffi/unsafe _bitmask)
+         ffi/unsafe/introspection
          racket/class
          racket/contract
          racket/list
@@ -115,9 +116,9 @@
                         #:name [name #f]
                         #:resolution [resolution '720p]
                         #:preview [video-preview (element-factory%-make "autovideosink")]
-                        #:monitor [audio-monitor (element-factory%-make "autoaudiosink")]
-                        #:h264-encoder [video-encoder (element-factory%-make "x264enc")]
-                        #:aac-encoder [audio-encoder (element-factory%-make "fdkaacenc")])
+                        #:monitor [audio-monitor (element-factory%-make "fakesink")]
+                        #:h264-encoder [video-encoder (x264enc)]
+                        #:aac-encoder [audio-encoder (element-factory%-make "faac")])
   (let* ([pipeline (pipeline%-new name)]
          [pipeline-name (send pipeline get-name)]
          [multiqueue (element-factory%-make "multiqueue" (format "~a:buffer" pipeline-name))]
@@ -132,14 +133,18 @@
                                   (element-factory%-make "queue")
                                   audio-encoder)]
          [muxer (element-factory%-make "flvmux"
-                                       (format "~a:muxer" pipeline-name))])
+                                       (format "~a:muxer" pipeline-name))]
+         [sink-buffer (element-factory%-make "queue"
+                                             (format "~a:sink-buffer" pipeline-name))])
     (gobject-set! muxer "streamable" #t)
-    (gobject-set! muxer "latency" 1000000000)  ; increased latency helps sync audio/video sources
+    (gobject-set! muxer "latency" 1000000000)
+    (gobject-set! mux-sink "sync" #t)
     (and (send pipeline add-many video-source audio-source)
          (send pipeline add-many video-tee audio-tee)
          (send pipeline add multiqueue)
          (send pipeline add-many h264-queue aac-queue)
          (send pipeline add muxer)
+         (send pipeline add sink-buffer)
          (send pipeline add mux-sink)
          (send pipeline add-many preview-bin monitor-bin)
          (send video-source link-filtered multiqueue (video-resolution resolution))
@@ -150,10 +155,29 @@
          (send h264-queue link muxer)
          (send audio-tee link aac-queue)
          (send aac-queue link muxer)
-         (send muxer link mux-sink)
+         (send muxer link sink-buffer)
+         (send sink-buffer link mux-sink)
          (send video-tee link preview-bin)
          (send audio-tee link monitor-bin)
          pipeline)))
+
+(define (x264enc)
+  (let ([enc (element-factory%-make "x264enc")])
+    (gobject-set! enc "tune" 'zerolatency (_bitmask '(stillimage
+                                                      fastdecode
+                                                      zerolatency)))
+    (gobject-set! enc "speed-preset" 'faster '(none
+                                               ultrafast
+                                               superfast
+                                               veryfast
+                                               faster
+                                               fast
+                                               medium
+                                               slow
+                                               slower
+                                               veryslow
+                                               placebo))
+    enc))
 
 (define (make-video-preview pipeline-name preview)
   (let ([queue (element-factory%-make "queue")])
