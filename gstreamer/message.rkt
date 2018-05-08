@@ -238,4 +238,4 @@
        (let-values ([(gerror debug)
                      (parse-message:warning msg)])
          (format "Warning (~a): ~a" owner-name debug))]
-      [else (format "Message ~a" msg-type)])))
+      [else (format "(~a): ~a" owner-name msg-type)])))
