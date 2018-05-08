@@ -48,7 +48,9 @@
                        [graphviz
                         (->* (path-string?)
                              ((is-a?/c pipeline%))
-                             any)])
+                             any)]
+                       [overscan-logger
+                        logger?])
          (all-from-out racket/base
                        racket/class
                        gstreamer
