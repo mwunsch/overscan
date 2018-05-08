@@ -123,23 +123,31 @@
          [audio-tee (tee (format "~a:audio:tee" pipeline-name))]
          [preview-bin (make-video-preview pipeline-name video-preview)]
          [monitor-bin (make-audio-monitor pipeline-name audio-monitor)]
+         [h264-queue (bin%-compose (format "~a:video:encoding" pipeline-name)
+                                   (element-factory%-make "queue")
+                                   video-encoder)]
+         [aac-queue (bin%-compose (format "~a:audio:encoding" pipeline-name)
+                                  (element-factory%-make "queue")
+                                  audio-encoder)]
          [muxer (element-factory%-make "flvmux"
                                        (format "~a:muxer" pipeline-name))])
     (gobject-set! muxer "streamable" #t)
+    (gobject-set! muxer "latency" 1000000000)  ; increased latency helps sync audio/video sources
     (and (send pipeline add-many video-source audio-source)
          (send pipeline add-many video-tee audio-tee)
          (send pipeline add multiqueue)
-         (send pipeline add-many video-encoder audio-encoder muxer)
+         (send pipeline add-many h264-queue aac-queue)
+         (send pipeline add muxer)
          (send pipeline add mux-sink)
          (send pipeline add-many preview-bin monitor-bin)
          (send video-source link-filtered multiqueue (video-resolution resolution))
          (send audio-source link multiqueue)
          (send multiqueue link video-tee)
          (send multiqueue link audio-tee)
-         (send video-tee link video-encoder)
-         (send video-encoder link muxer)
-         (send audio-tee link audio-encoder)
-         (send audio-encoder link muxer)
+         (send video-tee link h264-queue)
+         (send h264-queue link muxer)
+         (send audio-tee link aac-queue)
+         (send aac-queue link muxer)
          (send muxer link mux-sink)
          (send video-tee link preview-bin)
          (send audio-tee link monitor-bin)
