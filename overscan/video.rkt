@@ -17,6 +17,10 @@
                         (hash/c symbol?
                                 (cons/c exact-nonnegative-integer?
                                         exact-nonnegative-integer?))]
+                       [video-resolution-ref
+                        (-> symbol?
+                            (values exact-nonnegative-integer?
+                                    exact-nonnegative-integer?))]
                        [video-resolution
                         (-> symbol?
                             caps?)]
@@ -33,15 +37,19 @@
                               #:y exact-integer?
                               #:alpha (real-in 0 1))
                              (or/c (is-a?/c bin%) false/c))]
-                       [picture-in-picture-reposition
+                       [set-picture-in-picture-position!
                         (-> (is-a?/c bin%)
                             exact-nonnegative-integer?
                             exact-nonnegative-integer?
                             void?)]
-                       [picture-in-picture-resize
+                       [set-picture-in-picture-size!
                         (-> (is-a?/c bin%)
                             exact-nonnegative-integer?
                             exact-nonnegative-integer?
+                            void?)]
+                       [set-picture-in-picture-alpha!
+                        (-> (is-a?/c bin%)
+                            (real-in 0 1)
                             void?)]
                        [video-resolution/c
                         flat-contract?]))
@@ -66,69 +74,68 @@
 (define video-resolution/c
   (apply symbols (hash-keys video-resolutions)))
 
-(define (pair-values pair)
-  (values (car pair)
-          (cdr pair)))
+(define (video-resolution-ref resolution)
+  (let ([pair (hash-ref video-resolutions resolution)])
+    (values (car pair)
+            (cdr pair))))
 
 (define (video-resolution resolution)
-  (let-values ([(width height)
-                (pair-values (hash-ref video-resolutions resolution))])
+  (let-values ([(width height) (video-resolution-ref resolution)])
     (video/x-raw width height)))
 
 (define (video:720p [name #f])
   (capsfilter (video-resolution '720p) name))
 
 (define (picture-in-picture video1 video2 [name #f]
-                            #:width [width 320]
-                            #:height [height 240]
-                            #:x [xpos #f]
-                            #:y [ypos #f]
-                            #:alpha [alpha 1.0])
+                            #:width [width 640]
+                            #:height [height 360]
+                            #:x [xpos 20]
+                            #:y [ypos 20]
+                            #:alpha [alpha 1.0]
+                            #:resolution [resolution '720p])
   (let* ([bin (bin%-new name)]
          [bin-name (send bin get-name)]
          [mixer (videomixer (format "~a:mixer" bin-name))]
-         [vidbox (make-video-box video2 width height (format "~a:box" bin-name))]
+         [boxscale (bin%-compose #f
+                                 (element-factory%-make "videorate"))]
+         [vidbox (videobox (format "~a:box" bin-name))]
+         [box-bin (bin%-compose #f
+                                (videoscale)
+                                (element-factory%-make "videorate")
+                                (capsfilter (video/x-raw width height)
+                                            (format "~a:box-size" bin-name))
+                                vidbox)]
+         [main-picture (bin%-compose #f
+                                     video2
+                                     (capsfilter (string->caps "video/x-raw,pixel-aspect-ratio=1/1"))
+                                     (videoscale)
+                                     (element-factory%-make "videorate"))]
          [mixpad (send mixer get-static-pad "src")])
-    (and (send bin add-many video1 vidbox mixer)
-         (send video1 link mixer)
-         (send vidbox link mixer)
+    (and (send bin add mixer)
          (send bin add-pad (ghost-pad%-new "src" mixpad))
-         (set-video-box-alpha! vidbox alpha)
-         (when (or xpos ypos)
-           (picture-in-picture-reposition bin
-                                          (or xpos 0)
-                                          (or ypos 0)))
+         (send bin add-many video1 box-bin)
+         (send bin add main-picture)
+         (send video1 link-filtered box-bin (string->caps "video/x-raw,pixel-aspect-ratio=1/1"))
+         (send main-picture link-filtered mixer (video-resolution resolution))
+         (send box-bin link mixer)
+         (set-picture-in-picture-position! bin xpos ypos)
+         (set-picture-in-picture-alpha! bin alpha)
          bin)))
 
-(define (picture-in-picture-reposition pip x y)
+(define (set-picture-in-picture-position! pip x y)
   (let* ([pip-name (send pip get-name)]
          [mixer (send pip get-by-name (format "~a:mixer" pip-name))]
          [src (videomixer-ref mixer 1)])
-    (gobject-set! src "xpos" x _int)
-    (gobject-set! src "ypos" y _int)))
+    (gobject-set! src "xpos" x)
+    (gobject-set! src "ypos" y)))
 
-(define (picture-in-picture-resize pip width height)
+(define (set-picture-in-picture-size! pip width height)
   (let* ([pip-name (send pip get-name)]
-         [vidbox (send pip get-by-name (format "~a:box" pip-name))])
-    ;; TODO this is not ideal...
-    (video-box-resize pip width height)))
+         [boxfilter (send pip get-by-name (format "~a:box-size" pip-name))])
+    (set-capsfilter-caps! boxfilter (video/x-raw width height))))
 
-(define (make-video-box source width height [name #f])
-  (bin%-compose name
-                source
-                (videoscale)
-                (element-factory%-make "videorate")
-                (videobox "box")
-                (capsfilter (video/x-raw width height) "filter")))
-
-(define (set-video-box-alpha! bin alpha)
-  (let ([vidbox (send bin get-by-name "box")])
-    (set-videobox-alpha! vidbox alpha)))
-
-(define (video-box-resize bin width height
-                          #:pixel-aspect-ratio [par "1/1"]
-                          #:fps [fps "30/1"])
-  (let ([vidfilter (send bin get-by-name "filter")])
-    (set-capsfilter-caps! vidfilter (video/x-raw width height
-                                                 #:pixel-aspect-ratio par
-                                                 #:fps fps))))
+(define (set-picture-in-picture-alpha! pip alpha)
+  (let* ([pip-name (send pip get-name)]
+         [mixer (send pip get-by-name (format "~a:mixer" pip-name))]
+         [src (videomixer-ref mixer 1)])
+    (gobject-set! src "alpha" alpha)))
