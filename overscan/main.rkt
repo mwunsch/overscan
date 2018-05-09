@@ -19,8 +19,10 @@
                              (#:name (or/c string? false/c)
                               #:resolution video-resolution/c
                               #:preview (is-a?/c element%)
+                              #:monitor (is-a?/c element%)
                               #:h264-encoder (is-a?/c element%)
-                              #:aac-encoder (is-a?/c element%))
+                              #:aac-encoder (is-a?/c element%)
+                              #:latency clock-time?)
                              (or/c (is-a?/c pipeline%) false/c))]
                        [start
                         (-> (is-a?/c pipeline%) thread?)]
@@ -115,13 +117,20 @@
                         #:name [name #f]
                         #:resolution [resolution '720p]
                         #:preview [video-preview (element-factory%-make "autovideosink")]
+                        #:monitor [audio-monitor (element-factory%-make "fakesink")]
                         #:h264-encoder [video-encoder (x264enc)]
-                        #:aac-encoder [audio-encoder (element-factory%-make "fdkaacenc")])
+                        #:aac-encoder [audio-encoder (element-factory%-make "fdkaacenc")]
+                        #:latency [latency 1000000000])
   (let* ([pipeline (pipeline%-new name)]
          [pipeline-name (send pipeline get-name)]
-         [video-tee (tee (format "~a:video:tee" pipeline-name))]
+         [video-scale (bin%-compose (format "~a:video:scale+rate" pipeline-name)
+                                    (videoscale)
+                                    (element-factory%-make "videorate"))]
          [audio-rate (element-factory%-make "audiorate")]
+         [video-tee (tee (format "~a:video:tee" pipeline-name))]
+         [audio-tee (tee (format "~a:audio:tee" pipeline-name))]
          [preview-bin (make-video-preview pipeline-name video-preview)]
+         [monitor-bin (make-audio-monitor pipeline-name audio-monitor)]
          [h264-queue (bin%-compose (format "~a:video:encoding" pipeline-name)
                                    (element-factory%-make "queue")
                                    video-encoder)]
@@ -134,28 +143,29 @@
                                                     'use-buffering #t))]
          [muxer (element-factory%-make "flvmux"
                                        (format "~a:muxer" pipeline-name))]
-         [progress-report (element-factory%-make "progressreport")]
          [sink-buffer (element-factory%-make "queue"
                                              (format "~a:sink-buffer" pipeline-name))])
     (gobject-set! muxer "streamable" #t)
-    (gobject-set! muxer "latency" 1000000000)
+    (gobject-set! muxer "latency" latency)
+    (gobject-set! audio-monitor "ts-offset" (- latency))
     (gobject-set! mux-sink "sync" #t)
     (and (send pipeline add-many video-source audio-source)
-         (send pipeline add video-tee)
-         (send pipeline add audio-rate)
+         (send pipeline add-many video-scale audio-rate)
+         (send pipeline add-many video-tee audio-tee)
          (send pipeline add-many h264-queue aac-queue)
          (send pipeline add multiqueue)
-         (send pipeline add muxer)
-         (send pipeline add sink-buffer)
-         (send pipeline add mux-sink)
-         (send pipeline add preview-bin)
-         (send video-source link-filtered video-tee (video-resolution resolution))
+         (send pipeline add-many muxer sink-buffer mux-sink)
+         (send pipeline add-many preview-bin monitor-bin)
+         (send video-source link-filtered video-scale (string->caps "video/x-raw,pixel-aspect-ratio=1/1"))
+         (send video-scale link-filtered video-tee (video-resolution resolution))
          (send video-tee link preview-bin)
          (send video-tee link h264-queue)
          (send h264-queue link multiqueue)
          (send multiqueue link muxer)
-         (send audio-source link audio-rate)
-         (send audio-rate link aac-queue)
+         (send audio-source link-filtered audio-rate (string->caps "audio/x-raw"))
+         (send audio-rate link audio-tee)
+         (send audio-tee link monitor-bin)
+         (send audio-tee link aac-queue)
          (send aac-queue link multiqueue)
          (send multiqueue link muxer)
          (send muxer link sink-buffer)
@@ -192,7 +202,7 @@
 (define (make-audio-monitor pipeline-name monitor)
   (let ([queue (element-factory%-make "queue")])
     (gobject-set! queue "leaky" 'upstream '(no upstream downstream))
-    (gobject-set! monitor "sync" #f)
+    (gobject-set! monitor "sync" #t)
     (bin%-compose (format "~a:audio:monitor" pipeline-name)
                   queue
                   monitor)))
