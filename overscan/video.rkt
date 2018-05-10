@@ -4,7 +4,7 @@
          racket/contract
          (only-in racket/function curry)
          ffi/unsafe/introspection
-         (only-in ffi/unsafe _int)
+         (only-in ffi/unsafe _int _double)
          gstreamer)
 
 (provide (contract-out [video/x-raw
@@ -42,6 +42,10 @@
                             exact-nonnegative-integer?
                             exact-nonnegative-integer?
                             void?)]
+                       [picture-in-picture-position
+                        (-> (is-a?/c bin%)
+                            (values exact-nonnegative-integer?
+                                    exact-nonnegative-integer?))]
                        [set-picture-in-picture-size!
                         (-> (is-a?/c bin%)
                             exact-nonnegative-integer?
@@ -51,6 +55,9 @@
                         (-> (is-a?/c bin%)
                             (real-in 0 1)
                             void?)]
+                       [picture-in-picture-alpha
+                        (-> (is-a?/c bin%)
+                            (real-in 0 1))]
                        [video-resolution/c
                         flat-contract?]))
 
@@ -122,12 +129,21 @@
          (set-picture-in-picture-alpha! bin alpha)
          bin)))
 
+(define (picture-in-picture-mixer pip)
+  (let ([pip-name (send pip get-name)])
+    (send pip get-by-name (format "~a:mixer" pip-name))))
+
 (define (set-picture-in-picture-position! pip x y)
-  (let* ([pip-name (send pip get-name)]
-         [mixer (send pip get-by-name (format "~a:mixer" pip-name))]
+  (let* ([mixer (picture-in-picture-mixer pip)]
          [src (videomixer-ref mixer 1)])
     (gobject-set! src "xpos" x)
     (gobject-set! src "ypos" y)))
+
+(define (picture-in-picture-position pip)
+  (let* ([mixer (picture-in-picture-mixer pip)]
+         [src (videomixer-ref mixer 1)])
+    (values (gobject-get src "xpos" _int)
+            (gobject-get src "ypos" _int))))
 
 (define (set-picture-in-picture-size! pip width height)
   (let* ([pip-name (send pip get-name)]
@@ -135,7 +151,11 @@
     (set-capsfilter-caps! boxfilter (video/x-raw width height))))
 
 (define (set-picture-in-picture-alpha! pip alpha)
-  (let* ([pip-name (send pip get-name)]
-         [mixer (send pip get-by-name (format "~a:mixer" pip-name))]
+  (let* ([mixer (picture-in-picture-mixer pip)]
          [src (videomixer-ref mixer 1)])
     (gobject-set! src "alpha" alpha)))
+
+(define (picture-in-picture-alpha pip)
+  (let* ([mixer (picture-in-picture-mixer pip)]
+         [src (videomixer-ref mixer 1)])
+    (gobject-get src "alpha" _double)))
