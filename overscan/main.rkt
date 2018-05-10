@@ -125,6 +125,7 @@
          [pipeline-name (send pipeline get-name)]
          [video-scale (bin%-compose (format "~a:video:scale+rate" pipeline-name)
                                     (videoscale)
+                                    (element-factory%-make "videoconvert")
                                     (element-factory%-make "videorate"))]
          [audio-rate (element-factory%-make "audiorate")]
          [video-tee (tee (format "~a:video:tee" pipeline-name))]
@@ -237,14 +238,14 @@
          [chan (make-bus-channel bus)])
     (parameterize ([current-logger overscan-logger])
         (thread (thunk
-              (let loop ()
-                (let ([ev (sync chan)])
-                  (if (evt? ev)
-                      (semaphore-post broadcast-complete-evt)
-                      (begin
-                        (for ([proc (in-hash-values broadcast-listeners)])
-                          (proc ev broadcast))
-                        (loop))))))))))
+                 (let loop ()
+                   (let ([ev (sync chan)])
+                     (if (evt? ev)
+                         (semaphore-post broadcast-complete-evt)
+                         (begin
+                           (for ([proc (in-hash-values broadcast-listeners)])
+                             (proc ev broadcast))
+                           (loop))))))))))
 
 (define (playing? [broadcast (get-current-broadcast)])
   (let-values ([(result current pending) (send broadcast get-state)])
