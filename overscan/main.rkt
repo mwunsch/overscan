@@ -178,17 +178,18 @@
     (gobject-set! enc "tune" 'zerolatency (_bitmask '(stillimage
                                                       fastdecode
                                                       zerolatency)))
-    (gobject-set! enc "speed-preset" 'faster '(none
-                                               ultrafast
-                                               superfast
-                                               veryfast
-                                               faster
-                                               fast
-                                               medium
-                                               slow
-                                               slower
-                                               veryslow
-                                               placebo))
+    (gobject-set! enc "speed-preset" 'veryfast '(none
+                                                 ultrafast
+                                                 superfast
+                                                 veryfast
+                                                 faster
+                                                 fast
+                                                 medium
+                                                 slow
+                                                 slower
+                                                 veryslow
+                                                 placebo))
+    (gobject-set! enc "key-int-max" 60)
     enc))
 
 (define (make-video-preview pipeline-name preview)
@@ -213,7 +214,8 @@
     (error "Already a broadcast in progress"))
   (set-box! current-broadcast pipeline)
   (send pipeline set-state 'playing)
-  (spawn-bus-worker pipeline))
+  (parameterize ([current-logger overscan-logger])
+    (spawn-bus-worker pipeline)))
 
 (define (stop #:timeout [timeout 5])
   (define broadcast (get-current-broadcast))
@@ -236,16 +238,15 @@
 (define (spawn-bus-worker broadcast)
   (let* ([bus (send broadcast get-bus)]
          [chan (make-bus-channel bus)])
-    (parameterize ([current-logger overscan-logger])
-        (thread (thunk
-                 (let loop ()
-                   (let ([ev (sync chan)])
-                     (if (evt? ev)
-                         (semaphore-post broadcast-complete-evt)
-                         (begin
-                           (for ([proc (in-hash-values broadcast-listeners)])
-                             (proc ev broadcast))
-                           (loop))))))))))
+    (thread (thunk
+             (let loop ()
+               (let ([ev (sync chan)])
+                 (if (evt? ev)
+                     (semaphore-post broadcast-complete-evt)
+                     (begin
+                       (for ([proc (in-hash-values broadcast-listeners)])
+                         (proc ev broadcast))
+                       (loop)))))))))
 
 (define (playing? [broadcast (get-current-broadcast)])
   (let-values ([(result current pending) (send broadcast get-state)])
