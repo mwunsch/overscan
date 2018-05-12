@@ -61,9 +61,10 @@
 
 
 (unless (gst-initialized?)
-  (if (gst-initialize)
-      (displayln (gst-version-string))
+  (or (gst-initialize)
       (error "Could not load GStreamer")))
+
+(displayln (gst-version-string))
 
 (define overscan-logger
   (make-logger 'Overscan (current-logger)))
