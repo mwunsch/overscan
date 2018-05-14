@@ -4,14 +4,19 @@
 
 @section[#:tag "installation"]{Installation}
 
+Install @secref{Overscan} following the instructions at
+@secref["raco-pkg-install" #:doc '(lib "pkg/scribblings/pkg.scrbl")]:
+
+@commandline{raco pkg install git://github.com:mwunsch/overscan}
+
 Overscan requires the @secref{gstreamer} and
 @secref{gobject-introspection} libraries to be installed, along with a
 number of GStreamer plugins. Several of these plugins are
 platform-specific e.g. plugins for accessing camera and audio
 sources. Overscan, still in its infancy, is currently @emph{only}
-configured to work on a Mac. @margin-note*{Overscan has only been
-tested on macOS Sierra and Racket v6.9.} The requirements are assumed to be installed
-via @hyperlink["https://brew.sh"]{Homebrew}.
+configured to work on a Mac. @margin-note*{Overscan has been tested on
+macOS Sierra and Racket v6.12.} The requirements are assumed to be
+installed via @hyperlink["https://brew.sh"]{Homebrew}.
 
 @commandline{brew install gstreamer}
 
@@ -38,7 +43,7 @@ streaming.
 
 @commandline{brew install gst-plugins-good --with-aalib}
 
-@hyperlink["http://aa-project.sourceforge.net/aalib/"]{AAlib} is a library for converting still and moving images to ASCII art.
+@hyperlink["http://aa-project.sourceforge.net/aalib/"]{AAlib} is a library for converting still and moving images to ASCII art. Not necessary, but cool.
 
 @commandline{brew install gst-plugins-bad --with-rtmpdump --with-fdk-aac}
 
