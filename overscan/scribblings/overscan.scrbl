@@ -7,7 +7,7 @@
 @title{Overscan}
 @author[(author+email "Mark Wunsch" "mark@markwunsch.com")]
 
-@defmodule[overscan]
+@defmodulelang[overscan]
 
 @include-section["overscan/getting-started.scrbl"]
 @include-section["overscan/gstreamer.scrbl"]
