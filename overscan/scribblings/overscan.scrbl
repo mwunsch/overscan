@@ -7,9 +7,8 @@
 @title{Overscan}
 @author[(author+email "Mark Wunsch" "mark@markwunsch.com")]
 
-@defmodulelang[overscan]
-
 @include-section["overscan/getting-started.scrbl"]
+@include-section["overscan/broadcasting.scrbl"]
 @include-section["overscan/gstreamer.scrbl"]
 @include-section["overscan/introspection.scrbl"]
 
@@ -23,6 +22,8 @@ other live coding environments, see
 from a number of video and audio sources, send that stream to a video
 @emph{sink} (e.g. @hyperlink["http://twitch.tv"]{Twitch}), and manipulate
 that stream on-the-fly.
+
+@defmodulelang[overscan]
 
 The Overscan collection is built on top of two additional collections
 provided by this package: @racketmodname[gstreamer], a library and
