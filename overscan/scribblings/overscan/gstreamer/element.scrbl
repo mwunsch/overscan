@@ -17,6 +17,10 @@
     Look for an unlinked pad to which @racket[pad] can link. When @racket[caps] are present, they are used as a filter for the link. Returns a @racket[pad%] to which a link could be made, or @racket[#f] if one cannot be found.
   }
 
+  @defmethod[(get-compatible-pad-template [compattempl pad-template?]) (or/c pad-template? #f)]{
+    Retrieves a @tech{pad template} from @this-obj[] that is compatible with @racket[compattempl]. Pads from compatible templates can be linked together.
+  }
+
   @defmethod[(get-request-pad [name string?]) (or/c (is-a?/c pad%) #f)]{
     Retrieves a pad from @this-obj[] by name. This version only retrieves request pads. Returns @racket[#f] if a pad could not be found.
   }

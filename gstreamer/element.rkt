@@ -70,6 +70,7 @@
 (define element-mixin
   (make-gobject-delegate add-pad
                          get-compatible-pad
+                         get-compatible-pad-template
                          get-request-pad
                          get-static-pad
                          link
@@ -236,6 +237,8 @@
     (->*m ((is-a?/c pad%))
           ((or/c caps? false/c))
           (or/c (instanceof/c pad%/c) false/c))]
+   [get-compatible-pad-template
+    (->m pad-template? (or/c pad-template? false/c))]
    [get-request-pad
     (->m string? (or/c (instanceof/c pad%/c) false/c))]
    [get-static-pad
