@@ -21,8 +21,7 @@
                               #:preview (is-a?/c element%)
                               #:monitor (is-a?/c element%)
                               #:h264-encoder (is-a?/c element%)
-                              #:aac-encoder (is-a?/c element%)
-                              #:latency clock-time?)
+                              #:aac-encoder (is-a?/c element%))
                              (or/c (is-a?/c pipeline%) false/c))]
                        [start
                         (-> (is-a?/c pipeline%) thread?)]
@@ -120,8 +119,7 @@
                         #:preview [video-preview (element-factory%-make "autovideosink")]
                         #:monitor [audio-monitor (element-factory%-make "fakesink")]
                         #:h264-encoder [video-encoder (x264enc)]
-                        #:aac-encoder [audio-encoder (element-factory%-make "fdkaacenc")]
-                        #:latency [latency 1000000000])
+                        #:aac-encoder [audio-encoder (element-factory%-make "fdkaacenc")])
   (let* ([pipeline (pipeline%-new name)]
          [pipeline-name (send pipeline get-name)]
          [video-scale (bin%-compose (format "~a:video:scale+rate" pipeline-name)
@@ -148,8 +146,6 @@
          [sink-buffer (element-factory%-make "queue"
                                              (format "~a:sink-buffer" pipeline-name))])
     (gobject-set! muxer "streamable" #t)
-    (gobject-set! muxer "latency" latency)
-    (gobject-set! audio-monitor "ts-offset" (- latency))
     (gobject-set! mux-sink "sync" #t)
     (and (send pipeline add-many video-source audio-source)
          (send pipeline add-many video-scale audio-rate)
@@ -205,7 +201,7 @@
 (define (make-audio-monitor pipeline-name monitor)
   (let ([queue (element-factory%-make "queue")])
     (gobject-set! queue "leaky" 'upstream '(no upstream downstream))
-    (gobject-set! monitor "sync" #t)
+    (gobject-set! monitor "sync" #f)
     (bin%-compose (format "~a:audio:monitor" pipeline-name)
                   queue
                   monitor)))
