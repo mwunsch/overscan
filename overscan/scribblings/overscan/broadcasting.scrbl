@@ -12,3 +12,16 @@
                          [#:aac-encoder aac-encoder (is-a?/c element%)])
                          (or/c (is-a?/c pipeline%) #f)]{
 }
+
+@defproc[(start [pipeline (is-a?/c pipeline%)]) thread?]{
+}
+
+@defproc[(on-air?) boolean?]{
+}
+
+@defproc[(stop [#:timeout timeout exact-nonnegative-integer? 5])
+         state-change-return?]{
+}
+
+@defproc[(kill-broadcast) void?]{
+}
