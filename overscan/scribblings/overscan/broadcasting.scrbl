@@ -13,6 +13,9 @@
                          (or/c (is-a?/c pipeline%) #f)]{
 }
 
+@defproc[(get-current-broadcast) (is-a?/c pipeline%)]{
+}
+
 @defproc[(start [pipeline (is-a?/c pipeline%)]) thread?]{
 }
 

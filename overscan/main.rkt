@@ -23,6 +23,8 @@
                               #:h264-encoder (is-a?/c element%)
                               #:aac-encoder (is-a?/c element%))
                              (or/c (is-a?/c pipeline%) false/c))]
+                       [get-current-broadcast
+                        (-> (is-a?/c pipeline%))]
                        [start
                         (-> (is-a?/c pipeline%) thread?)]
                        [stop
