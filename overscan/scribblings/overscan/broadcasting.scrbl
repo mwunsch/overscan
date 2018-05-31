@@ -20,6 +20,7 @@
 }
 
 @defproc[(on-air?) boolean?]{
+  Returns @racket[#t] if there is a current broadcast, @racket[#f] otherwise.
 }
 
 @defproc[(stop [#:timeout timeout exact-nonnegative-integer? 5])
