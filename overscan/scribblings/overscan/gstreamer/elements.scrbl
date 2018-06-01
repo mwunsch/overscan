@@ -1,5 +1,6 @@
 #lang scribble/manual
 @require[@for-label[gstreamer
+                    gstreamer/appsink
                     racket/base
                     racket/contract
                     racket/class
