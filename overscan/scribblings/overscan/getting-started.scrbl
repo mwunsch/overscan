@@ -1,4 +1,5 @@
 #lang scribble/manual
+@require[@for-label[overscan]]
 
 @title[#:tag "getting-started"]{Getting Started}
 
@@ -59,3 +60,13 @@ format.
 With these dependencies in place and a running Racket implementation,
 you are now ready to begin broadcasting. @margin-note*{Personally, I
 have installed Racket with @exec{brew cask install racket}}
+
+@section[#:tag "basic-usage"]{Basic Usage}
+
+The "Hello, world" of Overscan is a test broadcast:
+
+@codeblock{
+  #lang overscan
+
+  (broadcast)
+ }

@@ -1,4 +1,10 @@
 #lang scribble/manual
+@require[@for-label[overscan
+                    gstreamer
+                    racket/base
+                    racket/contract
+                    racket/class
+                    ffi/unsafe/introspection]]
 
 @title[#:tag "broadcasting"]{Broadcasting}
 
@@ -11,6 +17,17 @@
                          [#:h264-encoder h264-encoder (is-a?/c element%)]
                          [#:aac-encoder aac-encoder (is-a?/c element%)])
                          (or/c (is-a?/c pipeline%) #f)]{
+}
+
+@defproc[(broadcast [video-source (is-a?/c element%) (videotestsrc)]
+                    [audio-source (is-a?/c element%) (audiotestsrc)]
+                    [flv-sink (is-a?/c element%) (filesink (make-temporary-file))]
+                    [#:name name (or/c string? false/c)]
+                    [#:preview video-preview (is-a?/c element%)]
+                    [#:monitor audio-monitor (is-a?/c element%)]
+                    [#:h264-encoder h264-encoder (is-a?/c element%)]
+                    [#:aac-encoder aac-encoder (is-a?/c element%)])
+                    (is-a?/c pipeline%)]{
 }
 
 @defproc[(get-current-broadcast) (is-a?/c pipeline%)]{
