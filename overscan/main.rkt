@@ -119,7 +119,7 @@
                         #:name [name #f]
                         #:resolution [resolution '720p]
                         #:preview [video-preview (element-factory%-make "autovideosink")]
-                        #:monitor [audio-monitor (element-factory%-make "fakesink")]
+                        #:monitor [audio-monitor (element-factory%-make "autoaudiosink")]
                         #:h264-encoder [video-encoder (x264enc)]
                         #:aac-encoder [audio-encoder (element-factory%-make "fdkaacenc")])
   (let* ([pipeline (pipeline%-new name)]
