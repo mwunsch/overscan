@@ -68,5 +68,7 @@ The "Hello, world" of Overscan is a test broadcast:
 @codeblock{
   #lang overscan
 
-  (broadcast)
+  (broadcast (videotestsrc)
+             (audiotestsrc)
+             (filesink "/dev/null"))
 }

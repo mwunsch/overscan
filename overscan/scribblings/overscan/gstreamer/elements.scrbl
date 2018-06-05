@@ -118,6 +118,21 @@ Examples include an h.264 encoder, an mp4 muxer, or a tee element --- used to ta
   Returns the RTMP URL of the @racket[element].
 }
 
+@subsection{@racket[filesink]}
+
+@defproc[(filesink [location path-string?] [name (or/c string? #f) #f])
+         filesink?]{
+  Create a @deftech{filesink} element with the given @racket[name] (or use a generated name) and with @racket[location] as a file path on the local file system.
+}
+
+@defproc[(filesink? [v any/c]) boolean?]{
+  Returns @racket[#t] if @racket[v] is an element of the @racket["filesink"] factory, @racket[#f] otherwise.
+}
+
+@defproc[(filesink-location [element filesink?]) path-string?]{
+  Returns the file path of the @racket[element].
+}
+
 @subsection{@racket[appsink%]}
 
 @defmodule[gstreamer/appsink]
