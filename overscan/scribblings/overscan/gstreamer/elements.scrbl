@@ -49,6 +49,21 @@ Examples of source elements are those that generate video or audio signal, or th
   Returns @racket[#t] if @racket[element] is being used as a live source, @racket[#f] otherwise.
 }
 
+@subsection{@racket[audiotestsrc]}
+
+@defproc[(audiotestsrc [name (or/c string? #f) #f]
+                       [#:live? is-live? boolean? #t]) audiotestsrc?]{
+  Creates a @deftech{audiotestsrc} element with the given @racket[name].
+}
+
+@defproc[(audiotestsrc? [v any/c]) boolean?]{
+  Returns @racket[#t] if @racket[v] is an element of the @racket["audiotestsrc"] factory, @racket[#f] otherwise.
+}
+
+@defproc[(audiotestsrc-live? [element audiotestsrc?]) boolean?]{
+  Returns @racket[#t] if @racket[element] is being used as a live source, @racket[#f] otherwise.
+}
+
 @section{Filter-like Elements}
 
 Filters and filter-like elements have both input and output @tech{pads}, also called sink and source pads respectively. They operate on data they receive on their sink pads and provide data on their output pads.
