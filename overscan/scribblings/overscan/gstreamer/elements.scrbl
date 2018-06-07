@@ -114,6 +114,14 @@ Examples include an h.264 encoder, an mp4 muxer, or a tee element --- used to ta
   Returns @racket[#t] if @racket[v] is an element of the @racket["tee"] factory, @racket[#f] otherwise.
 }
 
+@subsection{@racket[videoscale]}
+
+@defproc[(videoscale [name (or/c string? #f) #f]) videoscale?]{
+}
+
+@defproc[(videoscale? [v any/c]) boolean?]{
+}
+
 @section{Sink Elements}
 
 @deftech{Sink} elements are the end points in a media pipeline. They accept data but do not produce anything. Writing to a disk or video or audio playback are implemented by sink elements.
