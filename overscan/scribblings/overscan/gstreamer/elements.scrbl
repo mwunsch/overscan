@@ -120,6 +120,22 @@ Examples include an h.264 encoder, an mp4 muxer, or a tee element --- used to ta
 }
 
 @defproc[(videoscale? [v any/c]) boolean?]{
+ Returns @racket[#t] if @racket[v] is an element of the @racket["videoscale"] factory, @racket[#f] otherwise.
+}
+
+@subsection{@racket[videobox]}
+
+@defproc[(videobox [name (or/c string? #f) #f]
+                   [#:autocrop? autocrop boolean?]
+                   [#:top top exact-integer?]
+                   [#:bottom bottom exact-integer?]
+                   [#:left left exact-integer?]
+                   [#:right right exact-integer?])
+                   videobox?]{
+}
+
+@defproc[(videobox? [v any/c]) boolean?)]{
+ Returns @racket[#t] if @racket[v] is an element of the @racket["videobox"] factory, @racket[#f] otherwise.
 }
 
 @section{Sink Elements}
