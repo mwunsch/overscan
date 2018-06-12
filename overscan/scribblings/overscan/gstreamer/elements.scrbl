@@ -134,7 +134,7 @@ Examples include an h.264 encoder, an mp4 muxer, or a tee element --- used to ta
                    videobox?]{
 }
 
-@defproc[(videobox? [v any/c]) boolean?)]{
+@defproc[(videobox? [v any/c]) boolean?]{
  Returns @racket[#t] if @racket[v] is an element of the @racket["videobox"] factory, @racket[#f] otherwise.
 }
 
