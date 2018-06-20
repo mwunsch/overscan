@@ -72,3 +72,7 @@ The "Hello, world" of Overscan is a test broadcast:
              (audiotestsrc)
              (filesink "/dev/null"))
 }
+
+This code will broadcast SMTPE color bars and a 440 Hz tone and write the resulting stream out to @tt{/dev/null}. Additionally, a preview window will appear to display the video source, and the tone will play over your default audio output.
+
+The core concept of Overscan revolves around the @deftech{broadcast}.
