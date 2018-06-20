@@ -132,6 +132,7 @@ Examples include an h.264 encoder, an mp4 muxer, or a tee element --- used to ta
                    [#:left left exact-integer?]
                    [#:right right exact-integer?])
                    videobox?]{
+  Create a @deftech{videobox} element with the given @racket[name]. A videobox element will crop or enlarge the input video stream. The @racket[top], @racket[bottom], @racket[left], and @racket[right] parameters will crop pixels or add pixels to a border depending on if the values are positive or negative, respectively. When @racket[autocrop] is @racket[#t], @tech{caps} will determine crop properties. This element can be used to support letterboxing, mosaic, and picture-in-picture.
 }
 
 @defproc[(videobox? [v any/c]) boolean?]{
