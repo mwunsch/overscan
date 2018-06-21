@@ -8,6 +8,8 @@
 
 @title[#:tag "broadcasting"]{Broadcasting}
 
+A @deftech{broadcast} is a global @tech{pipeline} that can be controlled through the Overscan DSL, and provides a global event bus.
+
 @defproc[(make-broadcast [video-source (is-a?/c element%)]
                          [audio-source (is-a?/c element%)]
                          [flv-sink (is-a?/c element%)]

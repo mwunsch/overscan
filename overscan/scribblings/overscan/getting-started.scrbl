@@ -75,4 +75,10 @@ The "Hello, world" of Overscan is a test broadcast:
 
 This code will broadcast SMTPE color bars and a 440 Hz tone and write the resulting stream out to @tt{/dev/null}. Additionally, a preview window will appear to display the video source, and the tone will play over your default audio output.
 
-The core concept of Overscan revolves around the @deftech{broadcast}.
+The core concept of Overscan revolves around the @tech{broadcast}. To stop this broadcast you would call:
+
+@codeblock{
+  #lang overscan
+
+  (stop)
+}
