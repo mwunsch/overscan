@@ -33,6 +33,7 @@ A @deftech{broadcast} is a global @tech{pipeline} that can be controlled through
 }
 
 @defproc[(get-current-broadcast) (is-a?/c pipeline%)]{
+  Gets the current @tech{broadcast} or raises an error if there is none.
 }
 
 @defproc[(start [pipeline (is-a?/c pipeline%)]) thread?]{
@@ -44,6 +45,7 @@ A @deftech{broadcast} is a global @tech{pipeline} that can be controlled through
 
 @defproc[(stop [#:timeout timeout exact-nonnegative-integer? 5])
          state-change-return?]{
+  Stops the current @tech{broadcast}. If the state of the pipeline cannot be changed within @racket[timeout] seconds, an error will be raised.
 }
 
 @defproc[(kill-broadcast) void?]{
