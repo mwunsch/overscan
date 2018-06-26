@@ -19,6 +19,7 @@ A @deftech{broadcast} is a global @tech{pipeline} that can be controlled through
                          [#:h264-encoder h264-encoder (is-a?/c element%)]
                          [#:aac-encoder aac-encoder (is-a?/c element%)])
                          (or/c (is-a?/c pipeline%) #f)]{
+  Create a @tech{pipeline} that encodes a @racket[video-source] into h264 with @racket[h264-encoder], an @racket[audio-source] into aac with @racket[aac-encoder], muxes them together into an flv, and then sends that final flv to the @racket[flv-sink].
 }
 
 @defproc[(broadcast [video-source (is-a?/c element%) (videotestsrc)]
@@ -30,6 +31,7 @@ A @deftech{broadcast} is a global @tech{pipeline} that can be controlled through
                     [#:h264-encoder h264-encoder (is-a?/c element%)]
                     [#:aac-encoder aac-encoder (is-a?/c element%)])
                     (is-a?/c pipeline%)]{
+  Like @racket[make-broadcast], will create a pipeline, but will then call @racket[start] to promote it to the current @tech{broadcast}.
 }
 
 @defproc[(get-current-broadcast) (is-a?/c pipeline%)]{
