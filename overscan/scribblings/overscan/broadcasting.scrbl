@@ -31,7 +31,7 @@ A @deftech{broadcast} is a global @tech{pipeline} that can be controlled through
                     [#:h264-encoder h264-encoder (is-a?/c element%)]
                     [#:aac-encoder aac-encoder (is-a?/c element%)])
                     (is-a?/c pipeline%)]{
-  Like @racket[make-broadcast], will create a pipeline, but will then call @racket[start] to promote it to the current @tech{broadcast}.
+  Like @racket[make-broadcast], this procedure creates a pipeline, but will then call @racket[start] to promote it to the current @tech{broadcast}.
 }
 
 @defproc[(get-current-broadcast) (is-a?/c pipeline%)]{
@@ -39,7 +39,7 @@ A @deftech{broadcast} is a global @tech{pipeline} that can be controlled through
 }
 
 @defproc[(start [pipeline (is-a?/c pipeline%)]) thread?]{
-  Transforms the given @racket[pipeline] into the current @tech{broadcast} by creating an event listener on its @tech{bus} and setting its state to @racket['playing].
+  Transforms the given @racket[pipeline] into the current @tech{broadcast} by creating an event listener on its @tech{bus} and setting its state to @racket['playing]. The returned @tech{thread} is the listener polling the pipeline's bus.
 }
 
 @defproc[(on-air?) boolean?]{
