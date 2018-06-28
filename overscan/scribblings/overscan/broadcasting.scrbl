@@ -39,7 +39,7 @@ A @deftech{broadcast} is a global @tech{pipeline} that can be controlled through
 }
 
 @defproc[(start [pipeline (is-a?/c pipeline%)]) thread?]{
-  Transforms the given @racket[pipeline] into the current @tech{broadcast} by creating an event listener on its @tech{bus} and setting its state to @racket['playing]. The returned @tech{thread} is the listener polling the pipeline's bus.
+  Transforms the given @racket[pipeline] into the current @tech{broadcast} by creating an event listener on its @tech{bus} and setting its state to @racket['playing]. The returned thread is the listener polling the pipeline's bus.
 }
 
 @defproc[(on-air?) boolean?]{
@@ -47,7 +47,7 @@ A @deftech{broadcast} is a global @tech{pipeline} that can be controlled through
 }
 
 @defproc[(stop [#:timeout timeout exact-nonnegative-integer? 5])
-         state-change-return?]{
+         (one-of/c 'failure 'success 'async 'no-preroll)]{
   Stops the current @tech{broadcast} by sending an @tech{EOS} event. If the state of the pipeline cannot be changed within @racket[timeout] seconds, an error will be raised.
 }
 
