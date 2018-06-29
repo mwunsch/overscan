@@ -54,3 +54,15 @@ A @deftech{broadcast} is a global @tech{pipeline} that can be controlled through
 @defproc[(kill-broadcast) void?]{
   Stops the current @tech{broadcast} without waiting for a downstream @tech{EOS}.
 }
+
+@section{Twitch}
+
+@defmodule[overscan/twitch]
+
+@defparam[twitch-stream-key key string?
+          #:value (getenv "TWITCH_STREAM_KEY")]{
+  A parameter that defines the current stream key for broadcasting to Twitch.tv.
+}
+
+@defproc[(twitch-sink [#:test bandwidth-test? boolean? #f]) rtmpsink?]{
+}
