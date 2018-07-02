@@ -65,4 +65,5 @@ A @deftech{broadcast} is a global @tech{pipeline} that can be controlled through
 }
 
 @defproc[(twitch-sink [#:test bandwidth-test? boolean? #f]) rtmpsink?]{
+  Create a @tech{rtmpsink} set up to broadcast upstream data to Twitch.tv. If @racket[bandwidth-test?] is @racket[#t], the stream will be configured to run a test, and won't be broadcast live. This procedure can be parameterized with @racket[twitch-stream-key].
 }
