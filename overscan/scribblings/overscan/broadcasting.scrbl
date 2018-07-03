@@ -55,6 +55,10 @@ A @deftech{broadcast} is a global @tech{pipeline} that can be controlled through
   Stops the current @tech{broadcast} without waiting for a downstream @tech{EOS}.
 }
 
+@defthing[overscan-logger logger?]{
+  A @tech{logger} with a topic called @racket['Overscan]. Used by Overscan's event bus to log messages.
+}
+
 @section{Twitch}
 
 @defmodule[overscan/twitch]
