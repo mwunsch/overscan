@@ -63,6 +63,8 @@ A @deftech{broadcast} is a global @tech{pipeline} that can be controlled through
 
 @defmodule[overscan/twitch]
 
+@hyperlink["https://www.twitch.tv/"]{Twitch.tv} is a live streaming community. To broadcast to Twitch, get a stream key from the dashboard settings and use it as a parameter to @racket[twitch-sink] with @racket[twitch-stream-key].
+
 @defparam[twitch-stream-key key string?
           #:value (getenv "TWITCH_STREAM_KEY")]{
   A parameter that defines the current stream key for broadcasting to Twitch.tv.

@@ -82,3 +82,5 @@ The core concept of Overscan revolves around the @tech{broadcast}. To stop this 
 
   (stop)
 }
+
+The three arguments to @racket[broadcast] are GStreamer @tech{elements}. The first is a source element for generating a video signal (e.g. a @racket[videotestsrc]). The second, a source for generating audio (e.g. an @racket[audiotestsrc]). A GStreamer @tech{pipeline} is created to encode and mux these two sources and then send them on to the third and final argument, a @tech{sink} element that accepts an flv container stream (e.g. a @racket[rtmpsink]). By abstracting away the details of GStreamer pipeline construction, Overscan allows you to focus on the basic building blocks of live streaming.
