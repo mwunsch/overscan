@@ -29,7 +29,7 @@ The Overscan collection is built on top of two additional collections
 provided by this package: @racketmodname[gstreamer], a library and
 interface to the
 @hyperlink["https://gstreamer.freedesktop.org/"]{GStreamer} multimedia
-framework, and @racketmodname[ffi/unsafe/introspection] a module for
+framework, and @racketmodname[ffi/unsafe/introspection], a module for
 creating a Foreign Function Interface built on
 @hyperlink["https://wiki.gnome.org/Projects/GObjectIntrospection"]{GObject
 Introspection} bindings.
