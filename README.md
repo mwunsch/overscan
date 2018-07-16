@@ -59,9 +59,13 @@ devlogs at <http://www.markwunsch.com/tinyletter/>.
 ## Installation
 
 Overscan has been tested on macOS Sierra with Racket v6.12 and
-GStreamer v1.14.0.
+GStreamer v1.14.0. With a working Racket installation you can install
+with `raco`:
 
-Using homebrew:
+    raco pkg install overscan
+
+For Overscan to do anything meaningful, you also need to install
+GStreamer and necessary plugins. Using homebrew:
 
     brew install gstreamer
 
