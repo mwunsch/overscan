@@ -56,6 +56,16 @@ A @deftech{broadcast} is a global @tech{pipeline} that can be controlled through
   Stops the current @tech{broadcast} without waiting for a downstream @tech{EOS}.
 }
 
+@defproc[(add-listener [listener (-> message? (is-a?/c pipeline%) any)])
+         exact-nonnegative-integer?]{
+}
+
+@defproc[(remove-listener [id exact-nonnegative-integer?]) void?]{
+}
+
+@defproc[(graphviz [path path-string?]) any]{
+}
+
 @defthing[overscan-logger logger?]{
   A @tech[#:doc '(lib "scribblings/reference/reference.scrbl")]{logger} with a topic called @racket['Overscan]. Used by Overscan's event bus to log messages.
 }
