@@ -58,12 +58,15 @@ A @deftech{broadcast} is a global @tech{pipeline} that can be controlled through
 
 @defproc[(add-listener [listener (-> message? (is-a?/c pipeline%) any)])
          exact-nonnegative-integer?]{
+  Adds @racket[listener] to the broadcast's event bus, and returns an identifier that can be used with @racket[remove-listener]. A separate thread of execution will call the @racket[listener] whenever a message appears on the bus.
 }
 
 @defproc[(remove-listener [id exact-nonnegative-integer?]) void?]{
+  Removes the listener with @racket[id] from the event bus.
 }
 
 @defproc[(graphviz [path path-string?]) any]{
+  Writes a graphviz dot file to @racket[path] diagramming the current broadcast.
 }
 
 @defthing[overscan-logger logger?]{
