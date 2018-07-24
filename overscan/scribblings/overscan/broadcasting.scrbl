@@ -65,8 +65,8 @@ A @deftech{broadcast} is a global @tech{pipeline} that can be controlled through
   Removes the listener with @racket[id] from the event bus.
 }
 
-@defproc[(graphviz [path path-string?]) any]{
-  Writes a graphviz dot file to @racket[path] diagramming the current broadcast.
+@defproc[(graphviz [path path-string?] [pipeline (is-a?/c pipeline%) (get-current-broadcast)]) any]{
+  Writes a graphviz dot file to @racket[path] diagramming the @racket[pipeline].
 }
 
 @defthing[overscan-logger logger?]{
