@@ -21,7 +21,7 @@ other live coding environments, see
 @racket[overscan] DSL can be used to quickly produce a video stream
 from a number of video and audio sources, send that stream to a video
 @emph{sink} (e.g. @hyperlink["http://twitch.tv"]{Twitch}), and manipulate
-that stream on-the-fly.
+that stream on-the-fly. @margin-note*{Follow Overscan on Twitter @hyperlink["https://twitter.com/overscan_lang" "@overscan_lang"]}
 
 @defmodulelang[overscan]
 
