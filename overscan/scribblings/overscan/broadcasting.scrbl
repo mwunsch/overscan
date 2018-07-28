@@ -4,6 +4,7 @@
                     racket/base
                     racket/contract
                     racket/class
+                    racket/draw
                     ffi/unsafe/introspection
                     overscan/macos]]
 
@@ -144,4 +145,15 @@ Putting all the pieces together, to broadcast a camera and a microphone to Twitc
 
 @defproc[(call-atomically-in-run-loop [thunk (-> any)]) any]{
   Because of the idiosyncrasies of Racket, GStreamer, and Cocoa working together in concert, wrap the state change of a pipeline that includes a @racket[osxvideosink] in @racket[thunk] and call with this procedure, otherwise the program will crash. I don't fully understand the Cocoa happening underneath the hood, but a good rule of thumb is that if you have a @racket[broadcast] that includes @racket[osxvideosink], wrap it in this procedure before calling it.
+}
+
+@section{Drawing}
+
+@defmodule[overscan/draw]
+
+@defproc[(make-drawable [element (is-a?/c element%)]
+                        [#:width width exact-nonnegative-integer? 1280]
+                        [#:height height exact-nonnegative-integer? 720])
+                        (values (or/c (is-a?/c bin%) #f)
+                                (is-a?/c bitmap-dc%))]{
 }
