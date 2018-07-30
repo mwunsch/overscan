@@ -156,4 +156,5 @@ Putting all the pieces together, to broadcast a camera and a microphone to Twitc
                         [#:height height exact-nonnegative-integer? 720])
                         (values (or/c (is-a?/c bin%) #f)
                                 (is-a?/c bitmap-dc%))]{
+  Creates a means to draw on top of @racket[element] using @other-doc['(lib "scribblings/draw/draw.scrbl")]. This procedure creates a drawing surface of @racket[width] by @racket[height] dimensions that overlays @racket[element]. Two values are returned: a @tech{bin}, or @racket[#f] if an overlay could not be created, and a @racket[bitmap-dc%] object for drawing operations.
 }
