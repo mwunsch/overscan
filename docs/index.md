@@ -2,7 +2,10 @@
 title: Overscan
 ---
 
-# Overscan
+Overscan
+========
+
+## A live coding environment for live streaming video.
 
 + [docs](docs/)
 + [package](https://pkgs.racket-lang.org/package/overscan)
