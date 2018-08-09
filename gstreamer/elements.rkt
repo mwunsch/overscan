@@ -41,6 +41,14 @@
                         (-> any/c boolean?)]
                        [filesink-location
                         (-> filesink? path-string?)]
+                       [filesrc
+                        (->* (path-string?)
+                             ((or/c string? false/c))
+                             filesrc?)]
+                       [filesrc?
+                        (-> any/c boolean?)]
+                       [filesrc-location
+                        (-> filesrc? path-string?)]
                        [videotestsrc
                         (->* ()
                              ((or/c string? false/c)
@@ -133,6 +141,16 @@
   (element/c "filesink"))
 
 (define (filesink-location element)
+  (gobject-get element "location" _path))
+
+(define (filesrc location [name #f])
+  (gobject-with-properties (element-factory%-make "filesrc" name)
+                           (hash 'location location)))
+
+(define filesrc?
+  (element/c "filesrc"))
+
+(define (filesrc-location element)
   (gobject-get element "location" _path))
 
 (define videotest-patterns
