@@ -8,3 +8,14 @@
 ;;                logo. ! queue ! alpha method=custom target-r=253 target-g=164 target-b=40 ! background. \
 ;;                videotestsrc pattern=smpte100 ! video/x-raw,width=640,height=640 ! foreground. \
 ;;                logo. ! queue ! alpha method=custom target-r=127 target-g=15 target-b=126 ! foreground.
+
+(define final
+  (bin%-compose (videomixer)
+                (element-factory%-make "videoconvert")))
+
+(define background
+  (videomixer))
+
+(define foreground
+  (bin%-compose (videomixer)
+                (element-factory%-make "alpha")))
