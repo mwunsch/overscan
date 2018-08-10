@@ -1,5 +1,8 @@
 #lang overscan
 
+(require (only-in ffi/unsafe/introspection
+                  gobject-with-properties))
+
 ;; gst-launch-1.0 videomixer name=final ! videoconvert ! video/x-raw,width=640,height=640 ! osxvideosink sync=false \
 ;;                filesrc location=racket-logo.svg.png ! pngdec ! imagefreeze ! videoconvert ! tee name=logo \
 ;;                videomixer name=background ! final. \
@@ -10,12 +13,26 @@
 ;;                logo. ! queue ! alpha method=custom target-r=127 target-g=15 target-b=126 ! foreground.
 
 (define final
-  (bin%-compose (videomixer)
+  (bin%-compose "final"
+                (videomixer)
                 (element-factory%-make "videoconvert")))
+
+(define logosrc
+  (bin%-compose "logo"
+                (filesrc "racket-logo-svg.png")
+                (element-factory%-make "pngdec")
+                (element-factory%-make "imagefreeze")
+                (element-factory%-make "videoconvert")
+                (tee)))
 
 (define background
   (videomixer))
 
 (define foreground
-  (bin%-compose (videomixer)
-                (element-factory%-make "alpha")))
+  (bin%-compose "foreground"
+                (videomixer)
+                (gobject-with-properties (element-factory%-make "alpha")
+                                         (hash 'method 3
+                                               'target-r 253
+                                               'target-g 164
+                                               'target-b 40))))

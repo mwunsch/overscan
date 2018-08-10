@@ -206,6 +206,16 @@
   (let ([pad (format "sink_~a" pos)])
     (send mixer get-static-pad pad)))
 
+(define (alpha [name #f])
+  (element-factory%-make "alpha" name))
+
+(define alpha?
+  (element/c "alpha"))
+
+(define-values (alpha-method set-alpha-method!)
+  (make-gobject-property-procedures "method"
+                                    '(set green blue custom)))
+
 (define (videobox [name #f]
                   #:autocrop? [autocrop #f]
                   #:top [top 0]
