@@ -25,14 +25,18 @@
                 (element-factory%-make "videoconvert")
                 (tee)))
 
-(define background
-  (videomixer))
-
 (define foreground
-  (bin%-compose "foreground"
-                (videomixer)
+  (bin%-compose #f
+                (videomixer "foreground")
                 (gobject-with-properties (element-factory%-make "alpha")
                                          (hash 'method 3
                                                'target-r 253
                                                'target-g 164
                                                'target-b 40))))
+
+(define pipeline
+  (let* ([pl (pipeline%-new)]
+         [foreground (videomixer "foreground")]
+         [background (videomixer "background")])
+    (send pl add-many foreground background)
+    pl))
