@@ -12,31 +12,37 @@
 ;;                videotestsrc pattern=smpte100 ! video/x-raw,width=640,height=640 ! foreground. \
 ;;                logo. ! queue ! alpha method=custom target-r=127 target-g=15 target-b=126 ! foreground.
 
-(define final
-  (bin%-compose "final"
-                (videomixer)
-                (element-factory%-make "videoconvert")))
-
-(define logosrc
-  (bin%-compose "logo"
-                (filesrc "racket-logo-svg.png")
-                (element-factory%-make "pngdec")
-                (element-factory%-make "imagefreeze")
-                (element-factory%-make "videoconvert")
-                (tee)))
-
-(define foreground
-  (bin%-compose #f
-                (videomixer "foreground")
-                (gobject-with-properties (element-factory%-make "alpha")
-                                         (hash 'method 3
-                                               'target-r 253
-                                               'target-g 164
-                                               'target-b 40))))
 
 (define pipeline
   (let* ([pl (pipeline%-new)]
          [foreground (videomixer "foreground")]
-         [background (videomixer "background")])
-    (send pl add-many foreground background)
-    pl))
+         [background (videomixer "background")]
+         [logosrc (bin%-compose "logo"
+                                (filesrc "racket-logo-svg.png")
+                                (element-factory%-make "pngdec")
+                                (element-factory%-make "imagefreeze")
+                                (element-factory%-make "videoconvert")
+                                (tee))]
+         [foreq (bin%-compose #f
+                              (element-factory%-make "queue")
+                              (gobject-with-properties (element-factory%-make "alpha")
+                                                       (hash 'method 3
+                                                             'target-r 253
+                                                             'target-g 164
+                                                             'target-b 40)))]
+         [backq (bin%-compose #f
+                              (element-factory%-make "queue")
+                              (gobject-with-properties (element-factory%-make "alpha")
+                                                       (hash 'method 3
+                                                             'target-r 127
+                                                             'target-g 15
+                                                             'target-b 126)))]
+         [destination (videomixer "destination")])
+    (and (send pl add-many logosrc foreq foreground backq background destination)
+         (send logosrc link foreq)
+         (send logosrc link backq)
+         (send foreq link foreground)
+         (send backq link background)
+         (send foreground link destination)
+         (send background link destination)
+         pl)))
