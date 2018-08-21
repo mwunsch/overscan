@@ -21,8 +21,8 @@
                                 (filesrc "racket-logo-svg.png")
                                 (element-factory%-make "pngdec")
                                 (element-factory%-make "imagefreeze")
-                                (element-factory%-make "videoconvert")
-                                (tee))]
+                                (element-factory%-make "videoconvert"))]
+         [logotee (tee)]
          [foreq (bin%-compose #f
                               (element-factory%-make "queue")
                               (gobject-with-properties (element-factory%-make "alpha")
@@ -37,12 +37,17 @@
                                                              'target-r 127
                                                              'target-g 15
                                                              'target-b 126)))]
-         [destination (videomixer "destination")])
-    (and (send pl add-many logosrc foreq foreground backq background destination)
-         (send logosrc link foreq)
-         (send logosrc link backq)
+         [destination (videomixer "destination")]
+         [sink (bin%-compose #f
+                             (element-factory%-make "videoconvert")
+                             (element-factory%-make "fakesink"))])
+    (and (send pl add-many logosrc logotee foreq foreground backq background destination sink)
+         (send logosrc link logotee)
+         (send logotee link foreq)
+         (send logotee link backq)
          (send foreq link foreground)
          (send backq link background)
          (send foreground link destination)
          (send background link destination)
+         (send destination link sink)
          pl)))
