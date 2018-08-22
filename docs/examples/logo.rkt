@@ -37,11 +37,17 @@
                                                              'target-r 127
                                                              'target-g 15
                                                              'target-b 126)))]
+         [forepattern (videotestsrc #:pattern 'smpte100)]
+         [backpattern (videotestsrc #:pattern 'snow)]
          [destination (videomixer "destination")]
          [sink (bin%-compose #f
                              (element-factory%-make "videoconvert")
+                             (capsfilter (video/x-raw 640 640))
                              (element-factory%-make "fakesink"))])
-    (and (send pl add-many logosrc logotee foreq foreground backq background destination sink)
+    (and (send pl add-many logosrc logotee)
+         (send pl add-many forepattern foreq foreground)
+         (send pl add-many backpattern backq background)
+         (send pl add-many destination sink)
          (send logosrc link logotee)
          (send logotee link foreq)
          (send logotee link backq)
