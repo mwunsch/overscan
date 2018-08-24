@@ -18,7 +18,7 @@
          [foreground (videomixer "foreground")]
          [background (videomixer "background")]
          [logosrc (bin%-compose "logo"
-                                (filesrc "racket-logo-svg.png")
+                                (filesrc (build-path (current-directory) "racket-logo.svg.png"))
                                 (element-factory%-make "pngdec")
                                 (element-factory%-make "imagefreeze")
                                 (element-factory%-make "videoconvert"))]
