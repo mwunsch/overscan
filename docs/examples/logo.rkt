@@ -43,7 +43,10 @@
          [sink (bin%-compose #f
                              (element-factory%-make "videoconvert")
                              (capsfilter (video/x-raw 640 640))
-                             (element-factory%-make "fakesink"))])
+                             (element-factory%-make "queue")
+                             (element-factory%-make "vtenc_h264_hw")
+                             (element-factory%-make "mp4mux")
+                             (filesink (build-path (current-directory) "logo.mp4")))])
     (and (send pl add-many logosrc logotee)
          (send pl add-many forepattern foreq foreground)
          (send pl add-many backpattern backq background)
