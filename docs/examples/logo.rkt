@@ -5,14 +5,24 @@
          (prefix-in overscan: (only-in overscan
                                        stop)))
 
+(define (purple)
+  (gobject-with-properties (element-factory%-make "alpha")
+                           (hash 'method 3
+                                 'target-r 127
+                                 'target-g 15
+                                 'target-b 126)))
+
+(define (orange)
+  (gobject-with-properties (element-factory%-make "alpha")
+                           (hash 'method 3
+                                 'target-r 253
+                                 'target-g 164
+                                 'target-b 40)))
+
 (define pipeline
   (let* ([pl (pipeline%-new)]
          [foreground (videomixer "foreground")]
-         [forea (gobject-with-properties (element-factory%-make "alpha")
-                                         (hash 'method 3
-                                               'target-r 253
-                                               'target-g 164
-                                               'target-b 40))]
+         [forea (orange)]
          [background (videomixer "background")]
          [logosrc (bin%-compose "logo"
                                 (filesrc (build-path (current-directory) "racket-logo.svg.png"))
@@ -22,18 +32,10 @@
          [logotee (tee)]
          [foreq (bin%-compose #f
                               (element-factory%-make "queue")
-                              (gobject-with-properties (element-factory%-make "alpha")
-                                                       (hash 'method 3
-                                                             'target-r 127
-                                                             'target-g 15
-                                                             'target-b 126)))]
+                              (purple))]
          [backq (bin%-compose #f
                               (element-factory%-make "queue")
-                              (gobject-with-properties (element-factory%-make "alpha")
-                                                       (hash 'method 3
-                                                             'target-r 253
-                                                             'target-g 164
-                                                             'target-b 40)))]
+                              (orange))]
          [forepattern (videotestsrc #:pattern 'smpte100)]
          [backpattern (videotestsrc #:pattern 'snow)]
          [destination (videomixer "destination")]
