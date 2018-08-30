@@ -16,6 +16,11 @@
 (define pipeline
   (let* ([pl (pipeline%-new)]
          [foreground (videomixer "foreground")]
+         [forealpha (gobject-with-properties (element-factory%-make "alpha")
+                                             (hash 'method 3
+                                                   'target-r 253
+                                                   'target-g 164
+                                                   'target-b 40))]
          [background (videomixer "background")]
          [logosrc (bin%-compose "logo"
                                 (filesrc (build-path (current-directory) "racket-logo.svg.png"))
@@ -27,33 +32,31 @@
                               (element-factory%-make "queue")
                               (gobject-with-properties (element-factory%-make "alpha")
                                                        (hash 'method 3
-                                                             'target-r 253
-                                                             'target-g 164
-                                                             'target-b 40)))]
+                                                             'target-r 127
+                                                             'target-g 15
+                                                             'target-b 126)))]
          [backq (bin%-compose #f
                               (element-factory%-make "queue")
                               (gobject-with-properties (element-factory%-make "alpha")
                                                        (hash 'method 3
-                                                             'target-r 127
-                                                             'target-g 15
-                                                             'target-b 126)))]
+                                                             'target-r 253
+                                                             'target-g 164
+                                                             'target-b 40)))]
          [forepattern (videotestsrc #:pattern 'smpte100)]
          [backpattern (videotestsrc #:pattern 'snow)]
          [destination (videomixer "destination")]
          [sink (bin%-compose #f
                              (element-factory%-make "videoconvert")
                              (capsfilter (video/x-raw 640 640))
-                             (gobject-with-properties (element-factory%-make "queue")
-                                                      (hash 'leaky 1))
-                             (element-factory%-make "vtenc_h264_hw")
+                             (element-factory%-make "queue")
+                             (element-factory%-make "vtenc_h264" "encoder")
                              (element-factory%-make "h264parse")
-                             (element-factory%-make "mp4mux")
-                             (gobject-with-properties (filesink (build-path (current-directory) "logo.mp4"))
-                                                      (hash 'sync #f)))])
+                             (element-factory%-make "mp4mux" "muxer")
+                             (filesink (build-path (current-directory) "logo.mp4")))])
     (and (send pl add-many logosrc logotee)
          (send pl add-many forepattern foreq foreground)
          (send pl add-many backpattern backq background)
-         (send pl add-many destination sink)
+         (send pl add-many forealpha destination sink)
          (send logosrc link logotee)
          (send logotee link foreq)
          (send logotee link backq)
@@ -61,7 +64,14 @@
          (send foreq link foreground)
          (send backpattern link-filtered background (video/x-raw 640 640))
          (send backq link background)
-         (send foreground link destination)
          (send background link destination)
+         (send foreground link forealpha)
+         (send forealpha link destination)
          (send destination link sink)
          pl)))
+
+;;; This function is necessary because the imagefreeze element discards EOS events
+;;; So we send EOS directly to the encoder
+(define (end)
+  (let ([encoder (send pipeline get-by-name "encoder")])
+    (send encoder send-event (make-eos-event))))
