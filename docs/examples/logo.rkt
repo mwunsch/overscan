@@ -1,7 +1,9 @@
 #lang overscan
 
 (require (only-in ffi/unsafe/introspection
-                  gobject-with-properties)
+                  gobject-with-properties
+                  gobject-get
+                  gobject-set!)
          (prefix-in overscan: (only-in overscan
                                        stop)))
 
@@ -19,6 +21,12 @@
                                  'target-g 164
                                  'target-b 40)))
 
+(define-values (logo-w logo-h)
+  (values 420 420))
+
+(define-values (width height)
+  (video-resolution-ref '480p))
+
 (define pipeline
   (let* ([pl (pipeline%-new)]
          [foreground (videomixer "foreground")]
@@ -28,7 +36,8 @@
                                 (filesrc (build-path (current-directory) "racket-logo.svg.png"))
                                 (element-factory%-make "pngdec")
                                 (element-factory%-make "imagefreeze")
-                                (element-factory%-make "videoconvert"))]
+                                (element-factory%-make "videoconvert")
+                                (element-factory%-make "videoscale"))]
          [logotee (tee)]
          [foreq (bin%-compose #f
                               (element-factory%-make "queue")
@@ -41,7 +50,7 @@
          [destination (videomixer "destination")]
          [sink (bin%-compose #f
                              (element-factory%-make "videoconvert")
-                             (capsfilter (video/x-raw 640 640))
+                             (capsfilter (video/x-raw width height))
                              (element-factory%-make "queue")
                              (element-factory%-make "vtenc_h264" "encoder")
                              (element-factory%-make "h264parse")
@@ -51,16 +60,22 @@
          (send pl add-many forepattern foreq foreground)
          (send pl add-many backpattern backq background)
          (send pl add-many forea destination sink)
-         (send logosrc link logotee)
+         (send logosrc link-filtered logotee (video/x-raw logo-w logo-h))
          (send logotee link foreq)
          (send logotee link backq)
-         (send forepattern link-filtered foreground (video/x-raw 640 640))
+         (send forepattern link-filtered foreground (video/x-raw logo-w logo-h))
          (send foreq link foreground)
-         (send backpattern link-filtered background (video/x-raw 640 640))
+         (send backpattern link-filtered background (video/x-raw width height))
          (send backq link background)
+         (let ([pad (videomixer-ref background 1)])
+           (gobject-set! pad "xpos" (- (/ width 2) (/ logo-w 2)))
+           (gobject-set! pad "ypos" (- (/ height 2) (/ logo-h 2))))
          (send background link destination)
          (send foreground link forea)
          (send forea link destination)
+         (let ([pad (videomixer-ref destination 1)])
+           (gobject-set! pad "xpos" (- (/ width 2) (/ logo-w 2)))
+           (gobject-set! pad "ypos" (- (/ height 2) (/ logo-h 2))))
          (send destination link sink)
          pl)))
 
