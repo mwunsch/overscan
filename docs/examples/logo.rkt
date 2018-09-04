@@ -53,7 +53,7 @@
                              (capsfilter (video/x-raw width height))
                              (element-factory%-make "queue")
                              (gobject-with-properties (element-factory%-make "vtenc_h264" "encoder")
-                                                      (hash 'quality 0.9))
+                                                      (hash 'bitrate 15000))  ; hi bitrate to deal with snow
                              (element-factory%-make "h264parse")
                              (element-factory%-make "mp4mux" "muxer")
                              (filesink (build-path (current-directory) "logo.mp4")))])
@@ -89,6 +89,11 @@
 (define (stop)
   (and (end)
        (overscan:stop)))
+
+(define (record seconds)
+  (start pipeline)
+  (sleep seconds)
+  (stop))
 
 
 ;; gst-launch-1.0 videomixer name=final ! videoconvert ! video/x-raw,width=640,height=640 ! osxvideosink sync=false \

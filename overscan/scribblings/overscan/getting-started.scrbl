@@ -42,7 +42,7 @@ When installing the base plugins, be sure to include
 by GTK+. Overscan uses this for working with text overlays while
 streaming.
 
-@commandline{brew install gst-plugins-good --with-aalib}
+@commandline{brew install gst-plugins-good --with-aalib --with-libvpx}
 
 @hyperlink["http://aa-project.sourceforge.net/aalib/"]{AAlib} is a library for converting still and moving images to ASCII art. Not necessary, but cool.
 
