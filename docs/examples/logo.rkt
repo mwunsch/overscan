@@ -56,7 +56,10 @@
                                                       (hash 'bitrate 15000))  ; hi bitrate to deal with snow
                              (element-factory%-make "h264parse")
                              (element-factory%-make "mp4mux" "muxer")
-                             (filesink (build-path (current-directory) "logo.mp4")))])
+                             (filesink (build-path (current-directory) "logo.mp4"))
+                             ;; (element-factory%-make "pngenc" "encoder")
+                             ;; (filesink (build-path (current-directory) "logo.png"))
+                             )])
     (and (send pl add-many logosrc logotee)
          (send pl add-many forepattern foreq foreground)
          (send pl add-many backpattern backq background)
