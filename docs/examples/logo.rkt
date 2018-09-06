@@ -98,6 +98,10 @@
   (sleep seconds)
   (stop))
 
+(module+ main
+  ;; Call with racket -W 'info@Overscan' for logging to stderr
+  (record 10))
+
 
 ;; gst-launch-1.0 videomixer name=final ! videoconvert ! video/x-raw,width=640,height=640 ! osxvideosink sync=false \
 ;;                filesrc location=racket-logo.svg.png ! pngdec ! imagefreeze ! videoconvert ! tee name=logo \
