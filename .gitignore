@@ -4,3 +4,5 @@
 .DS_Store
 compiled/
 doc/
+docs/_site/
+.sass-cache/
