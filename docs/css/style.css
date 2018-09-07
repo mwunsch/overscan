@@ -1,0 +1,9 @@
+body {
+  margin: 0;
+}
+
+#logo {
+  object-fit: contain;
+  height: 50vh;
+  width: 100%;
+}

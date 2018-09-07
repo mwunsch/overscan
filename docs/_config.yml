@@ -1,1 +1,6 @@
-theme: jekyll-theme-cayman
+exclude:
+  - examples
+defaults:
+  -
+    values:
+      layout: "default"
