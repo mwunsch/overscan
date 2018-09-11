@@ -1,5 +1,25 @@
 body {
   margin: 0;
+  font-family: "Avenir Next", Avenir, sans-serif;
+  background: #000;
+  color: magenta;
+}
+
+a {
+  color: cyan;
+}
+
+section {
+  display: flex;
+  flex-direction: column;
+}
+
+h1 {
+  font-size: 8vmax;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+  margin: 0;
 }
 
 #logo {
