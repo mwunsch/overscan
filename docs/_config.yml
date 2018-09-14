@@ -1,6 +1,0 @@
-exclude:
-  - examples
-defaults:
-  -
-    values:
-      layout: "default"
