@@ -1,5 +1,6 @@
 #lang scribble/manual
-@require[@for-label[overscan
+@require["utilities.rkt"
+         @for-label[overscan
                     racket/base
                     ffi/unsafe/introspection
                     gstreamer]]
@@ -12,6 +13,8 @@
 @include-section["overscan/gstreamer.scrbl"]
 @include-section["overscan/introspection.scrbl"]
 
+@video["logo.mp4"]
+
 Overscan is a toolkit and
 @hyperlink["https://en.wikipedia.org/wiki/Live_coding"]{live coding
 environment} for broadcasting video. @margin-note*{For examples of
@@ -20,8 +23,10 @@ other live coding environments, see
 @hyperlink["http://extempore.moso.com.au"]{Extempore}.} The
 @racket[overscan] DSL can be used to quickly produce a video stream
 from a number of video and audio sources, send that stream to a video
-@emph{sink} (e.g. @hyperlink["http://twitch.tv"]{Twitch}), and manipulate
-that stream on-the-fly. @margin-note*{Follow Overscan on Twitter @hyperlink["https://twitter.com/overscan_lang" "@overscan_lang"]}
+@emph{sink} (e.g. @hyperlink["http://twitch.tv"]{Twitch}), and
+manipulate that stream on-the-fly. @margin-note*{Follow Overscan on
+Twitter @hyperlink["https://twitter.com/overscan_lang"
+"@overscan_lang"]}
 
 @defmodulelang[overscan]
 
