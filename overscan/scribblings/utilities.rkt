@@ -2,23 +2,29 @@
 
 (require scribble/base
          scribble/core
-         scribble/html-properties)
+         scribble/html-properties
+         racket/runtime-path
+         (only-in net/url relative-path->relative-url-string))
 
 (provide video)
 
+(define-runtime-path scribblings ".")
+
 (define (video path)
-  (elem (make-source path)
+  (elem (source path)
    #:style (style #f
                   (list (alt-tag "video")
                         (attributes '((muted . "muted")
                                       (autoplay . "autoplay")
                                       (loop . "loop")
-                                      (playsinline . "playsinline")))))))
+                                      (playsinline . "playsinline")
+                                      (style . "width: 100%;")))))))
 
-(define (make-source path)
+(define (source path)
   (elem
    #:style
    (style #f
           (list (alt-tag "source")
-                (attributes (list (cons 'src path)
+                (install-resource (path->complete-path (build-path scribblings path)))
+                (attributes (list (cons 'src (relative-path->relative-url-string path))
                                   (cons 'type "video/mp4")))))))

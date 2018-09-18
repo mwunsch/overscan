@@ -15,18 +15,17 @@
 
 @video["logo.mp4"]
 
-Overscan is a toolkit and
+Overscan is a
 @hyperlink["https://en.wikipedia.org/wiki/Live_coding"]{live coding
-environment} for broadcasting video. @margin-note*{For examples of
-other live coding environments, see
-@hyperlink["http://sonic-pi.net"]{Sonic Pi} or
-@hyperlink["http://extempore.moso.com.au"]{Extempore}.} The
-@racket[overscan] DSL can be used to quickly produce a video stream
-from a number of video and audio sources, send that stream to a video
-@emph{sink} (e.g. @hyperlink["http://twitch.tv"]{Twitch}), and
-manipulate that stream on-the-fly. @margin-note*{Follow Overscan on
-Twitter @hyperlink["https://twitter.com/overscan_lang"
-"@overscan_lang"]}
+environment} for live streaming video. @margin-note*{Follow Overscan
+on Twitter @hyperlink["https://twitter.com/overscan_lang"
+"@overscan_lang"].} The @racket[overscan] DSL can be used to quickly
+produce a video stream from a number of video and audio sources, send
+that stream to a video @emph{sink}
+(e.g. @hyperlink["http://twitch.tv"]{Twitch}), and manipulate that
+stream on-the-fly. @margin-note*{For examples of other live coding
+environments, see @hyperlink["http://sonic-pi.net"]{Sonic Pi} or
+@hyperlink["http://extempore.moso.com.au"]{Extempore}.}
 
 @defmodulelang[overscan]
 
