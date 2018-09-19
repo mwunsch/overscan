@@ -3,6 +3,7 @@
 (require scribble/base
          scribble/core
          scribble/html-properties
+         racket/path
          racket/runtime-path
          (only-in net/url relative-path->relative-url-string))
 
@@ -26,5 +27,6 @@
    (style #f
           (list (alt-tag "source")
                 (install-resource (path->complete-path (build-path scribblings path)))
-                (attributes (list (cons 'src (relative-path->relative-url-string path))
+                (attributes (list (cons 'src (relative-path->relative-url-string
+                                              (file-name-from-path path)))
                                   (cons 'type "video/mp4")))))))
