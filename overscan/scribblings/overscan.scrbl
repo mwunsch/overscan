@@ -28,7 +28,7 @@ Overscan is a @hyperlink["https://en.wikipedia.org/wiki/Live_coding"]{live codin
 
 The @racketmodname[overscan] DSL can be used to quickly
 produce a video stream from a number of video and audio sources, send
-that stream to a video @emph{sink}
+that stream to a video @tech{sink}
 (e.g. @hyperlink["http://twitch.tv"]{Twitch}), and manipulate that
 stream on-the-fly.
 
