@@ -32,6 +32,8 @@ that stream to a video @tech{sink}
 (e.g. @hyperlink["http://twitch.tv"]{Twitch}), and manipulate that
 stream on-the-fly.
 
+To see Overscan in action, @hyperlink["https://youtu.be/2aOqaE6oByA"]{watch this video from !!con 2018} where I demo the live-streaming capabilities. The code powering that broadcast is @hyperlink["https://gist.github.com/mwunsch/01f52fc8a3377c7016395db3e630e3e0"]{available online}. @hyperlink["https://github.com/mwunsch/overscan/blob/master/overscan/scribblings/examples/logo.rkt"]{Overscan's logo is itself generated with Overscan.}
+
 @defmodulelang[overscan]
 
 The Overscan collection is built on top of two additional collections
